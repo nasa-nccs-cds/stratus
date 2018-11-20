@@ -1,6 +1,7 @@
-from .base import NamedObject
+from .base import RequestObject
+from .input import Input
 
-class Operation:
+class Operation(Input):
 
-    def __init__(self, _name: str = None ):
+    def __init__(self, _name: str = None, inputs: ):
         super(Operation, self).__init__(_name)
