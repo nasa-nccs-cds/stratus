@@ -79,18 +79,18 @@ class Axis(Enum):
 
 class AxisBounds(RequestObject):
 
-    @classmethod
-    def new(cls, name, boundsSpec ):
-        if isinstance( boundsSpec, dict ):
-            start = boundsSpec.get("start",None)
-            end = boundsSpec.get("end",None)
-            step = boundsSpec.get("step", None)
-            system = WpsCwtParser.get( ["system","crs"], boundsSpec )
-            end = end + 1 if system.startswith("ind") else end
-            return AxisBounds( name, start, end, step, system, boundsSpec )
-        else:
-            value = boundsSpec
-            return AxisBounds( name, value, value, 1, "values", {} )
+    # @classmethod
+    # def new(cls, name, boundsSpec ):
+    #     if isinstance( boundsSpec, dict ):
+    #         start = boundsSpec.get("start",None)
+    #         end = boundsSpec.get("end",None)
+    #         step = boundsSpec.get("step", None)
+    #         system = WpsCwtParser.get( ["system","crs"], boundsSpec )
+    #         end = end + 1 if system.startswith("ind") else end
+    #         return AxisBounds( name, start, end, step, system, boundsSpec )
+    #     else:
+    #         value = boundsSpec
+    #         return AxisBounds( name, value, value, 1, "values", {} )
 
 
     def __init__(self, _name: str, _start: Union[float,int,str], _end: Union[float,int,str], _step: Union[float,int,str], _system: str, _metadata: Dict, timeDelta: Optional[relativedelta] = None ):
@@ -224,20 +224,20 @@ class Domain(RequestObject):
         super(Domain, self).__init__(_name)
         self.axisBounds: Dict[Axis,AxisBounds] = _axisBounds if _axisBounds else {}
 
-    @classmethod
-    def new(cls, domainSpec: Dict[str, Any] ):
-        name = "d0"
-        axisBounds: Dict[Axis,AxisBounds] = {}
-        for ( key, value ) in domainSpec.items():
-            if( key.lower() in [ "name", "id" ] ):
-                name = value
-            else:
-                bounds = AxisBounds.new( key, value )
-                axisBounds[ bounds.type ] = bounds
-        return Domain( name,  axisBounds )
+    # @classmethod
+    # def new(cls, domainSpec: Dict[str, Any] ):
+    #     name = "d0"
+    #     axisBounds: Dict[Axis,AxisBounds] = {}
+    #     for ( key, value ) in domainSpec.items():
+    #         if( key.lower() in [ "name", "id" ] ):
+    #             name = value
+    #         else:
+    #             bounds = AxisBounds.new( key, value )
+    #             axisBounds[ bounds.type ] = bounds
+    #     return Domain( name,  axisBounds )
 
     @classmethod
-    def empty(cls ):
+    def empty(cls):
         return Domain( "empty",  {} )
 
     def addBounds(self, axis: Axis, bounds: AxisBounds ):
@@ -288,10 +288,10 @@ class Domain(RequestObject):
 
 class DomainManager:
 
-    @classmethod
-    def new(cls, domainSpecs: List[Dict[str, Any]] ):
-        domains = [ Domain.new(domainSpec) for domainSpec in domainSpecs ]
-        return DomainManager( { d.name.lower(): d for d in domains } )
+    # @classmethod
+    # def new(cls, domainSpecs: List[Dict[str, Any]] ):
+    #     domains = [ Domain.new(domainSpec) for domainSpec in domainSpecs ]
+    #     return DomainManager( { d.name.lower(): d for d in domains } )
 
     def __init__(self, _domains: Dict[str,Domain] ):
         self.domains = _domains

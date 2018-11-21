@@ -3,6 +3,7 @@ from .input import Input
 from typing import  List, Dict, Any, Sequence, Union, Optional, ValuesView, Tuple
 from enum import Enum, auto
 from stratus.util.parsers import RequestParser
+from .domain import Domain
 
 class SourceType(Enum):
     UNKNOWN = auto()
@@ -14,13 +15,13 @@ class SourceType(Enum):
 
 class DataSource:
 
-    @classmethod
-    def new(cls, variableSpec: Dict[str, Any] ):
-        for type in SourceType:
-           spec = variableSpec.get( type.name, None )
-           if spec is not None:
-                return DataSource( spec, type )
-        raise Exception( "Can't find data source in variableSpec: " + str( variableSpec ) )
+    # @classmethod
+    # def new(cls, variableSpec: Dict[str, Any] ):
+    #     for type in SourceType:
+    #        spec = variableSpec.get( type.name, None )
+    #        if spec is not None:
+    #             return DataSource( spec, type )
+    #     raise Exception( "Can't find data source in variableSpec: " + str( variableSpec ) )
 
     def __init__(self, address: str,  type: SourceType = SourceType.UNKNOWN ):
         self.processUri( type, address )
@@ -65,27 +66,26 @@ class VID:
 
 class DataInput(Input):
 
-    @classmethod
-    def new(cls, variableSpec: Dict[str, Any] ):
-        vids = RequestParser.get( ["name", "id"], variableSpec )
-        assert vids is not None, "Missing 'name' or 'id' parm in variableSpec: " + str(variableSpec)
-        varnames = vids.split(",")
-        vars = []
-        for varname in varnames:
-            nameToks = RequestParser.split( ["|", ":"], varname )
-            name = nameToks[0]
-            id = nameToks[-1]
-            vars.append(VID(name, id))
-        domain = variableSpec.get("domain")
-        source = DataSource.new( variableSpec )
-        return DataInput(vars, domain, source, variableSpec)
+    # @classmethod
+    # def new(cls, variableSpec: Dict[str, Any] ):
+    #     vids = RequestParser.get( ["name", "id"], variableSpec )
+    #     assert vids is not None, "Missing 'name' or 'id' parm in variableSpec: " + str(variableSpec)
+    #     varnames = vids.split(",")
+    #     vars = []
+    #     for varname in varnames:
+    #         nameToks = RequestParser.split( ["|", ":"], varname )
+    #         name = nameToks[0]
+    #         id = nameToks[-1]
+    #         vars.append(VID(name, id))
+    #     domain = variableSpec.get("domain")
+    #     source = DataSource.new( variableSpec )
+    #     return DataInput(vars, domain, source, variableSpec)
 
-    def __init__(self, _name: str, vars: List[VID], _domain: str, _source: DataSource, _metadata: Dict[str, Any] ):
-        super(DataInput, self).__init__(_name)
+    def __init__(self, name: str, vars: List[VID], source: DataSource, domain: Domain, **kwargs ):
+        super(DataInput, self).__init__(name,domain)
         self.vids: List[VID] = vars
-        self.domain: str = _domain
-        self.dataSource: DataSource = _source
-        self.metadata = _metadata
+        self.dataSource: DataSource = source
+        self.metadata = kwargs
 
     def name2id(self, _existingMap: Dict[str,str] = None ) -> Dict[str,str]:
         existingMap = _existingMap if _existingMap is not None else {}
@@ -106,18 +106,18 @@ class DataInput(Input):
         return ":".join(self.ids)
 
     def __str__(self):
-        return "V({})[ domain: {}, source: {} ]".format( ",".join([str(v) for v in self.vids]), self.domain, str(self.dataSource))
+        return "V({})[ domain: {}, source: {} ]".format( ",".join([str(v) for v in self.vids]), self.domain.name, str(self.dataSource))
 
 class DataInputManager:
 
-    @classmethod
-    def new(cls, variableSpecs: List[Dict[str, Any]] ):
-        vsources = [DataInput.new(variableSpec) for variableSpec in variableSpecs]
-        vmap = {}
-        for vsource in vsources:
-            for var in vsource.vids:
-                vmap[var.id] = vsource
-        return DataInputManager( vmap )
+    # @classmethod
+    # def new(cls, variableSpecs: List[Dict[str, Any]] ):
+    #     vsources = [DataInput.new(variableSpec) for variableSpec in variableSpecs]
+    #     vmap = {}
+    #     for vsource in vsources:
+    #         for var in vsource.vids:
+    #             vmap[var.id] = vsource
+    #     return DataInputManager( vmap )
 
     def __init__(self, _variables: Dict[str, DataInput]):
         self.variables: Dict[str, DataInput] = _variables

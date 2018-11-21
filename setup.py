@@ -8,5 +8,5 @@ setup(name='stratus',
       author='Thomas Maxwell',
       author_email='thomas.maxwell@nasa.gov',
       url='https://github.com/nasa-nccs-cds/stratus.git',
-      packages=[ 'stratus', 'stratus.api', 'stratus.util', 'stratus.api.request' ]
+      packages=[ 'stratus', 'stratus.client', 'stratus.util', 'stratus.client.request' ]
 )
