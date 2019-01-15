@@ -1,12 +1,16 @@
-#!/usr/bin/env python
+import sys
+from setuptools import setup, find_packages
 
-from distutils.core import setup
+
+with open('requirements.txt') as f:
+    deps = [dep for dep in f.read().split('\n') if dep.strip() != ''
+            and not dep.startswith('-e')]
+    install_requires = deps
+
 
 setup(name='stratus',
-      version='1.0',
-      description='Stratus: Integrative framework presenting a unified API and workflow orchestration for varied climate data analytic services',
-      author='Thomas Maxwell',
-      author_email='thomas.maxwell@nasa.gov',
-      url='https://github.com/nasa-nccs-cds/stratus.git',
-      packages=[ 'stratus', 'stratus.client', 'stratus.util', 'stratus.client.request' ]
-)
+      version="0.1",
+      packages=find_packages(),
+      zip_safe=False,
+      include_package_data=True,
+      install_requires=install_requires)

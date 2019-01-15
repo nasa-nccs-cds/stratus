@@ -1,4 +1,4 @@
-# stratus :sparkles:
+# stratus
 ##### *Synchronization Technology Relating Analytic Transparently Unified Subsystems*
 
   Integrative framework presenting a unified API and workflow orchestration for varied climate data analytic services.
@@ -8,17 +8,15 @@ ___
 
 ###### Building a Conda environment for high performance climate data analytics
 ```
-    > conda create -n hpcda -c conda-forge -c cdat python=3.6 cdms2 cdutil cdtime
-    > source activate hpcda
-    > conda install  -c conda-forge libnetcdf nco eofs dask distributed xarray matplotlib scipy bottleneck paramiko netCDF4 defusedxml python-graphviz bokeh pyparsing pillow scikit-learn tensorflow keras zeromq pyzmq pytest cartopy paramiko
-    > pip install pydap sklearn_xarray
+    > conda create -n stratus -c conda-forge python=3.6 
+    > source activate stratus
 ```
 
 
 ###### Installing Stratus
 ```
-    > git clone https://github.com/nasa-nccs-cds/stratus.git
-    > cd stratus
-    > python setup.py install
+    (stratus)> git clone https://github.com/nasa-nccs-cds/stratus.git
+    (stratus)> cd stratus
+    (stratus)> python setup.py install
 
 ```
