@@ -8,7 +8,7 @@ ___
 
 ###### Building a Conda environment for high performance climate data analytics
 ```
-    > conda create -n stratus -c conda-forge python=3.6 
+    > conda create -n stratus -c conda-forge python=3.6 flask
     > source activate stratus
 ```
 

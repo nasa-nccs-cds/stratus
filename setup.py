@@ -9,7 +9,11 @@ with open('requirements.txt') as f:
 
 
 setup(name='stratus',
-      version="0.1",
+      version='1.0',
+      description='Stratus: Integrative framework presenting a unified API and workflow orchestration for varied climate data analytic services',
+      author='Thomas Maxwell',
+      author_email='thomas.maxwell@nasa.gov',
+      url='https://github.com/nasa-nccs-cds/stratus.git',
       packages=find_packages(),
       zip_safe=False,
       include_package_data=True,
