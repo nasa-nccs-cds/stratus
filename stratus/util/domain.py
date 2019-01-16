@@ -2,7 +2,9 @@ import os
 import mimetypes
 import json
 from functools import update_wrapper
+import urllib.request
 from datetime import timedelta
+import yaml
 
 from werkzeug.exceptions import HTTPException
 from flask import jsonify, abort, current_app, request, make_response
@@ -70,3 +72,22 @@ def crossdomain(origin=None, methods=None, headers=None,
         f.provide_automatic_options = False
         return update_wrapper(wrapped_function, f)
     return decorator
+
+def _decoder(mime):
+    if mime in _YAML_TYPES:
+        return yaml.load
+    # we'll just try json
+    return json.loads
+
+def get_content(url):
+    if os.path.exists(url):
+        mime = mimetypes.guess_type(url)[0]
+        with open(url) as f:
+            data = f.read()
+            return _decoder(mime)(data)
+    else:
+        with urllib.request.urlopen(url) as resp:
+            data = resp.read()
+        content_type = resp.getheader('Content-Type', 'application/json')
+
+    return _decoder(content_type)(data)
