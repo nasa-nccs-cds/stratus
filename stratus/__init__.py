@@ -1,1 +1,1 @@
-from myservice.app import app   # NOQA
+from stratus.app import app   # NOQA

@@ -10,4 +10,4 @@ def index():
 
     This view will return an empty JSON mapping.
     """
-    return {}
+    return { "Response": "Hello!" }
