@@ -19,7 +19,7 @@ produces:
 paths:
   /exe:
     get:
-      operationId: stratus.handlers.hpda.exeStat
+      operationId: stratus.handlers.hpda.Handler.exeStat
       description: Returns status information on existing analytics request
       parameters:
         - name: id
@@ -48,7 +48,7 @@ paths:
             $ref: '#/definitions/Request'
       responses:
         "200":
-          description: pet response
+          description: Analytics request response
           schema:
             $ref: '#/definitions/Status'
         default:
@@ -57,7 +57,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       description: Kills a running analytics request
-      operationId: stratus.handlers.hpda.exeKill
+      operationId: stratus.handlers.hpda.Handler.exeKill
       parameters:
         - name: id
           in: path
@@ -102,11 +102,43 @@ definitions:
       message:
         type: string
 
+  Range:
+    required:
+    - start
+    properties:
+      start:
+        type: string
+      end:
+        type: string
+      crs:
+        type: string
+
+#  Domain:
+#    required:
+#    - name
+#    properties:
+#      name:
+#        type: string
+#      lat:
+#        schema:
+#          $ref: '#/definitions/Range'
+#      lon:
+#        schema:
+#          $ref: '#/definitions/Range'
+#      lev:
+#        schema:
+#          $ref: '#/definitions/Range'
+#      time:
+#        schema:
+#          $ref: '#/definitions/Range'
+#      crs:
+#        type: string
+
   Domain:
     required:
-    - id
+    - name
     properties:
-      id:
+      name:
         type: string
       lat:
         type: string
@@ -141,6 +173,16 @@ definitions:
       name:
         type: string
       axes:
+        type: string
+      domain:
+        type: string
+      groupby:
+        type: string
+      resample:
+        type: string
+      select:
+        type: string
+      args:
         type: string
 
   Request:
