@@ -1,5 +1,10 @@
 flask
 pytest
 connexion
-
+flake8
+decorator
+mock
+pytest-cov
+testfixtures
+jsonschema
 

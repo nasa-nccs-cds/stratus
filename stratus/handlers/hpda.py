@@ -1,30 +1,14 @@
+import json
 
 def getUserNames():
     return [ "tpmaxwel" ]
 
 def exe( variables, domains, operations ):
-    return [ 1, 5, 25, 33 ]
+    return { "variables": json.loads(variables), "domains": json.loads(domains), "operations": json.loads(operations) }
 
-def getUserIds():
-    return [ 1, 5, 25, 33 ]
+def exeStat( id ):
+    return { "Status": "Executing" }
 
-
-def testOp1():
-    return [ 1, 5, 25, 33 ]
-
-
-def testOp2():
-    return [ 1, 5, 25, 33 ]
-
-
-def testOp3():
-    return [ 1, 5, 25, 33 ]
-
-
-def testOp4():
-    return [ 1, 5, 25, 33 ]
-
-
-def testOp5():
-    return [ 1, 5, 25, 33 ]
+def exeKill( id ):
+    return { "Status": "Killed" }
 
