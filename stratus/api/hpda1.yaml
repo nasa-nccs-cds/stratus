@@ -38,10 +38,10 @@ paths:
             $ref: '#/definitions/Error'
     post:
       description: Executes an analytics request
-      operationId: stratus.handlers.hpda.exe
+      operationId: stratus.handlers.hpda.Handler.exe
       parameters:
-        - name: request
-          in: body
+        - in: body
+          name: request
           description:  Analytics Request
           required: true
           schema:
@@ -104,35 +104,18 @@ definitions:
 
   Range:
     required:
-    - start
+    - axis
     properties:
+      axis:
+        type: string
       start:
         type: string
       end:
         type: string
+      slice:
+        type: string
       crs:
         type: string
-
-#  Domain:
-#    required:
-#    - name
-#    properties:
-#      name:
-#        type: string
-#      lat:
-#        schema:
-#          $ref: '#/definitions/Range'
-#      lon:
-#        schema:
-#          $ref: '#/definitions/Range'
-#      lev:
-#        schema:
-#          $ref: '#/definitions/Range'
-#      time:
-#        schema:
-#          $ref: '#/definitions/Range'
-#      crs:
-#        type: string
 
   Domain:
     required:
@@ -140,16 +123,10 @@ definitions:
     properties:
       name:
         type: string
-      lat:
-        type: string
-      lon:
-        type: string
-      lev:
-        type: string
-      time:
-        type: string
-      crs:
-        type: string
+      bounds:
+        type: array
+        items:
+          $ref: "#/definitions/Range"
 
   Variable:
     required:

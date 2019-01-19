@@ -10,10 +10,10 @@ app = App._create_('http://127.0.0.1:5000/hpda/swagger.json')
 client = Client()
 
 variables=[ dict( name='tas:v0', uri='collection://merra2')  ]
-domains=[ dict( name='d0', lat='-50,50')  ]
-operations=[ dict( name='ave', input='v0', domain='d0' )  ]
+bounds = [ dict( axis='lat', start=-50, end=50, crs='values' ) ]
+domains=[ dict( name='d0', bounds=bounds) ]
+operations=[ dict( name='ave', axis='t', input='v0', domain='d0' )  ]
 request=dict(variables=variables, domains=domains, operations=operations )
-app.mime_codec.register( "text/html", HtmlCodec() )
 op: Operation = app.op['exe']
 response = client.request( op(request=request) )
 
