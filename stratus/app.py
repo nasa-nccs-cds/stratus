@@ -21,8 +21,6 @@ app.add_error_handler( 500, render_server_error )
 flask: Flask = app.app
 flask.register_error_handler( TypeError, render_server_error )
 
-defaults = { 'PROPAGATE_EXCEPTIONS': False }
-app.app.config.update( defaults )
 settings = os.environ.get('FLASK_SETTINGS', _SETTINGS)
 if settings is not None:
     config_file = Config(settings)
