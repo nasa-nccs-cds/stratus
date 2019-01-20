@@ -1,11 +1,29 @@
 import re
-import os
+import os, logging, time, socket
 from configparser import ConfigParser, ExtendedInterpolation
 from six import string_types, integer_types
 
 
 _IS_NUMBER = re.compile('^-?[0-9]+$')
 _IS_FLOAT = re.compile(r'^-?[0-9]+\.[0-9]*$|^-?\.[0-9]+$')
+STRATUS_CONFIG=os.path.expanduser("~/.stratus")
+
+class StratusLogger:
+    logger = None
+
+    @classmethod
+    def getLogger(cls, lname = socket.gethostname() ):
+        if cls.logger is None:
+            cls.logger = logging.getLogger()
+            LOG_DIR = os.path.expanduser(os.path.join(STRATUS_CONFIG, "logs"))
+            if not os.path.exists(LOG_DIR):  os.makedirs(LOG_DIR)
+            timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.gmtime())
+            logger = logging.getLogger()
+            logger.setLevel(logging.DEBUG)
+            fh = logging.FileHandler("{}/stratus-{}-{}.log".format(LOG_DIR, lname, timestamp))
+            fh.setLevel(logging.DEBUG)
+            cls.logger.addHandler(fh)
+        return cls.logger
 
 class ExtendedEnvironmentInterpolation(ExtendedInterpolation):
     def __init__(self):
