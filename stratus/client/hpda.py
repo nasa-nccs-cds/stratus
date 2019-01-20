@@ -14,7 +14,16 @@ bounds = [ dict( axis='lat', start=-50, end=50, crs='values' ) ]
 domains=[ dict( name='d0', bounds=bounds) ]
 operations=[ dict( name='ave', axis='t', input='v0', domain='d0' )  ]
 request=dict(variables=variables, domains=domains, operations=operations )
+
 op: Operation = app.op['exe']
 response = client.request( op(request=request) )
-
 print( response.data )
+
+op: Operation = app.op['exeStat']
+response = client.request( op( id=response.data['id'] ) )
+print( response.data )
+
+op: Operation = app.op['exeKill']
+response = client.request( op( id=response.data['id'] ) )
+print( response.data )
+

@@ -60,12 +60,12 @@ paths:
       operationId: stratus.handlers.hpda.Handler.exeKill
       parameters:
         - name: id
-          in: path
+          in: query
           description: ID of request to kill
           required: true
           type: string
       responses:
-        "204":
+        "200":
           description: request killed
           schema:
             $ref: '#/definitions/Status'
