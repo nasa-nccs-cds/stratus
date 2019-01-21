@@ -1,6 +1,6 @@
 import os
 # from stratus.views import blueprints
-# from connexion.resolver import RestyResolver
+from connexion.resolver import RestyResolver
 # from stratus.views.blueprints import SwaggerBlueprint, JsonBlueprint
 
 import os, traceback

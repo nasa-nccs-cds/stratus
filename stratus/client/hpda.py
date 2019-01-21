@@ -9,11 +9,11 @@ operations=[ dict( name='ave', axis='t', input='v0', domain='d0' )  ]
 request=dict(variables=variables, domains=domains, operations=operations )
 
 response = server.request( 'exe', request=request )
-print( response.data )
+print( response )
 
 response = server.request( 'exeStat', id=response.data['id'] )
-print( response.data )
+print( response )
 
 response = server.request( 'exeKill', id=response.data['id'] )
-print( response.data )
+print( response )
 

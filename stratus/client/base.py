@@ -11,4 +11,4 @@ class ServerProxy:
     def request(self, method: str, **kwargs ) -> Response:
         op: Operation = self.app.op[ method ]
         response = self.client.request( op(**kwargs) )
-        return response
+        return response.data
