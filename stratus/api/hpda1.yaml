@@ -19,7 +19,7 @@ produces:
 paths:
   /exeStat:
     get:
-      operationId: stratus.handlers.hpda.Handler.exeStat
+      operationId: stratus.handlers.hpda1.Handler.exeStat
       description: Returns status information on existing analytics request
       parameters:
         - name: id
@@ -39,7 +39,7 @@ paths:
   /exe:
     post:
       description: Executes an analytics request
-      operationId: stratus.handlers.hpda.Handler.exe
+      operationId: stratus.handlers.hpda1.Handler.exe
       parameters:
         - in: body
           name: request
@@ -59,7 +59,7 @@ paths:
   /exeKill:
     delete:
       description: Kills a running analytics request
-      operationId: stratus.handlers.hpda.Handler.exeKill
+      operationId: stratus.handlers.hpda1.Handler.exeKill
       parameters:
         - name: id
           in: query

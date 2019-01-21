@@ -5,6 +5,7 @@ from connexion.resolver import RestyResolver
 
 import os, traceback
 from flask import Flask, Response
+from connexion.resolver import RestyResolver
 import connexion, json, logging
 from stratus.util.config import Config, StratusLogger, STRATUS_CONFIG
 logger = StratusLogger.getLogger()
@@ -18,6 +19,7 @@ def render_server_error( ex: Exception ):
 
 app = connexion.FlaskApp("stratus", specification_dir='api/', debug=True )
 app.add_error_handler( 500, render_server_error )
+app.add_error_handler( 404, render_server_error )
 flask: Flask = app.app
 flask.register_error_handler( TypeError, render_server_error )
 
@@ -31,6 +33,6 @@ if settings is not None:
 #         app.app.register_blueprint(bp)
 #         print( "Register blueprint: " + str(bp))
 
-app.add_api( 'hpda1.yaml' ) #  , resolver=RestyResolver('stratus.handlers') )
+app.add_api( 'hpda1.yaml' ) # , resolver=RestyResolver('stratus.handlers.hpda1') )
 
 app.run( 5000 )
