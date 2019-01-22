@@ -35,15 +35,20 @@ flask: Flask = app.app
 flask.register_error_handler( TypeError, render_server_error )
 
 settings = os.environ.get('FLASK_SETTINGS', _SETTINGS)
-if settings is not None:
-    config_file = Config(settings)
-    app.app.config.update( config_file.get_map('flask') )
+config_file = Config(settings)
+app.app.config.update( config_file.get_map('flask') )
+stratus_parms = config_file.get_map('stratus')
+api = stratus_parms.get( 'API', None )
+if api is None: raise Exception( "Missing required stratus parameter in settings.ini: 'API'" )   #  'hpda1.yaml
+handler = stratus_parms['HANDLER']
+if handler is None: raise Exception( "Missing required stratus parameter in settings.ini: 'HANDLER'" ) # 'stratus.handlers.hpda1'
 
 # if blueprints is not None:
 #     for bp in blueprints:
 #         app.app.register_blueprint(bp)
 #         print( "Register blueprint: " + str(bp))
 
-app.add_api( 'hpda1.yaml', resolver=StratusResolver('stratus.handlers.hpda1') )
 
+
+app.add_api( api + ".yaml", resolver=StratusResolver( handler ) )
 app.run( 5000 )
