@@ -9,7 +9,7 @@ info:
     name: APLv2
     url: https://www.apache.org/licenses/LICENSE-2.0.html
   version: 0.1.0
-basePath: /hpda
+basePath: /hpda1
 schemes:
   - http
 consumes:
