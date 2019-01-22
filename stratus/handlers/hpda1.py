@@ -29,3 +29,14 @@ class Handler:
         result = cls.getDefaultStatus(stat="killed")
         cls.current_exe_id = None
         return result
+
+def exe( request ):
+    return Handler.exe( request )
+
+def stat( id ):
+    return Handler.exeStat( id )
+
+
+def kill( id ):
+    return Handler.exeKill( id )
+

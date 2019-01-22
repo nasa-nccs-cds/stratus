@@ -11,9 +11,9 @@ request=dict(variables=variables, domains=domains, operations=operations )
 response = server.request( 'exe', request=request )
 print( response )
 
-response = server.request( 'exeStat', id=response.data['id'] )
+response = server.request( 'stat', id=response['id'] )
 print( response )
 
-response = server.request( 'exeKill', id=response.data['id'] )
+response = server.request( 'kill', id=response['id'] )
 print( response )
 

@@ -17,9 +17,9 @@ consumes:
 produces:
   - application/json
 paths:
-  /exeStat:
+  /exe:
     get:
-      operationId: stratus.handlers.hpda.Handler.exeStat
+      operationId: stat
       description: Returns status information on existing analytics request
       parameters:
         - name: id
@@ -36,10 +36,9 @@ paths:
           description: unexpected error
           schema:
             $ref: '#/definitions/Error'
-  /exe:
     post:
       description: Executes an analytics request
-      operationId: stratus.handlers.hpda.Handler.exe
+      operationId: exe
       parameters:
         - in: body
           name: request
@@ -56,10 +55,9 @@ paths:
           description: unexpected error
           schema:
             $ref: '#/definitions/Error'
-  /exeKill:
     delete:
       description: Kills a running analytics request
-      operationId: stratus.handlers.hpda.Handler.exeKill
+      operationId: kill
       parameters:
         - name: id
           in: query

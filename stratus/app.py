@@ -2,6 +2,8 @@ import os
 # from stratus.views import blueprints
 from connexion.resolver import RestyResolver
 # from stratus.views.blueprints import SwaggerBlueprint, JsonBlueprint
+from connexion.resolver import Resolver
+from connexion.operations import AbstractOperation
 
 import os, traceback
 from flask import Flask, Response
@@ -15,6 +17,17 @@ def render_server_error( ex: Exception ):
     print( str( ex ) )
     traceback.print_exc()
     return Response(response=json.dumps({ 'message': getattr(ex, 'message', repr(ex)), "code": 500 } ), status=500, mimetype="application/json")
+
+class StratusResolver(Resolver):
+
+    def __init__(self, default_handler_package: str ):
+        Resolver.__init__(self)
+        self.default_handler_package = default_handler_package
+
+    def resolve_operation_id(self, operation: AbstractOperation):
+        operation_id = operation.operation_id
+        router_controller = operation.router_controller if operation.router_controller else self.default_handler_package
+        return '{}.{}'.format(router_controller, operation_id)
 
 app = connexion.FlaskApp("stratus", specification_dir='api/', debug=True )
 app.add_error_handler( 500, render_server_error )
@@ -31,6 +44,6 @@ if settings is not None:
 #         app.app.register_blueprint(bp)
 #         print( "Register blueprint: " + str(bp))
 
-app.add_api( 'hpda1.yaml' ) #  , resolver=RestyResolver('stratus.handlers') )
+app.add_api( 'hpda1.yaml', resolver=StratusResolver('stratus.handlers.hpda1') )
 
 app.run( 5000 )
