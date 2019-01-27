@@ -1,6 +1,6 @@
 from stratus.client.base import ServerProxy
 
-server = ServerProxy( 'http://127.0.0.1:5000/hpda/swagger.json' )
+server = ServerProxy( 'http://127.0.0.1:5000/hpda1/swagger.json' )
 
 variables=[ dict( name='tas:v0', uri='collection://merra2')  ]
 bounds = [ dict( axis='lat', start=-50, end=50, crs='values' ) ]

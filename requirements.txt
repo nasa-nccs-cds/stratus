@@ -3,3 +3,6 @@ pytest
 pyswagger
 connexion[swagger-ui]
 requests
+networkx
+celery
+sqlalchemy_json

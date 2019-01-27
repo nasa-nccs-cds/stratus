@@ -1,6 +1,6 @@
 import json, string, random
 
-class Handler:
+class Endpoint:
     current_exe_id = None
 
     @classmethod
@@ -31,12 +31,14 @@ class Handler:
         return result
 
 def exe( request ):
-    return Handler.exe( request )
+    return Endpoint.exe( request )
 
 def stat( id ):
-    return Handler.exeStat( id )
+    return Endpoint.exeStat( id )
 
 
 def kill( id ):
-    return Handler.exeKill( id )
+    return Endpoint.exeKill( id )
+
+
 

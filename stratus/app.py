@@ -4,6 +4,8 @@ import os, traceback
 from flask import Flask, Response
 import connexion, json, logging
 from stratus.util.config import Config, StratusLogger
+from flask_sqlalchemy import SQLAlchemy
+from celery import Celery
 
 class StratusResolver(Resolver):
 
@@ -27,14 +29,19 @@ class StratusApp:
         self.app.app.register_error_handler( TypeError, self.render_server_error )
         settings = os.environ.get('FLASK_SETTINGS', self.SETTINGS )
         config_file = Config(settings)
-        self.app.app.config.update( config_file.get_map('flask') )
+        flask_parms = config_file.get_map('flask')
+        flask_parms[ 'SQLALCHEMY_DATABASE_URI' ] = flask_parms['DATABASE_URI']
+        self.app.app.config.update( flask_parms )
         self.parms = config_file.get_map('stratus')
         api = self.getParameter( 'API' )
         handler = self.getParameter( 'HANDLER' )
+        self.celery = self.make_celery( self.app.app )
+        self.db = SQLAlchemy( self.app.app )
         self.app.add_api( api + ".yaml", resolver=StratusResolver( handler ) )
 
     def run(self):
         port = self.getParameter( 'PORT', 5000 )
+        self.db.create_all( )
         return self.app.run( int( port ) )
 
     def getParameter(self, name: str, default = None ) -> str:
@@ -47,7 +54,19 @@ class StratusApp:
         traceback.print_exc()
         return Response(response=json.dumps({ 'message': getattr(ex, 'message', repr(ex)), "code": 500 } ), status=500, mimetype="application/json")
 
+    def make_celery( self, app: Flask ):
+        celery = Celery( app.import_name, backend=app.config['DATABASE_URI'], broker=app.config['CELERY_BROKER_URL'] )
+        celery.conf.update(app.config)
+
+        class ContextTask(celery.Task):
+            def __call__(self, *args, **kwargs):
+                with app.app_context():
+                    return self.run(*args, **kwargs)
+
+        celery.Task = ContextTask
+        return celery
+
+app = StratusApp()
 
 if __name__ == "__main__":
-    app = StratusApp()
     app.run()
