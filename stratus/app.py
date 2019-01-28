@@ -3,20 +3,25 @@ from connexion.operations import AbstractOperation
 import os, traceback
 from flask import Flask, Response
 import connexion, json, logging
+from stratus.handlers.base import Handlers
+from functools import partial
 from stratus.util.config import Config, StratusLogger
 from flask_sqlalchemy import SQLAlchemy
 from celery import Celery
 
 class StratusResolver(Resolver):
 
-    def __init__(self, default_handler_package: str ):
-        Resolver.__init__(self)
+    def __init__(self, default_handler_package: str  ):
+        Resolver.__init__( self, self.function_resolver )
         self.default_handler_package = default_handler_package
 
-    def resolve_operation_id(self, operation: AbstractOperation):
+    def resolve_operation_id(self, operation: AbstractOperation) -> str:
         operation_id = operation.operation_id
         router_controller = operation.router_controller if operation.router_controller else self.default_handler_package
         return '{}.{}'.format(router_controller, operation_id)
+
+    def function_resolver( self, operation_id: str ) :
+        return partial( Handlers.processRequest, operation_id )
 
 class StratusApp:
     HERE = os.path.dirname(__file__)
@@ -52,10 +57,11 @@ class StratusApp:
         if parm is None: raise Exception( "Missing required stratus parameter in settings.ini: " + name )
         return parm
 
+    @staticmethod
     def render_server_error( ex: Exception ):
         print( str( ex ) )
         traceback.print_exc()
-        return Response(response=json.dumps({ 'message': getattr(ex, 'message', repr(ex)), "code": 500 } ), status=500, mimetype="application/json")
+        return Response(response=json.dumps({ 'message': getattr(ex, 'message', repr(ex)), "code": 500, "id": "", "status": "error" } ), status=500, mimetype="application/json")
 
     def make_celery( self, app: Flask ):
         celery = Celery( app.import_name, backend=app.config['DATABASE_URI'], broker=app.config['CELERY_BROKER_URL'] )

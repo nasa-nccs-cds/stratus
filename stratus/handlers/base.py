@@ -9,10 +9,36 @@ class Handler:
         return ''.join(random.SystemRandom().choice(tokens) for _ in range(length))
 
     @abc.abstractmethod
-    def execute(self, request: str ): pass
+    def handles(self, op: str )-> bool : pass
 
     @abc.abstractmethod
-    def status(self,  id: str ): pass
+    def processRequest(self, op: str, **kwargs ): pass
 
-    @abc.abstractmethod
-    def kill(self,  id: str ): pass
+
+class DebugHandler(Handler):
+
+    def handles(self, op: str )-> bool : return True
+
+    def processRequest(self, op: str, **kwargs ):
+        rid = kwargs.get("id", self.randomStr(8) )
+        kwargs.update( { "op" : op, "id": rid, "status": "complete" } )
+        return kwargs
+
+class Handlers:
+    handlers = [ DebugHandler() ]
+
+    @classmethod
+    def processRequest(cls, op, **kwargs ):
+        handler = cls.getHandler( op )
+        return handler.processRequest( op, **kwargs )
+
+    @classmethod
+    def getHandler( cls, op: str ):
+        for handler in cls.handlers:
+            if handler.handles( op ):
+                return handler
+        return None
+
+    @classmethod
+    def addHandler(cls, handler ):
+        cls.handlers.insert( 0, handler )
