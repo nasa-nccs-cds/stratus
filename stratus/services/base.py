@@ -1,12 +1,47 @@
-import string, random, abc, os
+import string, random, abc, os, yaml
+from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
 
+class Service:
+
+    def __init__(self, **kwargs):
+        self.parms = kwargs
+        self.name = self['name']
+        self.api = self['api']
+        self.type = self['type']
+
+    def __getitem__( self, key: str ) -> str:
+        result =  self.parms.get( key, None )
+        assert result is not None, "Missing required parameter in {}: {} ".format( self.__class__.__name__, key )
+        return result
+
+    def parm(self, key: str, default: str ) -> str:
+        return self.parms.get( key, default  )
 
 class ServiceManager:
     HERE = os.path.dirname(__file__)
-    SETTINGS = os.path.join( HERE, 'services.yml')
+    SPEC_FILE = os.path.join( HERE, 'services.yml')
 
     def __init__(self):
-        self.services = []
+        self.services = {}
+        spec = self.load_spec()
+        for service_spec in spec['services']:
+            service = Service( **service_spec )
+            self.services[ service.name ] = service
+
+    def load_spec(self):
+        with open( self.SPEC_FILE, 'r') as stream:
+            data_loaded = yaml.load(stream)
+        return data_loaded
+
+    def __getitem__( self, key: str ) -> Service:
+        result =  self.services.get( key, None )
+        assert result is not None, "Attempt to access unknown service in ServiceManager: {} ".format( key )
+        return result
+
+    def findService( self, type: str, api: str = None ) -> Optional[Service]:
+        for service in self.services.values():
+            if service.type == type and ( (api is None) or (service.api == api) ): return service
+        return None
 
 class Handler:
     __metaclass__ = abc.ABCMeta
@@ -50,3 +85,7 @@ class Handlers:
     @classmethod
     def addHandler(cls, handler ):
         cls.handlers.insert( 0, handler )
+
+if __name__ == "__main__":
+    mgr = ServiceManager()
+    pass

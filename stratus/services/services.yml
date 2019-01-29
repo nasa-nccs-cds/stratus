@@ -1,4 +1,4 @@
-services
+services:
   - name: hpda-rest
     type: rest
     server: 127.0.0.1
