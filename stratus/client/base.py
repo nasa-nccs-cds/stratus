@@ -1,15 +1,33 @@
-from pyswagger import App, Security
-from pyswagger.contrib.client.requests import Client
-from pyswagger.spec.v2_0.objects import Operation
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView
 from flask import Response
+import abc
 
-class ServerProxy:
-    def __init__(self, openapi_spec: str ):
-        self.app = App._create_( openapi_spec )
-        self.client = Client()
+class StratusClient:
+    __metaclass__ = abc.ABCMeta
 
-    def request(self, method: str, **kwargs ) -> Dict:
-        op: Operation = self.app.op[ method ]
-        response = self.client.request( op(**kwargs) )
-        return response.data
+    def __init__( self, api: str, **kwargs ):
+        self.api = api
+        self.parms = kwargs
+        self.init()
+
+    @abc.abstractmethod
+    def request(self, api: str, epp: str, req: Dict, **kwargs ) -> Dict: pass
+
+    @abc.abstractmethod
+    def handles(self, api: str, epp: str, **kwargs ) -> Dict: pass
+
+    @abc.abstractmethod
+    def stat(self, id: str, **kwargs ) -> Dict: pass
+
+    @abc.abstractmethod
+    def kill(self, id: str, **kwargs ) -> Dict: pass
+
+    def init( self ) -> Dict: pass
+
+    def __getitem__( self, key: str ) -> str:
+        result =  self.parms.get( key, None )
+        assert result is not None, "Missing required parameter in {}: {} ".format( self.__class__.__name__, key )
+        return result
+
+    def parm(self, key: str, default: str ) -> str:
+        return self.parms.get( key, default  )

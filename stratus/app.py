@@ -11,14 +11,12 @@ from celery import Celery
 
 class StratusResolver(Resolver):
 
-    def __init__(self, default_handler_package: str  ):
+    def __init__(self, api: str  ):
         Resolver.__init__( self, self.function_resolver )
-        self.default_handler_package = default_handler_package
+        self.api = api
 
     def resolve_operation_id(self, operation: AbstractOperation) -> str:
-        operation_id = operation.operation_id
-        router_controller = operation.router_controller if operation.router_controller else self.default_handler_package
-        return '{}.{}'.format(router_controller, operation_id)
+        return '{}:{}'.format( self.api, operation.operation_id )
 
     def function_resolver( self, operation_id: str ) :
         return partial( Handlers.processRequest, operation_id )
@@ -39,13 +37,12 @@ class StratusApp:
         self.app.app.config.update( flask_parms )
         self.parms = config_file.get_map('stratus')
         api = self.getParameter( 'API' )
-        endpoint = self.getParameter( 'ENDPOINT' )
         handler = self.getParameter( 'HANDLER' )
         celery_parms = config_file.get_map('celery')
         self.app.app.config.update( celery_parms )
         self.celery = self.make_celery( self.app.app )
         self.db = SQLAlchemy( self.app.app )
-        self.app.add_api( api + ".yaml", resolver=StratusResolver( endpoint ) )
+        self.app.add_api( api + ".yaml", resolver=StratusResolver( api ) )
 
     def run(self):
         port = self.getParameter( 'PORT', 5000 )
