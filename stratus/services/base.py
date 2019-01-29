@@ -1,4 +1,12 @@
-import string, random, abc
+import string, random, abc, os
+
+
+class ServiceManager:
+    HERE = os.path.dirname(__file__)
+    SETTINGS = os.path.join( HERE, 'services.yml')
+
+    def __init__(self):
+        self.services = []
 
 class Handler:
     __metaclass__ = abc.ABCMeta

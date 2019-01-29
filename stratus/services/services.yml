@@ -1,0 +1,13 @@
+services
+  - name: hpda-rest
+    type: rest
+    server: 127.0.0.1
+    port: 5000
+    api: hpda1
+    database: sqlite:////tmp/test.db
+  - name: hpda-celery
+    type: celery
+    queue: queue_1
+    broker: amqp://stratus:xyz123@localhost:5672/celery
+    api: hpda1
+    backend: sqlite:////tmp/test.db

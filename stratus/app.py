@@ -30,7 +30,7 @@ class StratusApp:
         self.app = connexion.FlaskApp("stratus", specification_dir='api/', debug=True )
         self.app.add_error_handler( 500, self.render_server_error )
         self.app.app.register_error_handler( TypeError, self.render_server_error )
-        settings = os.environ.get('STRATUS_SETTINGS', os.environ.get('FLASK_SETTINGS', self.SETTINGS) )
+        settings = os.environ.get( 'STRATUS_SETTINGS', self.SETTINGS )
         config_file = Config(settings)
         flask_parms = config_file.get_map('flask')
         flask_parms[ 'SQLALCHEMY_DATABASE_URI' ] = flask_parms['DATABASE_URI']
