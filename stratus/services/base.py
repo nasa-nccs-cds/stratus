@@ -1,4 +1,4 @@
-import string, random, abc, os, yaml
+import string, random, abc, os, yaml, json
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
 
 class Service:
@@ -16,6 +16,9 @@ class Service:
 
     def parm(self, key: str, default: str ) -> str:
         return self.parms.get( key, default  )
+
+    def __repr__(self):
+        return json.dumps( self.parms )
 
 class ServiceManager:
     HERE = os.path.dirname(__file__)
@@ -42,6 +45,9 @@ class ServiceManager:
         for service in self.services.values():
             if service.type == type and ( (api is None) or (service.api == api) ): return service
         return None
+
+    def __repr__(self):
+        return json.dumps( { key: s.parms for key,s in self.services.items() } )
 
 class Handler:
     __metaclass__ = abc.ABCMeta
@@ -88,4 +94,4 @@ class Handlers:
 
 if __name__ == "__main__":
     mgr = ServiceManager()
-    pass
+    print( str(mgr) )
