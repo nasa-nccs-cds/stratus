@@ -1,7 +1,7 @@
 import networkx as nx
 from sqlalchemy import Column, Integer, String
 from sqlalchemy_json import MutableJson
-from stratus.app import app
+from services.rest.app import app
 from celery.states import SUCCESS
 from celery.result import AsyncResult
 import time

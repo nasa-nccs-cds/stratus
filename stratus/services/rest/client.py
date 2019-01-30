@@ -1,8 +1,8 @@
-from pyswagger import App, Security
+from pyswagger import App
 from pyswagger.contrib.client.requests import Client
 from pyswagger.spec.v2_0.objects import Operation
-from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView
-from stratus.client.base import StratusClient
+from typing import Dict
+from services.client import StratusClient
 
 class RestClient(StratusClient):
 

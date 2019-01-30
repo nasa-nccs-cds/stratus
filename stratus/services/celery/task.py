@@ -1,13 +1,7 @@
-from celery.backends.database.models import Task as CeleryTask
-import networkx as nx
-from sqlalchemy import Column, Integer, String
-from networkx.algorithms.dag import is_directed_acyclic_graph
-from sqlalchemy_json import MutableJson
-from stratus.dbase.models import Workflow, Task
-from stratus.app import app
+from services.celery.models import Workflow, Task
+from services.rest.app import app
 from celery.states import SUCCESS
-from celery.result import AsyncResult
-import time
+
 
 @app.app.task(bind=True)
 def run( self, workflow_id, cur_task_id=None ):
