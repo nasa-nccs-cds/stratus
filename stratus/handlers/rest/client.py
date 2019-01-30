@@ -2,7 +2,7 @@ from pyswagger import App
 from pyswagger.contrib.client.requests import Client
 from pyswagger.spec.v2_0.objects import Operation
 from typing import Dict
-from services.client import StratusClient
+from ..client import StratusClient
 
 class RestClient(StratusClient):
 

@@ -26,3 +26,5 @@ def run( self, workflow_id, cur_task_id=None ):
     for task_id in next_task_ids:
         run.apply_async( args=(workflow_id, task_id,), queue=self.QUEUE_NAME )
 
+
+

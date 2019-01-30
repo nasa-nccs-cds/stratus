@@ -1,4 +1,4 @@
-from services.rest.client import RestClient
+from stratus.handlers.rest.client import RestClient
 
 server = RestClient( 'hpda1', server='127.0.0.1', port=5000 )
 

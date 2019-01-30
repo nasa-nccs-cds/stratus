@@ -1,13 +1,14 @@
 import string, random, abc, os, yaml, json
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
+from stratus.handlers.client import StratusClient, ClientFactory
 
-class Service:
+class Handler:
 
     def __init__(self, **kwargs):
         self.parms = kwargs
         self.name = self['name']
         self.type = self['type']
-        self.client = None
+        self._client = None
 
     def __getitem__( self, key: str ) -> str:
         result =  self.parms.get( key, None )
@@ -17,41 +18,45 @@ class Service:
     def parm(self, key: str, default: str ) -> str:
         return self.parms.get( key, default  )
 
-    def client(self):
-        if self.client is None:
-            self.client = ClientManager.getClient( self.type, **self.parms )
-        return self.client
+    @property
+    def client(self) -> StratusClient:
+        if self._client is None:
+            self._client = ClientFactory.getClient(self.type, **self.parms)
+        return self._client
 
     def __repr__(self):
         return json.dumps( self.parms )
 
-class ServiceManager:
+class Handlers:
     HERE = os.path.dirname(__file__)
-    SPEC_FILE = os.path.join( HERE, 'services.yml')
+    SPEC_FILE = os.path.join( HERE, 'handlers.yml')
 
     def __init__(self):
-        self._services: Dict[str,Service] = {}
+        self._handlers: Dict[str, Handler] = {}
         spec = self.load_spec()
         for service_spec in spec['services']:
-            service = Service( **service_spec )
-            self._services[ service.name] = service
+            service = Handler(**service_spec)
+            self._handlers[ service.name] = service
 
     def load_spec(self):
         with open( self.SPEC_FILE, 'r') as stream:
             data_loaded = yaml.load(stream)
         return data_loaded
 
-    def __getitem__( self, key: str ) -> Service:
-        result =  self._services.get(key, None)
-        assert result is not None, "Attempt to access unknown service in ServiceManager: {} ".format( key )
+    def __getitem__( self, key: str ) -> Handler:
+        result =  self._handlers.get(key, None)
+        assert result is not None, "Attempt to access unknown handler in Handlers: {} ".format( key )
         return result
 
+    def getClients( self, api, epa, **kwargs ) -> List[StratusClient]:
+        return [service.client for service in self._handlers.values() if service.client.handles(api, epa, **kwargs)]
+
     @property
-    def services(self) -> Dict[str,Service]:
-        return self._services
+    def available(self) -> Dict[str, Handler]:
+        return self._handlers
 
     def __repr__(self):
-        return json.dumps({key: s.parms for key,s in self._services.items()})
+        return json.dumps({key: s.parms for key,s in self._handlers.items()})
 
 # class Handler:
 #     __metaclass__ = abc.ABCMeta
@@ -97,5 +102,5 @@ class ServiceManager:
 #         cls.handlers.insert( 0, handler )
 
 if __name__ == "__main__":
-    mgr = ServiceManager()
+    mgr = Handlers()
     print( str(mgr) )

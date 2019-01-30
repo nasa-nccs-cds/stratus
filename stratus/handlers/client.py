@@ -50,7 +50,7 @@ class StratusClient:
         return self.parms.get( key, default  )
 
 
-class ClientManager:
+class ClientFactory:
 
     def getClient( type: str, **kwargs ) -> StratusClient:
         pass
