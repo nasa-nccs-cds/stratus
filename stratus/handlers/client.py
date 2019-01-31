@@ -1,13 +1,15 @@
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
+import inspect, stratus.handlers
 import abc, re
+import functools
+import importlib
 
 class EndpointSpec:
-    def __init__(self, epaSpec: str, apiSpec: str ):
+    def __init__(self, epaSpec: str ):
         self._epaSpec = epaSpec
-        self._apiSpec = apiSpec
 
-    def handles( self, api: str, epa: str, **kwargs ) -> bool:
-        return ( re.match( self._epaSpec, epa ) is not None ) and ( re.match( self._apiSpec, api ) is not None )
+    def handles( self, epa: str, **kwargs ) -> bool:
+        return ( re.match( self._epaSpec, epa ) is not None )
 
 class StratusClient:
     __metaclass__ = abc.ABCMeta
@@ -15,31 +17,20 @@ class StratusClient:
     def __init__( self, type: str, **kwargs ):
         self.type = type
         self.parms = kwargs
-        self.endpointSpecs: List[EndpointSpec] = [ EndpointSpec( epaSpec, apiSpec ) for (epaSpec,apiSpec)  in self.getEndpointSpecs( ) ]
         self.init()
+        self.endpointSpecs: List[EndpointSpec] = [ EndpointSpec( epaSpec ) for epaSpec  in self.request( "epas" )["epas"] ]
 
     @abc.abstractmethod
-    def request(self, api: str, req: Dict, **kwargs ) -> Dict: pass
+    def request(self, epa: str, **kwargs ) -> Dict: pass
 
     @abc.abstractmethod
-    def handles(self, api: str, epa: str, **kwargs ) -> bool:
+    def handles(self, epa: str, **kwargs ) -> bool:
         for endpointSpec in self.endpointSpecs:
-            if endpointSpec.handles( api, epa, **kwargs ): return True
+            if endpointSpec.handles( epa, **kwargs ): return True
         return False
 
     @abc.abstractmethod
-    def getEndpointSpecs(self, **kwargs ) -> List[Tuple[str,str]]: pass
-
-    @abc.abstractmethod
-    def stat(self, id: str, **kwargs ) -> Dict: pass
-
-    @abc.abstractmethod
-    def health(self, id: str, **kwargs ) -> Dict: pass
-
-    @abc.abstractmethod
-    def kill(self, id: str, **kwargs ) -> Dict: pass
-
-    def init( self ) -> Dict: pass
+    def init( self ): pass
 
     def __getitem__( self, key: str ) -> str:
         result =  self.parms.get( key, None )
@@ -53,4 +44,11 @@ class StratusClient:
 class ClientFactory:
 
     def getClient( type: str, **kwargs ) -> StratusClient:
-        pass
+        if type == "openapi": pass
+        return None
+
+
+if __name__ == "__main__":
+    members = inspect.getmembers(stratus.handlers, inspect.ismodule)
+    module = importlib.import_module("stratus.handlers")
+    print( "." )

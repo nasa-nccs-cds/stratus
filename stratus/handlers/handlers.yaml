@@ -1,0 +1,6 @@
+services:
+  - name: hpda-celery
+    type: celery
+    queue: queue_1
+    broker: amqp://stratus:xyz123@localhost:5672/celery
+    api: hpda1

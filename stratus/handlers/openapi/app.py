@@ -1,23 +1,28 @@
 from connexion.resolver import Resolver
 from connexion.operations import AbstractOperation
+from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
+from stratus.handlers.client import StratusClient
 import os, traceback
 from flask import Flask, Response
 import connexion, json, logging
-from stratus.handlers.base import Handlers
 from functools import partial
 from stratus.util.config import Config, StratusLogger
 from flask_sqlalchemy import SQLAlchemy
 
 class StratusResolver(Resolver):
 
-    def __init__(self  ):
+    def __init__(self, api: str  ):
         Resolver.__init__( self, self.function_resolver )
+        self.api = api
 
     def resolve_operation_id( self, operation: AbstractOperation ) -> str:
-        return '{}:{}'.format( self.api, operation.operation_id )
+        return operation.operation_id
 
     def function_resolver( self, operation_id: str ) :
-        return partial( Handlers.processRequest, operation_id )
+        from stratus.handlers.base import handlers
+        clients: List[StratusClient] = handlers.getClients( operation_id )
+        assert len(clients), "No handlers found for epa: " + operation_id
+        return partial( clients[0].request, operation_id )
 
 class StratusApp:
     HERE = os.path.dirname(__file__)
@@ -34,9 +39,9 @@ class StratusApp:
         flask_parms[ 'SQLALCHEMY_DATABASE_URI' ] = flask_parms['DATABASE_URI']
         self.app.app.config.update( flask_parms )
         self.parms = config_file.get_map('stratus')
-        rest_api = self.getParameter( 'REST_API' )
+        api = self.getParameter( 'API' )
         self.db = SQLAlchemy( self.app.app )
-        self.app.add_api( rest_api + ".yaml", resolver=StratusResolver() )
+        self.app.add_api( api + ".yaml", resolver=StratusResolver(api) )
 
     def run(self):
         port = self.getParameter( 'PORT', 5000 )

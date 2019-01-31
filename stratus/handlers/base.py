@@ -21,7 +21,7 @@ class Handler:
     @property
     def client(self) -> StratusClient:
         if self._client is None:
-            self._client = ClientFactory.getClient(self.type, **self.parms)
+            self._client = ClientFactory.getClient(**self.parms)
         return self._client
 
     def __repr__(self):
@@ -29,7 +29,7 @@ class Handler:
 
 class Handlers:
     HERE = os.path.dirname(__file__)
-    SPEC_FILE = os.path.join( HERE, 'handlers.yml')
+    SPEC_FILE = os.path.join( HERE, 'handlers.yaml')
 
     def __init__(self):
         self._handlers: Dict[str, Handler] = {}
@@ -48,8 +48,8 @@ class Handlers:
         assert result is not None, "Attempt to access unknown handler in Handlers: {} ".format( key )
         return result
 
-    def getClients( self, api, epa, **kwargs ) -> List[StratusClient]:
-        return [service.client for service in self._handlers.values() if service.client.handles(api, epa, **kwargs)]
+    def getClients( self, epa, **kwargs ) -> List[StratusClient]:
+        return [service.client for service in self._handlers.values() if service.client.handles( epa, **kwargs)]
 
     @property
     def available(self) -> Dict[str, Handler]:
@@ -57,6 +57,8 @@ class Handlers:
 
     def __repr__(self):
         return json.dumps({key: s.parms for key,s in self._handlers.items()})
+
+handlers = Handlers()
 
 # class Handler:
 #     __metaclass__ = abc.ABCMeta
