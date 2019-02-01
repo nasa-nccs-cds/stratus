@@ -30,7 +30,7 @@ class StratusApp:
 
     def __init__(self):
         self.logger = StratusLogger.getLogger()
-        self.app = connexion.FlaskApp("stratus", specification_dir='handlers/rest/api/', debug=True )
+        self.app = connexion.FlaskApp("stratus", specification_dir='handlers/openapi/api/', debug=True )
         self.app.add_error_handler( 500, self.render_server_error )
         self.app.app.register_error_handler( TypeError, self.render_server_error )
         settings = os.environ.get( 'STRATUS_SETTINGS', self.SETTINGS )

@@ -1,4 +1,4 @@
-from services.client import StratusClient
+from stratus.handlers.client import StratusClient
 
 class DirectClient(StratusClient):
 

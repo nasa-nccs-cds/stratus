@@ -1,6 +1,6 @@
-from stratus.handlers.rest.client import RestClient
+from stratus.handlers.openapi.client import OpenApiClient
 
-server = RestClient( 'hpda1', server='127.0.0.1', port=5000, api='hpda1' )
+server = OpenApiClient( 'hpda1', server='127.0.0.1', port=5000, api='hpda1' )
 
 variables=[ dict( name='tas:v0', uri='collection://merra2')  ]
 bounds = [ dict( axis='lat', start=-50, end=50, crs='values' ) ]

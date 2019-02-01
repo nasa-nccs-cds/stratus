@@ -1,14 +1,21 @@
 import string, random, abc, os, yaml, json
-from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
-from stratus.handlers.client import StratusClient, ClientFactory
+from typing import List, Dict, Any, Sequence, Callable, BinaryIO, TextIO, ValuesView, Optional
+from stratus.handlers.client import StratusClient
+from stratus.util.config import Config, StratusLogger
+import importlib
+
+import abc, sys, pkgutil
 
 class Handler:
+    __metaclass__ = abc.ABCMeta
 
-    def __init__(self, **kwargs):
+    def __init__(self, htype: str, **kwargs):
         self.parms = kwargs
         self.name = self['name']
-        self.type = self['type']
+        self.type: str = htype
         self._client = None
+        htype1 = self.parms.pop("type")
+        assert htype1 == htype, "Sanity check of Handler type failed: {} vs {}".format(htype1,htype)
 
     def __getitem__( self, key: str ) -> str:
         result =  self.parms.get( key, None )
@@ -18,10 +25,13 @@ class Handler:
     def parm(self, key: str, default: str ) -> str:
         return self.parms.get( key, default  )
 
+    @abc.abstractmethod
+    def newClient(self) -> StratusClient: pass
+
     @property
     def client(self) -> StratusClient:
         if self._client is None:
-            self._client = ClientFactory.getClient(**self.parms)
+            self._client = self.newClient()
         return self._client
 
     def __repr__(self):
@@ -32,11 +42,19 @@ class Handlers:
     SPEC_FILE = os.path.join( HERE, 'handlers.yaml')
 
     def __init__(self):
+        self.logger = StratusLogger.getLogger()
         self._handlers: Dict[str, Handler] = {}
+        self._constructors: Dict[str, Callable[[], Handler]] = {}
+        self.addConstructors()
         spec = self.load_spec()
         for service_spec in spec['services']:
-            service = Handler(**service_spec)
-            self._handlers[ service.name] = service
+            try:
+                service = self.getHandler(service_spec)
+                self._handlers[ service.name ] = service
+            except Exception as err:
+                err_msg = "Error registering handler for service {}: {}".format( service_spec.get("name",""), str(err) )
+                print( err_msg )
+                self.logger.error( err_msg )
 
     def load_spec(self):
         with open( self.SPEC_FILE, 'r') as stream:
@@ -57,6 +75,37 @@ class Handlers:
 
     def __repr__(self):
         return json.dumps({key: s.parms for key,s in self._handlers.items()})
+
+    def addConstructor( self, type: str, handler_constructor: Callable[[], Handler]  ):
+        print( "Adding constructor for " + type )
+        self._constructors[type] = handler_constructor
+
+    def getHandler(self, service_spec: Dict[str,str] ) -> Handler:
+        type = service_spec.get('type',None)
+        name = service_spec.get('type', "")
+        if type is None:
+            raise Exception( "Missing required 'type' parameter in service spec'{}'".format(name) )
+        constructor = self._constructors.get( type, None )
+        assert constructor is not None, "No Handler registered of type '{}' for service spec '{}'".format( type, name )
+        return constructor( **service_spec )
+
+    def listPackages(self):
+        package = __import__("stratus")
+        packages = []
+        for loader, module_name, is_pkg in pkgutil.walk_packages(package.__path__, package.__name__ + '.'):
+            if is_pkg: packages.append(module_name)
+        return packages
+
+    def addConstructors(self):
+        packageList = self.listPackages()
+        for package_name in packageList:
+            try:
+                module = importlib.import_module(package_name + ".base")
+                constructor = getattr(module, "ServiceHandler")
+                type = package_name.split(".")[-1]
+                self.addConstructor( type, constructor )
+            except Exception as err:
+                self.logger.warn( "Unable to register constructor for {}: {} ({})".format( package_name, str(err), err.__class__.__name__ ) )
 
 handlers = Handlers()
 

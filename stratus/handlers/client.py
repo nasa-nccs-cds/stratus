@@ -41,14 +41,3 @@ class StratusClient:
         return self.parms.get( key, default  )
 
 
-class ClientFactory:
-
-    def getClient( type: str, **kwargs ) -> StratusClient:
-        if type == "openapi": pass
-        return None
-
-
-if __name__ == "__main__":
-    members = inspect.getmembers(stratus.handlers, inspect.ismodule)
-    module = importlib.import_module("stratus.handlers")
-    print( "." )
