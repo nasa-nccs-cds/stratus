@@ -30,23 +30,24 @@ class StratusApp:
 
     def __init__(self):
         self.logger = StratusLogger.getLogger()
-        self.app = connexion.FlaskApp("stratus", specification_dir='handlers/openapi/api/', debug=True )
+        self.app = connexion.FlaskApp("stratus.handlers.openapi", specification_dir='api/', debug=True )
         self.app.add_error_handler( 500, self.render_server_error )
         self.app.app.register_error_handler( TypeError, self.render_server_error )
         settings = os.environ.get( 'STRATUS_SETTINGS', self.SETTINGS )
         config_file = Config(settings)
-        flask_parms = config_file.get_map('flask')
-        flask_parms[ 'SQLALCHEMY_DATABASE_URI' ] = flask_parms['DATABASE_URI']
-        self.app.app.config.update( flask_parms )
+        self.flask_parms = config_file.get_map('flask')
+        self.flask_parms[ 'SQLALCHEMY_DATABASE_URI' ] = self.flask_parms['DATABASE_URI']
+        self.app.app.config.update( self.flask_parms )
         self.parms = config_file.get_map('stratus')
         api = self.getParameter( 'API' )
         self.db = SQLAlchemy( self.app.app )
         self.app.add_api( api + ".yaml", resolver=StratusResolver(api) )
 
     def run(self):
-        port = self.getParameter( 'PORT', 5000 )
+        port = self.flask_parms.get( 'PORT', 5000 )
+        host = self.flask_parms.get('HOST', "127.0.0.1" )
         self.db.create_all( )
-        return self.app.run( int( port ) )
+        return self.app.run( port=int( port ), host=host, debug=False )
 
     def getParameter(self, name: str, default = None ) -> str:
         parm = self.parms.get( name, default )

@@ -18,6 +18,24 @@ produces:
   - application/json
 paths:
   /exe:
+    get:
+      operationId: stat
+      description: Returns status information on existing analytics request
+      parameters:
+        - name: id
+          in: query
+          description: ID of existing analytics request
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Status of analytic operation
+          schema:
+            $ref: '#/definitions/Status'
+        default:
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/Error'
     post:
       description: Executes an analytics request
       operationId: exe
@@ -37,6 +55,55 @@ paths:
           description: unexpected error
           schema:
             $ref: '#/definitions/Error'
+    delete:
+      description: Kills a running analytics request
+      operationId: kill
+      parameters:
+        - name: id
+          in: query
+          description: ID of request to kill
+          required: true
+          type: string
+      responses:
+        "200":
+          description: request killed
+          schema:
+            $ref: '#/definitions/Status'
+        default:
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+
+  /health:
+    get:
+      operationId: health
+      description: Returns server health information
+      responses:
+        "200":
+          description: Status of analytic operation
+          schema:
+            $ref: '#/definitions/Health'
+        default:
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+
+  /epas:
+    get:
+      operationId: epas
+      description: Returns end point addresses handled by this service
+      responses:
+        "200":
+          description: List of endpoint address specs
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/EPASpec'
+        default:
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+
 
 definitions:
 
@@ -144,3 +211,22 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/Variable'
+
+  EPASpec:
+    required:
+    - epa
+    - api
+    properties:
+      epa:
+        type: string
+      api:
+        type: string
+
+  Health:
+    required:
+    - status
+    properties:
+      status:
+        type: string
+
+
