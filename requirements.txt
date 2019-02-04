@@ -7,3 +7,4 @@ networkx
 celery
 sqlalchemy_json
 flask_sqlalchemy
+six

@@ -19,7 +19,7 @@ class StratusResolver(Resolver):
         return operation.operation_id
 
     def function_resolver( self, operation_id: str ) :
-        from stratus.handlers.base import handlers
+        from stratus.handlers.manager import handlers
         clients: List[StratusClient] = handlers.getClients( operation_id )
         assert len(clients), "No handlers found for epa: " + operation_id
         return partial( clients[0].request, operation_id )

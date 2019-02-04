@@ -10,4 +10,4 @@ class ServiceHandler( Handler ):
         super(ServiceHandler, self).__init__( htype, **kwargs )
 
     def newClient(self) -> StratusClient:
-        return OpenApiClient( self.type, **self.parms )
+        return OpenApiClient( **self.parms )

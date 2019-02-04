@@ -19,19 +19,18 @@ class StratusClient:
         self.parms = kwargs
         self.init()
         endPointData = self.request( "epas" )
-        self.endpointSpecs: List[EndpointSpec] = [ EndpointSpec( epaSpec ) for epaSpec  in endPointData["epa"] ]
+        self.endpointSpecs: List[EndpointSpec] = [ EndpointSpec( epaSpec ) for epaSpec  in endPointData["epas"] ]
+
+    @abc.abstractmethod
+    def init( self ): pass
 
     @abc.abstractmethod
     def request(self, epa: str, **kwargs ) -> Dict: pass
 
-    @abc.abstractmethod
     def handles(self, epa: str, **kwargs ) -> bool:
         for endpointSpec in self.endpointSpecs:
             if endpointSpec.handles( epa, **kwargs ): return True
         return False
-
-    @abc.abstractmethod
-    def init( self ): pass
 
     def __getitem__( self, key: str ) -> str:
         result =  self.parms.get( key, None )

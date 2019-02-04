@@ -6,6 +6,9 @@ from stratus.handlers.client import StratusClient
 
 class OpenApiClient(StratusClient):
 
+    def __init__( self, **kwargs ):
+        super(OpenApiClient, self).__init__( "openapi", **kwargs )
+
     def request(self, epa: str, **kwargs) -> Dict:
         op: Operation = self.app.op[ epa ]
         response = self.client.request( op(**kwargs) )

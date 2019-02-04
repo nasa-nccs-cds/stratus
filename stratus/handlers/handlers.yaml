@@ -1,7 +1,5 @@
 services:
-  - name: hpda-rest
-    type: openapi
-    server: 127.0.0.1
-    port: 5000
-    api: hpda1
-    database: sqlite:////tmp/test.db
+  - name: endpoint-test
+    type: endpoint
+    module: stratus.handlers.endpoint.test.test1
+    class: TestEndpoint1
