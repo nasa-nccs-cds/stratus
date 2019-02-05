@@ -30,6 +30,7 @@ class Handler:
     def client(self) -> StratusClient:
         if self._client is None:
             self._client = self.newClient()
+            self._client.init()
         return self._client
 
     def __repr__(self):

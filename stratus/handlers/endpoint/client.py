@@ -7,6 +7,7 @@ class DirectClient(StratusClient):
     def __init__( self, **kwargs ):
         super(DirectClient, self).__init__( "endpoint", **kwargs )
         self.endpoint = self.instantiateEndpoint()
+        self.endpoint.init()
 
     def instantiateEndpoint( self ):
         module_name = self["module"]
@@ -21,4 +22,3 @@ class DirectClient(StratusClient):
         else:
             return self.endpoint.request(epa, **kwargs )
 
-    def init( self ): self.endpoint.init()

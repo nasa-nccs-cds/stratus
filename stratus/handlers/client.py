@@ -17,12 +17,10 @@ class StratusClient:
     def __init__( self, type: str, **kwargs ):
         self.type = type
         self.parms = kwargs
-        self.init()
+
+    def init( self ):
         endPointData = self.request( "epas" )
         self.endpointSpecs: List[EndpointSpec] = [ EndpointSpec( epaSpec ) for epaSpec  in endPointData["epas"] ]
-
-    @abc.abstractmethod
-    def init( self ): pass
 
     @abc.abstractmethod
     def request(self, epa: str, **kwargs ) -> Dict: pass

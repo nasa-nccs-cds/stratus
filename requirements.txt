@@ -8,3 +8,9 @@ celery
 sqlalchemy_json
 flask_sqlalchemy
 six
+SQLAlchemy>=0.8.0
+clickclick>=1.2
+inflection>=0.3.1
+jsonschema<3.0.0,>=2.5.1
+openapi-spec-validator>=0.2.4
+PyYAML>=3.11

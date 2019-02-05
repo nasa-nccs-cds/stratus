@@ -34,8 +34,13 @@ class Handlers:
         assert result is not None, "Attempt to access unknown handler in Handlers: {} ".format( key )
         return result
 
-    def getClients( self, epa, **kwargs ) -> List[StratusClient]:
+    def getClients( self, epa: str, **kwargs ) -> List[StratusClient]:
         return [service.client for service in self._handlers.values() if service.client.handles( epa, **kwargs)]
+
+    def getClient( self, name: str, **kwargs ) -> StratusClient:
+        service = self._handlers.get( name, None )
+        assert service is not None, "Attempt to access unknown service handler: " + name
+        return service.client
 
     @property
     def available(self) -> Dict[str, Handler]:
@@ -60,6 +65,7 @@ class Handlers:
 
     def listPackages(self):
         package = __import__("stratus")
+        import pkgutil
         packages = []
         for loader, module_name, is_pkg in pkgutil.walk_packages(package.__path__, package.__name__ + '.'):
             if is_pkg: packages.append(module_name)
