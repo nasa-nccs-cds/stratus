@@ -21,9 +21,10 @@ class StratusClient:
     def init( self ):
         endPointData = self.request( "epas" )
         self.endpointSpecs: List[EndpointSpec] = [ EndpointSpec( epaSpec ) for epaSpec  in endPointData["epas"] ]
+        print( "$" )
 
     @abc.abstractmethod
-    def request(self, epa: str, **kwargs ) -> Dict: pass
+    def request(self, task: str, **kwargs ) -> Dict: pass
 
     def handles(self, epa: str, **kwargs ) -> bool:
         for endpointSpec in self.endpointSpecs:

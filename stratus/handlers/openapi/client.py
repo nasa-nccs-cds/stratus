@@ -9,8 +9,8 @@ class OpenApiClient(StratusClient):
     def __init__( self, **kwargs ):
         super(OpenApiClient, self).__init__( "openapi", **kwargs )
 
-    def request(self, epa: str, **kwargs) -> Dict:
-        op: Operation = self.app.op[ epa ]
+    def request(self, task: str, **kwargs) -> Dict:
+        op: Operation = self.app.op[ task ]
         response = self.client.request( op(**kwargs) )
         return response.data
 

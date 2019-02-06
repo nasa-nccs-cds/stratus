@@ -18,7 +18,7 @@ class DirectClient(StratusClient):
 
     def request(self, epa: str, **kwargs ) -> Dict:
         if epa == "epas":
-            return self.endpoint.epas()
+            return dict( epas=self.endpoint.epas() )
         else:
             return self.endpoint.request(epa, **kwargs )
 

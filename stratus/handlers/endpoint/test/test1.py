@@ -9,7 +9,7 @@ class TestEndpoint1(Endpoint):
         super(TestEndpoint1, self).__init__( **kwargs )
 
     def request(cls, epa: str, **kwargs ) -> Dict:
-        return dict( result="Hello from test1!" )
+        return dict( result=kwargs )
 
     def epas( cls ) -> List[str]:
         return [ "hpda.test1" ]
