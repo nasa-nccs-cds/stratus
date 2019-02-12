@@ -1,6 +1,6 @@
 import os
 import mimetypes
-import json
+import json, string, random
 from functools import update_wrapper
 import urllib.request
 from datetime import timedelta
@@ -16,6 +16,21 @@ _YAML_TYPES = ('application/x-yaml', 'text/yaml')
 if '.yaml' not in mimetypes.types_map:
     mimetypes.types_map['.yaml'] = 'application/x-yaml'
 
+class UID:
+    ndigits = 6
+
+    @staticmethod
+    def randomId( length: int ) -> str:
+        sample = string.ascii_lowercase+string.digits+string.ascii_uppercase
+        return ''.join(random.choice(sample) for i in range(length))
+
+    def __init__(self, uid = None ):
+        self.uid = uid if uid else self.randomId( UID.ndigits )
+
+    def __add__(self, other: str ):
+        return other if other.endswith(self.uid) else other + "-" + self.uid
+
+    def __str__(self): return self.uid
 
 def error_handling(error):
     if isinstance(error, HTTPException):

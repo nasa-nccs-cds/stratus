@@ -8,6 +8,7 @@ import connexion, json, logging
 from functools import partial
 from stratus.util.config import Config, StratusLogger
 from flask_sqlalchemy import SQLAlchemy
+from stratus.handlers.app import StratusCore
 
 class StratusResolver(Resolver):
 
@@ -19,26 +20,21 @@ class StratusResolver(Resolver):
         return operation.operation_id
 
     def function_resolver( self, operation_id: str ) :
-        from stratus.handlers.manager import handlers
-        clients: List[StratusClient] = handlers.getClients( operation_id )
+        clients = StratusCore.getClients( operation_id )
         assert len(clients), "No handlers found for epa: " + operation_id
         return partial( clients[0].request, operation_id )
 
-class StratusApp:
-    HERE = os.path.dirname(__file__)
-    SETTINGS = os.path.join( HERE, 'settings.ini')
+class StratusApp(StratusCore):
 
     def __init__(self):
-        self.logger = StratusLogger.getLogger()
+        StratusCore.__init__(self)
         self.app = connexion.FlaskApp("stratus.handlers.openapi", specification_dir='api/', debug=True )
         self.app.add_error_handler( 500, self.render_server_error )
         self.app.app.register_error_handler( TypeError, self.render_server_error )
-        settings = os.environ.get( 'STRATUS_SETTINGS', self.SETTINGS )
-        config_file = Config(settings)
-        self.flask_parms = config_file.get_map('flask')
+        self.flask_parms = self.getConfigParms('flask')
         self.flask_parms[ 'SQLALCHEMY_DATABASE_URI' ] = self.flask_parms['DATABASE_URI']
         self.app.app.config.update( self.flask_parms )
-        self.parms = config_file.get_map('stratus')
+        self.parms = self.getConfigParms('stratus')
         api = self.getParameter( 'API' )
         self.db = SQLAlchemy( self.app.app )
         self.app.add_api( api + ".yaml", resolver=StratusResolver(api) )

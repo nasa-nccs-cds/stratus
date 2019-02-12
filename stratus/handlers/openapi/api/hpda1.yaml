@@ -173,12 +173,12 @@ definitions:
 
   Operation:
     required:
-    - name
+    - epa
     - input
     properties:
       input:
         type: string
-      name:
+      epa:
         type: string
       axes:
         type: string

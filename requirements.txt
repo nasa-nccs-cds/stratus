@@ -8,6 +8,8 @@ celery
 sqlalchemy_json
 flask_sqlalchemy
 six
+pyzmq
+sortedcontainers
 SQLAlchemy>=0.8.0
 clickclick>=1.2
 inflection>=0.3.1
