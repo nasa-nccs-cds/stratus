@@ -2,17 +2,13 @@ import json, string, random, abc
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
 from stratus.handlers.endpoint.base import Endpoint
 
-class TestEndpoint1(Endpoint):
-    __metaclass__ = abc.ABCMeta
+class TestEndpoint(Endpoint):
 
     def __init__( self, **kwargs ):
-        super(TestEndpoint1, self).__init__( **kwargs )
+        super(TestEndpoint, self).__init__( **kwargs )
 
     def request(cls, epa: str, **kwargs ) -> Dict:
         return dict( result=kwargs )
-
-    def epas( cls ) -> List[str]:
-        return [ "hpda.test1" ]
 
     def init( cls ): pass
 
@@ -21,3 +17,23 @@ class TestEndpoint1(Endpoint):
         if create: cls.current_exe_id = cls.randomStr(6)
         elif not  cls.current_exe_id: stat = "undefined"
         return  { "id": cls.current_exe_id, "status": stat }
+
+class TestEndpoint1(TestEndpoint):
+
+    def epas( cls ) -> List[str]:
+        return [ "A", "B", "C", "D" ]
+
+class TestEndpoint2(TestEndpoint):
+
+    def epas( cls ) -> List[str]:
+        return [ "C", "D", "E", "F" ]
+
+class TestEndpoint3(TestEndpoint):
+
+    def epas( cls ) -> List[str]:
+        return [ "G", "H", "I", "J" ]
+
+class TestEndpoint4(TestEndpoint):
+
+    def epas( cls ) -> List[str]:
+        return [ "A", "E", "J", "X" ]

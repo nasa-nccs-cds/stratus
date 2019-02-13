@@ -6,19 +6,21 @@ import zmq, traceback, time, logging, xml, socket
 from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
 from .base import Responder, ErrorReport, DataPacket, Message, Response
+from stratus.handlers.manager import handlers
 from enum import Enum
 MB = 1024 * 1024
 
 class StratusApp(StratusCore):
 
-    def __init__( self ):
-        StratusCore.__init__(self)
+    def __init__( self, **kwargs ):
+        StratusCore.__init__(self, **kwargs )
         self.logger =  StratusLogger.getLogger()
         self.active = True
+        self.zeromq_parms = self.getConfigParms('flask')
         self.parms = self.getConfigParms('stratus')
-        self.client_address = self.parms["client.address"]
-        self.request_port = self.parms.get( "request_port", 4556 )
-        self.response_port = self.parms.get( "response_port", 4557 )
+        self.client_address = self.zeromq_parms["client.address"]
+        self.request_port = self.zeromq_parms.get( "request_port", 4556 )
+        self.response_port = self.zeromq_parms.get( "response_port", 4557 )
 
         try:
             self.zmqContext: zmq.Context = zmq.Context()
@@ -26,7 +28,6 @@ class StratusApp(StratusCore):
             self.responder = Responder( self.zmqContext, self.client_address, self.response_port )
             self.handlers = {}
             self.initSocket( self.client_address, self.request_port )
-
 
         except Exception as err:
             self.logger.error( "@@Portal:  ------------------------------- StratusApp Init error: {} ------------------------------- ".format( err ) )
@@ -65,7 +66,6 @@ class StratusApp(StratusCore):
         self.logger.debug("Sending header: " + header)
         self.responder.sendDataPacket( DataPacket( clientId, rid, header, data ) )
 
-
     def sendFile( self, clientId: str, jobId: str, name: str, filePath: str, sendData: bool ) -> str:
         self.logger.debug( "@@Portal: Sending file data to client for {}, filePath={}".format( name, filePath ) )
         with open(filePath, mode='rb') as file:
@@ -84,13 +84,6 @@ class StratusApp(StratusCore):
                 traceback.print_exc()
             return file.name
 
-
-    def execUtility( self, utilSpec: Sequence[str] ) -> Message: pass
-    def execute( self, taskSpec: Sequence[str] ) -> Response: pass
-    def shutdown( self ): pass
-    def getCapabilities( self, type: str ) -> Message: pass
-    def describeProcess( self, utilSpec: Sequence[str] ) -> Message: pass
-    def getVariableSpec( self, collId: str, varId: str ) -> Message: pass
 
     def sendResponseMessage( self, msg: Response ) -> str:
         request_args = [ msg.id(), msg.message() ]
@@ -119,39 +112,39 @@ class StratusApp(StratusCore):
             return "UNKNOWN"
 
     def run(self):
+
         while self.active:
             self.logger.info(  "@@Portal:Listening for requests on port: {}, host: {}".format( self.request_port, self.getHostInfo() ) )
-            request_header = str( self.request_socket.recv(0) ).strip().strip("'")
+            request_header = self.request_socket.recv_string().strip().strip("'")
             parts = request_header.split("!")
-            self.responder.registerClient( parts[0] )
+            clientId = parts[0]
+            rType = parts[1]
+            self.responder.registerClient( clientId )
             try:
                 timeStamp = datetime.datetime.now().strftime("MM/dd HH:mm:ss")
-                self.logger.info( "@@Portal:  ###  Processing {} request: {} @({})".format( parts[1], request_header, timeStamp) )
-                if parts[1] == "execute":
-                    self.sendResponseMessage( self.execute(parts) )
-                elif parts[1] == "util":
+                self.logger.info( "@@Portal:  ###  Processing {} request @({})".format( rType, timeStamp) )
+                if rType == "epas":
+                    self.sendResponseMessage( Message( clientId, "epas", json.dumps( handlers.getEpas() ) ) )
+                elif rType == "request":
                     if len(parts) <= 2: raise Exception( "Missing parameters to utility request")
-                    self.sendResponseMessage( self.execUtility(parts[2:]) )
-                elif parts[1] == "quit" or parts[1] == "shutdown":
-                    self.sendResponseMessage( Message(parts[0], "quit", "Terminating") )
+                    request = json.loads( parts[2] )
+                    responses = self.processWorkflow(request)
+                    self.sendResponseMessage( Message( clientId, "response", json.dumps(responses) )  )
+                elif rType == "quit" or rType == "shutdown":
+                    self.sendResponseMessage( Message( clientId, "quit", "Terminating") )
                     self.logger.info("@@Portal: Received Shutdown Message")
                     exit(0)
-                elif parts[1].lower() == "getcapabilities":
-                    type = parts[2] if (len(parts) > 2) and len(parts[2].strip()) else "kernels"
-                    self.sendResponseMessage( self.getCapabilities(type) )
-                elif parts[1].lower() == "describeprocess":
-                    self.sendResponseMessage( self.describeProcess(parts) )
                 else:
-                    msg = "@@Portal: Unknown request header type: " + parts[1]
+                    msg = "@@Portal: Unknown request type: " + rType
                     self.logger.info(msg)
-                    self.sendResponseMessage( Message(parts[0], "error", msg) )
+                    self.sendResponseMessage( Message(clientId, "error", msg) )
             except Exception as ex:
                 # clientId = elem( self.taskSpec, 0 )
                 # runargs = self.getRunArgs( self.taskSpec )
                 # jobId = runargs.getOrElse("jobId", self.randomIds.nextString)
                 self.logger.error( "@@Portal: Execution error: " + str(ex) )
                 traceback.print_exc()
-                self.sendResponseMessage( Message( parts[0], "error", str(ex)) )
+                self.sendResponseMessage( Message( clientId, "error", str(ex)) )
 
         self.logger.info( "@@Portal: EXIT EDASPortal")
 

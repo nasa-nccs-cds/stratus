@@ -1,0 +1,21 @@
+services:
+  - name: test-ep1
+    type: endpoint
+    module: stratus.handlers.endpoint.test
+    class: TestEndpoint1
+    priority: 1.0
+  - name: test-ep2
+    type: endpoint
+    module: stratus.handlers.endpoint.test
+    class: TestEndpoint2
+    priority: 1.0
+  - name: test-ep3
+    type: endpoint
+    module: stratus.handlers.endpoint.test
+    class: TestEndpoint3
+    priority: 1.0
+  - name: test-ep4
+    type: endpoint
+    module: stratus.handlers.endpoint.test
+    class: TestEndpoint4
+    priority: 1.0

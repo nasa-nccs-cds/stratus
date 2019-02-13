@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Opti
 from stratus.util.config import Config, StratusLogger
 from stratus.handlers.client import StratusClient
 from stratus.util.domain import UID
+from stratus.handlers.manager import handlers
 
 class OpSet():
 
@@ -47,10 +48,13 @@ class StratusCore:
     HERE = os.path.dirname(__file__)
     SETTINGS = os.path.join( HERE, 'settings.ini')
 
-    def __init__(self):
+    def __init__(self, **kwargs ):
         self.logger = StratusLogger.getLogger()
-        settings = os.environ.get( 'STRATUS_SETTINGS', self.SETTINGS )
+        settings = kwargs.get( "settings", os.environ.get( 'STRATUS_SETTINGS', self.SETTINGS ) )
         self.config = Config(settings)
+        self.parms = self.getConfigParms('stratus')
+        handlersSpec = self["HANDLERS"]
+        handlers.init( handlersSpec )
 
     def getConfigParms(self, module: str ) -> Dict:
         return self.config.get_map( module )
@@ -82,9 +86,15 @@ class StratusCore:
 
         return responses
 
+    def parm(self, name: str, default = None ) -> str:
+        parm = self.parms.get( name, default )
+        if parm is None: raise Exception( "Missing required stratus parameter in settings.ini: " + name )
+        return parm
 
-
-
+    def __getitem__( self, key: str ) -> str:
+        result =  self.parms.get( key, None )
+        assert result is not None, "Missing required parameter in {}: {} ".format( self.__class__.__name__, key )
+        return result
 
 if __name__ == "__main__":
 #        sCore = StratusCore()

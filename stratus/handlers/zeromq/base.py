@@ -62,13 +62,13 @@ class DataPacket(Response):
         return ( self._data is not None ) and ( len( self._data ) > 0 )
 
     def getTransferHeader(self) -> bytes:
-        return bytearray( self.clientId + ":" + self._body, 'utf-8' )
+        return b"%s" % self._body
 
     def getHeaderString(self) -> str:
-        return self.clientId + ":" + self._body
+        return self._body
 
     def getTransferData(self) -> bytes:
-        return bytearray( self.clientId, 'utf-8' ) + self._data
+        return self._data
 
     def getRawData(self) -> bytes:
         return self._data
@@ -88,7 +88,7 @@ class Responder:
         self.status_reports: Dict[str,str] = {}
         self.clients: Set[str] = set()
         self.client_address = _client_address
-        self.initSocket()
+        self.socket: zmq.Socket = self.initSocket()
 
     def registerClient( self, client: str ):
         self.clients.add(client)
@@ -115,30 +115,26 @@ class Responder:
             self.logger.error( "@@R: Error, unrecognized response type: " + r.rtype )
             self.doSendErrorReport( ErrorReport( r.clientId, r.responseId, "Error, unrecognized response type: " + r.rtype ) )
 
-    def doSendMessage(self, msg: Response) -> str:
-        self.logger.info("@@R: Sending MESSAGE: " + str(msg.message()))
-        request_args = [ msg.id(), "response", msg.message() ]
-        packaged_msg = "!".join( request_args )
-        self.socket.send( bytearray( packaged_msg, 'utf-8' ) )
-        return packaged_msg
+    def doSendMessage(self, msg: Response, type: str = "response") -> str:
+        msgStr = str(msg.message())
+        self.logger.info("@@R: Sending {} MESSAGE: {}".format( type, msgStr ) )
+        self.socket.send_multipart( [ b"%s"%msg.clientId, b"%s"%msg.responseId, b"%s"%type, b"%s"%msgStr ] )
+        return msgStr
 
     def doSendErrorReport( self, msg: Response  ):
-        self.logger.info("@@R: Sending ERROR report: " + str(msg.message()))
-        request_args = [ msg.id(), "error", msg.message() ]
-        packaged_msg = "!".join( request_args )
-        self.socket.send( bytearray( packaged_msg, 'utf-8' )  )
-        return packaged_msg
+        return self.doSendMessage( msg, "error")
 
     def doSendDataPacket( self, dataPacket: DataPacket ):
-        header = dataPacket.getTransferHeader()
-        self.socket.send( header )
-        self.logger.info("@@R: Sent data header for " + dataPacket.id() + ": " + dataPacket.getHeaderString())
-        if( dataPacket.hasData() ):
-            bdata: bytes = dataPacket.getRawData()
-            self.socket.send( bdata )
+        multipart_msg = [ b"%s"%dataPacket.clientId, b"%s"%dataPacket.responseId, b"data", dataPacket.getTransferHeader() ]
+        if dataPacket.hasData():
+            bdata: bytes = dataPacket.getTransferData()
+            multipart_msg.append( bdata )
             self.logger.info("@@R: Sent data packet for " + dataPacket.id() + ", data Size: " + str(len(bdata)) )
+            self.logger.info("@@R: Data header: " + + dataPacket.getHeaderString())
         else:
             self.logger.info( "@@R: Sent data header only for " + dataPacket.id() + "---> NO DATA!" )
+
+        self.socket.send_multipart( multipart_msg )
 
     def setExeStatus( self, cId: str, rid: str, status: str ):
         self.status_reports[rid] = status
@@ -156,13 +152,14 @@ class Responder:
                 self.doSendMessage( hb_msg )
             except Exception: pass
 
-    def initSocket(self):
-        self.socket: zmq.Socket   = self.context.socket(zmq.PUSH)
+    def initSocket(self) -> zmq.Socket:
+        socket: zmq.Socket   = self.context.socket(zmq.PUB)
         try:
-            self.socket.bind( "tcp://{}:{}".format( self.client_address, self.response_port ) )
+            socket.bind( "tcp://{}:{}".format( self.client_address, self.response_port ) )
             self.logger.info( "@@R: --> Bound response socket to client at {} on port: {}".format( self.client_address, self.response_port ) )
         except Exception as err:
             self.logger.error( "@@R: Error initializing response socket on port {}: {}".format( self.response_port, err ) )
+        return socket
 
     def close_connection( self ):
         try:

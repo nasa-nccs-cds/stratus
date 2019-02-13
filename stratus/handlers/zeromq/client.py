@@ -66,6 +66,9 @@ class ZMQClient(StratusClient):
             print (err_msg)
             self.shutdown()
 
+    def request(self, epa: str, **kwargs ) -> Dict:
+        return self.sendMessage( epa, json.dumps( kwargs ) )
+
     def log(self, msg: str ):
         self.logger.info( "[P] " + msg )
         print  (msg)
@@ -87,15 +90,12 @@ class ZMQClient(StratusClient):
                 self.response_manager.term()
                 self.response_manager = None
 
-    def sendMessage(self, type: str, mDataList=None):
-        if mDataList is None:
-            mDataList = [""]
-        msgStrs = [ str(mData).replace("'",'"') for mData in mDataList ]
-        self.log( "Sending {0} request {1} on port {2}.".format( type, msgStrs, self.request_port )  )
+    def sendMessage(self, type: str, requestData=""):
+        self.log( "Sending {0} request {1} on port {2}.".format( type, requestData, self.request_port )  )
         try:
-            message = "!".join( [self.clientID,type] + msgStrs )
+            message = "!".join( [ self.clientID, type, requestData ] )
             self.request_socket.send_string( message )
-            response = self.request_socket.recv()
+            response = self.request_socket.recv_string()
         except zmq.error.ZMQError as err:
             self.logger.error( "Error sending message {0} on request socket: {1}".format( message, str(err) ) )
             response = str(err)
@@ -103,9 +103,6 @@ class ZMQClient(StratusClient):
 
     def waitUntilDone(self):
         self.response_manager.join()
-
-    def request(self, epa: str, **kwargs ) -> Dict:
-        return self.sendMessage( epa, [ json.dumps(kwargs) ] )
 
 class ResponseManager(Thread):
 
@@ -144,9 +141,9 @@ class ResponseManager(Thread):
         response_socket = None
         try:
             self.log("Run RM thread")
-            response_socket: zmq.Socket = self.context.socket( zmq.PULL )
+            response_socket: zmq.Socket = self.context.socket( zmq.SUB )
             response_port = ConnectionMode.connectSocket( response_socket, self.host, self.port )
-            response_socket.subscribe( self.clientId )
+            response_socket.subscribe( b"%s" % self.clientId )
             self.log("Connected response socket on port {} with subscription (client) id: '{}'".format( response_port, self.clientId ) )
             while( self.active ):
                 self.processNextResponse( response_socket )
@@ -174,10 +171,6 @@ class ResponseManager(Thread):
         self.logger.info( "[RM] " + msg )
         print(  "[RM] " + msg[0:maxPrintLen] )
 
-
-    #    def getResponse(self, key, default = None ):
-    #       return self.cached_results.get( key, default )
-
     def getItem(self, str_array: Sequence[str], itemIndex: int, default_val="NULL" ) -> str:
         try: return str_array[itemIndex]
         except Exception as err: return default_val
@@ -185,21 +178,22 @@ class ResponseManager(Thread):
     def processNextResponse(self, socket: zmq.Socket ):
         try:
             self.log("Awaiting responses" )
-            response = socket.recv()
-            toks: List[bytearray] = response.split( s2b('!') )
-            rId = b2s( toks[0] )
-            type = b2s( toks[1] )
-            msg = b2s( toks[2] )
+            response = socket.recv_multipart()
+            cId = b2s( response[0] )
+            rId = b2s( response[1] )
+            type = b2s( response[2] )
+            msg = b2s( response[3] )
             self.log("Received response, rid: " + rId + ", type: " + type )
             if type == "array":
                 self.log( "\n\n #### Received array " + rId + ": " + msg )
-                data = socket.recv()
+                data = response[4]
                 array = data # npArray.createInput(msg,data)
                 self.logger.info("Received array: {0}".format(rId))
                 self.cacheArray( rId, array )
             elif type == "file":
+                data = response[4]
                 self.log("\n\n #### Received file " + rId + ": " + msg)
-                filePath = self.saveFile( msg, socket )
+                filePath = self.saveFile( msg, data )
                 self.filePaths[rId] = filePath
                 self.log("Saved file '{0}' for rid {1}".format(filePath,rId))
             elif type == "error":
@@ -224,12 +218,11 @@ class ResponseManager(Thread):
         self.log(" ***->> getFileCacheDir = {0}".format(filePath) )
         return filePath
 
-    def saveFile(self, header: str, socket: zmq.Socket ):
+    def saveFile(self, header: str, data ):
         header_toks = header.split('|')
         id = header_toks[1]
         role = header_toks[2]
         fileName = os.path.basename(header_toks[3])
-        data = socket.recv()
         filePath = os.path.join( self.getFileCacheDir(role), fileName )
         self.log(" %%%% filePath = {0}".format(filePath) )
         with open( filePath, mode='wb') as file:

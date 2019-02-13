@@ -26,15 +26,15 @@ class StratusResolver(Resolver):
 
 class StratusApp(StratusCore):
 
-    def __init__(self):
-        StratusCore.__init__(self)
+    def __init__( self, **kwargs ):
+        StratusCore.__init__( self, **kwargs )
         self.app = connexion.FlaskApp("stratus.handlers.openapi", specification_dir='api/', debug=True )
         self.app.add_error_handler( 500, self.render_server_error )
         self.app.app.register_error_handler( TypeError, self.render_server_error )
         self.flask_parms = self.getConfigParms('flask')
         self.flask_parms[ 'SQLALCHEMY_DATABASE_URI' ] = self.flask_parms['DATABASE_URI']
         self.app.app.config.update( self.flask_parms )
-        self.parms = self.getConfigParms('stratus')
+
         api = self.getParameter( 'API' )
         self.db = SQLAlchemy( self.app.app )
         self.app.add_api( api + ".yaml", resolver=StratusResolver(api) )
@@ -44,11 +44,6 @@ class StratusApp(StratusCore):
         host = self.flask_parms.get('HOST', "127.0.0.1" )
         self.db.create_all( )
         return self.app.run( port=int( port ), host=host, debug=False )
-
-    def getParameter(self, name: str, default = None ) -> str:
-        parm = self.parms.get( name, default )
-        if parm is None: raise Exception( "Missing required stratus parameter in settings.ini: " + name )
-        return parm
 
     @staticmethod
     def render_server_error( ex: Exception ):

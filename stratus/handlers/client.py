@@ -12,6 +12,9 @@ class EndpointSpec:
     def handles( self, epa: str, **kwargs ) -> bool:
         return ( re.match( self._epaSpec, epa ) is not None )
 
+    def __str(self):
+        return self._epaSpec
+
 class StratusClient:
     __metaclass__ = abc.ABCMeta
 
@@ -23,13 +26,17 @@ class StratusClient:
 
     def init( self ):
         endPointData = self.request( "epas" )
-        self.endpointSpecs: List[EndpointSpec] = [ EndpointSpec( epaSpec ) for epaSpec  in endPointData["epas"] ]
+        self._endpointSpecs: List[EndpointSpec] = [EndpointSpec(epaSpec) for epaSpec in endPointData["epas"]]
 
     @abc.abstractmethod
     def request(self, task: str, **kwargs ) -> Dict: pass
 
+    @property
+    def endpointSpecs(self) -> List[str]:
+        return [str(eps) for eps in self._endpointSpecs]
+
     def handles(self, epa: str, **kwargs ) -> bool:
-        for endpointSpec in self.endpointSpecs:
+        for endpointSpec in self._endpointSpecs:
             if endpointSpec.handles( epa, **kwargs ): return True
         return False
 
