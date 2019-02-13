@@ -21,3 +21,4 @@ class OpenApiClient(StratusClient):
         openapi_spec = 'http://{}:{}/{}/swagger.json'.format( self.server, str(self.port), self.api )
         self.app = App._create_( openapi_spec )
         self.client = Client()
+        StratusClient.init( self )

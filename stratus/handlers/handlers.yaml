@@ -3,9 +3,11 @@ services:
     type: endpoint
     module: stratus.handlers.endpoint.test.test1
     class: TestEndpoint1
+    priority: 1.0
   - name: rest-hpda1
     type: openapi
     server: 127.0.0.1
     port: 5000
     api: hpda1
+    priority: 0.5
 

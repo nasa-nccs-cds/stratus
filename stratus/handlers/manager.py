@@ -2,7 +2,7 @@ import string, random, abc, os, yaml, json
 from typing import List, Dict, Any, Sequence, Callable, BinaryIO, TextIO, ValuesView, Optional
 from stratus.handlers.client import StratusClient
 from stratus.util.config import Config, StratusLogger
-from .base import Handler
+from stratus.handlers.base import Handler
 import importlib
 
 class Handlers:
@@ -56,7 +56,7 @@ class Handlers:
 
     def getHandler(self, service_spec: Dict[str,str] ) -> Handler:
         type = service_spec.get('type',None)
-        name = service_spec.get('type', "")
+        name = service_spec.get('name', "")
         if type is None:
             raise Exception( "Missing required 'type' parameter in service spec'{}'".format(name) )
         constructor = self._constructors.get( type, None )

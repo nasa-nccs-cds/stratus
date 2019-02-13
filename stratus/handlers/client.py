@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
 import inspect, stratus.handlers
+from stratus.util.domain import UID
 import abc, re
 import functools
 import importlib
@@ -14,14 +15,15 @@ class EndpointSpec:
 class StratusClient:
     __metaclass__ = abc.ABCMeta
 
-    def __init__( self, type: str, **kwargs ):
-        self.type = type
+    def __init__( self, type: str, name: str, **kwargs ):
+        self.type: str = type
+        self.name: str = kwargs.get("name")
         self.parms = kwargs
+        self.priority: float = float( self.parm( "priority", "0" ) )
 
     def init( self ):
         endPointData = self.request( "epas" )
         self.endpointSpecs: List[EndpointSpec] = [ EndpointSpec( epaSpec ) for epaSpec  in endPointData["epas"] ]
-        print( "$" )
 
     @abc.abstractmethod
     def request(self, task: str, **kwargs ) -> Dict: pass
