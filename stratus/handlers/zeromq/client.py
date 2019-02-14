@@ -45,36 +45,39 @@ class ZMQClient(StratusClient):
 
     def __init__( self, **kwargs ):
         super(ZMQClient, self).__init__( "zeromq", **kwargs )
+        self.active = True
+        self.host_address = self.parm( "host", "127.0.0.1" )
+        self.default_request_port = int( self.parm( "request_port", 4556 ) )
+        self.response_port = int( self.parm( "response_port", 4557 ) )
+        self.clientID = UID.randomId(6)
+        self.logger =  StratusLogger.getLogger()
+
+    def init(self, **kwargs):
         try:
-            self.active = True
-            self.host_address = self.parm( "host", "127.0.0.1" )
-            initial_request_port = int( self.parm( "request_port", 4556 ) )
-            self.response_port = int( self.parm( "response_port", 4557 ) )
-            self.clientID = UID.randomId(6)
-            self.logger =  StratusLogger.getLogger()
             self.context = zmq.Context()
             self.request_socket = self.context.socket(zmq.REQ)
-            self.request_port = ConnectionMode.connectSocket(self.request_socket, self.host_address, initial_request_port )
+            self.request_port = ConnectionMode.connectSocket(self.request_socket, self.host_address, self.default_request_port )
             self.log("[1]Connected request socket to server {0} on port: {1}".format( self.host_address, self.request_port ) )
 
             self.response_manager = ResponseManager(self.context, self.clientID, self.host_address, self.response_port, **kwargs)
             self.response_manager.start()
+            super(ZMQClient, self).init()
 
         except Exception as err:
             err_msg =  "\n-------------------------------\nWorker Init error: {0}\n{1}-------------------------------\n".format(err, traceback.format_exc() )
             self.logger.error(err_msg)
-            print (err_msg)
             self.shutdown()
 
     def request(self, epa: str, **kwargs ) -> Dict:
-        return self.sendMessage( epa, json.dumps( kwargs ) )
+        msg = self.sendMessage( epa, json.dumps( kwargs ) )
+        parts = msg.split("!")
+        return json.loads( parts[1] )
 
     def log(self, msg: str ):
         self.logger.info( "[P] " + msg )
-        print  (msg)
 
     def __del__(self):
-        print(  " Portal client being deleted " )
+        self.log(  " Portal client being deleted " )
         self.shutdown()
 
     def createResponseManager(self) -> "ResponseManager":
@@ -82,7 +85,7 @@ class ZMQClient(StratusClient):
 
     def shutdown(self):
         if self.active:
-            print(  " ############################## Disconnect Portal Client from Server & shutdown Client ##############################"  )
+            self.log(  " ############################## Disconnect Portal Client from Server & shutdown Client ##############################"  )
             self.active = False
             try: self.request_socket.close()
             except Exception: pass
@@ -91,7 +94,7 @@ class ZMQClient(StratusClient):
                 self.response_manager = None
 
     def sendMessage(self, type: str, requestData=""):
-        self.log( "Sending {0} request {1} on port {2}.".format( type, requestData, self.request_port )  )
+        self.log( "Sending {} request {} on port {}.".format( type, requestData, str(self.request_port) )  )
         try:
             message = "!".join( [ self.clientID, type, requestData ] )
             self.request_socket.send_string( message )
@@ -120,7 +123,7 @@ class ResponseManager(Thread):
         self.cached_arrays = {}
         self.filePaths = {}
         self.setDaemon(True)
-        self.cacheDir = self.parms
+        self.cacheDir = kwargs.get( "cacheDir",  os.path.expanduser( "~/.edas/cache") )
         self.log("Created RM, cache dir = " + self.cacheDir )
 
     def cacheResult(self, id: str, result: str ):
@@ -143,12 +146,13 @@ class ResponseManager(Thread):
             self.log("Run RM thread")
             response_socket: zmq.Socket = self.context.socket( zmq.SUB )
             response_port = ConnectionMode.connectSocket( response_socket, self.host, self.port )
-            response_socket.subscribe( b"%s" % self.clientId )
+            response_socket.subscribe( self.clientId.encode('utf-8') )
             self.log("Connected response socket on port {} with subscription (client) id: '{}'".format( response_port, self.clientId ) )
             while( self.active ):
                 self.processNextResponse( response_socket )
 
-        except Exception: pass
+        except Exception as err:
+            self.log( "Error connecting response socket: " + str(err) )
         finally:
             if response_socket: response_socket.close()
 
@@ -169,7 +173,6 @@ class ResponseManager(Thread):
 
     def log(self, msg: str, maxPrintLen = 300 ):
         self.logger.info( "[RM] " + msg )
-        print(  "[RM] " + msg[0:maxPrintLen] )
 
     def getItem(self, str_array: Sequence[str], itemIndex: int, default_val="NULL" ) -> str:
         try: return str_array[itemIndex]
@@ -243,3 +246,9 @@ class ResponseManager(Thread):
         except KeyboardInterrupt:
             self.log("Terminating wait for response")
             return []
+
+if __name__ == "__main__":
+    client = ZMQClient()
+    client.init( )
+    while True:
+        time.sleep(1)

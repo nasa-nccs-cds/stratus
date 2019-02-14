@@ -53,7 +53,7 @@ class ErrorReport(Response):
 
 class DataPacket(Response):
 
-    def __init__( self,  clientId: str,  responseId: str,  header: str, data: bytes = b""  ):
+    def __init__( self,  clientId: str,  responseId: str,  header: str, data: bytes = bytearray(0)  ):
         super(DataPacket, self).__init__( "data", clientId, responseId )
         self._body =  header
         self._data = data
@@ -62,7 +62,7 @@ class DataPacket(Response):
         return ( self._data is not None ) and ( len( self._data ) > 0 )
 
     def getTransferHeader(self) -> bytes:
-        return b"%s" % self._body
+        return self._body.encode('utf-8')
 
     def getHeaderString(self) -> str:
         return self._body
@@ -118,14 +118,14 @@ class Responder:
     def doSendMessage(self, msg: Response, type: str = "response") -> str:
         msgStr = str(msg.message())
         self.logger.info("@@R: Sending {} MESSAGE: {}".format( type, msgStr ) )
-        self.socket.send_multipart( [ b"%s"%msg.clientId, b"%s"%msg.responseId, b"%s"%type, b"%s"%msgStr ] )
+        self.socket.send_multipart( [msg.clientId.encode('utf-8'), msg.responseId.encode('utf-8'), type.encode('utf-8'), msgStr.encode('utf-8')  ] )
         return msgStr
 
     def doSendErrorReport( self, msg: Response  ):
         return self.doSendMessage( msg, "error")
 
     def doSendDataPacket( self, dataPacket: DataPacket ):
-        multipart_msg = [ b"%s"%dataPacket.clientId, b"%s"%dataPacket.responseId, b"data", dataPacket.getTransferHeader() ]
+        multipart_msg = [ dataPacket.clientId.encode('utf-8'), dataPacket.responseId.encode('utf-8'), b"data", dataPacket.getTransferHeader() ]
         if dataPacket.hasData():
             bdata: bytes = dataPacket.getTransferData()
             multipart_msg.append( bdata )
@@ -158,7 +158,8 @@ class Responder:
             socket.bind( "tcp://{}:{}".format( self.client_address, self.response_port ) )
             self.logger.info( "@@R: --> Bound response socket to client at {} on port: {}".format( self.client_address, self.response_port ) )
         except Exception as err:
-            self.logger.error( "@@R: Error initializing response socket on port {}: {}".format( self.response_port, err ) )
+            self.logger.error( "@@R: Error initializing response socket on {}, port {}: {}".format( self.client_address, self.response_port, err ) )
+            self.logger.error(traceback.format_exc())
         return socket
 
     def close_connection( self ):

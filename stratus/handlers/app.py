@@ -64,7 +64,8 @@ class StratusCore:
         from stratus.handlers.manager import handlers
         return handlers.getClients( epa )
 
-    def processWorkflow(self, request: Dict ) -> Dict[str,Dict]:
+    @classmethod
+    def processWorkflow(cls, request: Dict ) -> Dict[str,Dict]:
         ops = request.get("operations")
         clientMap: Dict[str,OpSet] = dict()
         for op in ops:

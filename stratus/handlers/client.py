@@ -12,13 +12,13 @@ class EndpointSpec:
     def handles( self, epa: str, **kwargs ) -> bool:
         return ( re.match( self._epaSpec, epa ) is not None )
 
-    def __str(self):
+    def __str__(self):
         return self._epaSpec
 
 class StratusClient:
     __metaclass__ = abc.ABCMeta
 
-    def __init__( self, type: str, name: str, **kwargs ):
+    def __init__( self, type: str, **kwargs ):
         self.type: str = type
         self.name: str = kwargs.get("name")
         self.parms = kwargs

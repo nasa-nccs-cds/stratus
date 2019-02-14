@@ -6,7 +6,6 @@ with open('requirements.txt') as f:
     deps = [dep for dep in f.read().split('\n') if dep.strip() != '' and not dep.startswith('-e')]
     install_requires = deps
 
-
 setup(name='stratus',
       version='1.0',
       description='Stratus: Integrative framework presenting a unified API and workflow orchestration for varied climate data analytic services',

@@ -5,7 +5,7 @@ from stratus.util.config import Config, StratusLogger
 import zmq, traceback, time, logging, xml, socket
 from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
-from .base import Responder, ErrorReport, DataPacket, Message, Response
+from stratus.handlers.zeromq.base import Responder, ErrorReport, DataPacket, Message, Response
 from stratus.handlers.manager import handlers
 from enum import Enum
 MB = 1024 * 1024
@@ -16,28 +16,19 @@ class StratusApp(StratusCore):
         StratusCore.__init__(self, **kwargs )
         self.logger =  StratusLogger.getLogger()
         self.active = True
-        self.zeromq_parms = self.getConfigParms('flask')
+        self.zeromq_parms = self.getConfigParms('zeromq')
         self.parms = self.getConfigParms('stratus')
         self.client_address = self.zeromq_parms["client.address"]
         self.request_port = self.zeromq_parms.get( "request_port", 4556 )
         self.response_port = self.zeromq_parms.get( "response_port", 4557 )
-
-        try:
-            self.zmqContext: zmq.Context = zmq.Context()
-            self.request_socket: zmq.Socket = self.zmqContext.socket(zmq.REP)
-            self.responder = Responder( self.zmqContext, self.client_address, self.response_port )
-            self.handlers = {}
-            self.initSocket( self.client_address, self.request_port )
-
-        except Exception as err:
-            self.logger.error( "@@Portal:  ------------------------------- StratusApp Init error: {} ------------------------------- ".format( err ) )
 
     def initSocket(self, client_address, request_port):
         try:
             self.request_socket.bind( "tcp://{}:{}".format( client_address, request_port ) )
             self.logger.info( "@@Portal --> Bound request socket to client at {} on port: {}".format( client_address, request_port ) )
         except Exception as err:
-            self.logger.error( "@@Portal: Error initializing request socket on port {}: {}".format( request_port, err ) )
+            self.logger.error( "@@Portal: Error initializing request socket on {}, port {}: {}".format( client_address,  request_port, err ) )
+            self.logger.error( traceback.format_exc() )
 
     def sendErrorReport( self, clientId: str, responseId: str, msg: str ):
         self.logger.info("@@Portal-----> SendErrorReport[" + clientId +":" + responseId + "]" )
@@ -113,6 +104,16 @@ class StratusApp(StratusCore):
 
     def run(self):
 
+        try:
+            self.zmqContext: zmq.Context = zmq.Context()
+            self.request_socket: zmq.Socket = self.zmqContext.socket(zmq.REP)
+            self.responder = Responder( self.zmqContext, self.client_address, self.response_port )
+            self.handlers = {}
+            self.initSocket( self.client_address, self.request_port )
+
+        except Exception as err:
+            self.logger.error( "@@Portal:  ------------------------------- StratusApp Init error: {} ------------------------------- ".format( err ) )
+
         while self.active:
             self.logger.info(  "@@Portal:Listening for requests on port: {}, host: {}".format( self.request_port, self.getHostInfo() ) )
             request_header = self.request_socket.recv_string().strip().strip("'")
@@ -124,7 +125,8 @@ class StratusApp(StratusCore):
                 timeStamp = datetime.datetime.now().strftime("MM/dd HH:mm:ss")
                 self.logger.info( "@@Portal:  ###  Processing {} request @({})".format( rType, timeStamp) )
                 if rType == "epas":
-                    self.sendResponseMessage( Message( clientId, "epas", json.dumps( handlers.getEpas() ) ) )
+                    msg = { "epas": handlers.getEpas() }
+                    self.sendResponseMessage( Message( clientId, "epas", json.dumps( msg ) ) )
                 elif rType == "request":
                     if len(parts) <= 2: raise Exception( "Missing parameters to utility request")
                     request = json.loads( parts[2] )
@@ -170,4 +172,8 @@ class StratusApp(StratusCore):
         items = [ ":".join(item) for item in metadata.items() ]
         return ";".join(items)
 
+if __name__ == "__main__":
+    from stratus.handlers.manager import Handlers
+    app = StratusApp( settings=Handlers.getStratusFilePath( "stratus/handlers/zeromq/test_settings1.ini" ) )
+    app.run()
 

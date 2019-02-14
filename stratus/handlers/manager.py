@@ -18,7 +18,7 @@ class Handlers:
 
     def init(self, handlersFile: str ):
         if self.specFile is None:
-            self.specFile = self.getSpecFilePath( handlersFile.strip() )
+            self.specFile = self.getStratusFilePath(handlersFile.strip())
             self.addConstructors()
             spec = self.load_spec()
             for service_spec in spec['services']:
@@ -30,9 +30,10 @@ class Handlers:
                     print( err_msg )
                     self.logger.error( err_msg )
 
-    def getSpecFilePath( self, handlersFile: str ) -> str:
+    @classmethod
+    def getStratusFilePath(cls, handlersFile: str) -> str:
         if handlersFile.startswith("/"): return handlersFile
-        return os.path.join( self.STRATUS_ROOT, handlersFile )
+        return os.path.join( cls.STRATUS_ROOT, handlersFile )
 
     def load_spec(self):
         with open( self.specFile, 'r') as stream:
@@ -64,7 +65,6 @@ class Handlers:
         return json.dumps({key: s.parms for key,s in self._handlers.items()})
 
     def addConstructor( self, type: str, handler_constructor: Callable[[], Handler]  ):
-        print( "Adding constructor for " + type )
         self.logger.info( "Adding constructor for " + type )
         self._constructors[type] = handler_constructor
 
@@ -95,7 +95,6 @@ class Handlers:
                 self.addConstructor( type, constructor )
             except Exception as err:
                 msg = "Unable to register constructor for {}: {} ({})".format( package_name, str(err), err.__class__.__name__ )
-                print( msg )
                 self.logger.warn( msg )
 
 handlers = Handlers()
