@@ -7,6 +7,7 @@ from .client import ZMQClient
 import zmq, traceback, time, logging, xml, socket
 from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
+from stratus.util.parsing import s2b, b2s
 from enum import Enum
 MB = 1024 * 1024
 
@@ -40,15 +41,15 @@ class Response:
 
 class Message ( Response ):
 
-    def __init__(self,  _clientId: str,  _responseId: str,  _message: str ):
-        super(Message, self).__init__( "message", _clientId, _responseId )
-        self._body = _message
+    def __init__(self,  clientId: str,  responseId: str,  message: Dict ):
+        super(Message, self).__init__( "message", clientId, responseId )
+        self._body = json.dumps( message )
 
 class ErrorReport(Response):
 
-    def __init__( self,  clientId: str,  _responseId: str,  _message: str ):
-        super(ErrorReport, self).__init__( "error", clientId, _responseId )
-        self._body = _message
+    def __init__( self,  clientId: str,  responseId: str,  message: Dict ):
+        super(ErrorReport, self).__init__( "error", clientId, responseId )
+        self._body = json.dumps( message )
 
 
 class DataPacket(Response):
@@ -62,7 +63,7 @@ class DataPacket(Response):
         return ( self._data is not None ) and ( len( self._data ) > 0 )
 
     def getTransferHeader(self) -> bytes:
-        return self._body.encode('utf-8')
+        return s2b( self._body )
 
     def getHeaderString(self) -> str:
         return self._body
@@ -118,14 +119,14 @@ class Responder:
     def doSendMessage(self, msg: Response, type: str = "response") -> str:
         msgStr = str(msg.message())
         self.logger.info("@@R: Sending {} MESSAGE: {}".format( type, msgStr ) )
-        self.socket.send_multipart( [msg.clientId.encode('utf-8'), msg.responseId.encode('utf-8'), type.encode('utf-8'), msgStr.encode('utf-8')  ] )
+        self.socket.send_multipart( [ s2b( msg.clientId ), s2b( msg.responseId ), s2b( type ), s2b( msgStr )  ] )
         return msgStr
 
     def doSendErrorReport( self, msg: Response  ):
         return self.doSendMessage( msg, "error")
 
     def doSendDataPacket( self, dataPacket: DataPacket ):
-        multipart_msg = [ dataPacket.clientId.encode('utf-8'), dataPacket.responseId.encode('utf-8'), b"data", dataPacket.getTransferHeader() ]
+        multipart_msg = [ s2b( dataPacket.clientId ), s2b( dataPacket.responseId ), b"data", dataPacket.getTransferHeader() ]
         if dataPacket.hasData():
             bdata: bytes = dataPacket.getTransferData()
             multipart_msg.append( bdata )
@@ -144,13 +145,6 @@ class Responder:
             elif (status.startswith("error")) or (status.startswith("completed") ):
                 del self.executing_jobs[rid]
         except Exception: pass
-
-    def heartbeat( self ):
-        for client in self.clients:
-            try:
-                hb_msg = Message( str(client), "status", "heartbeat" )
-                self.doSendMessage( hb_msg )
-            except Exception: pass
 
     def initSocket(self) -> zmq.Socket:
         socket: zmq.Socket   = self.context.socket(zmq.PUB)

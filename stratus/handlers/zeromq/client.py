@@ -6,15 +6,10 @@ from stratus.util.config import Config, StratusLogger
 from stratus.util.domain import UID
 from threading import Thread
 from typing import Sequence, List, Dict, Mapping, Optional
+from stratus.util.parsing import s2b, b2s
 import random, string, os
 from enum import Enum
 MB = 1024 * 1024
-
-def s2b( s: str ):
-    return bytearray( s, 'utf-8'  )
-
-def b2s( b: bytearray ):
-    return b.decode( 'utf-8'  )
 
 class ConnectionMode():
     BIND = 1
@@ -68,8 +63,8 @@ class ZMQClient(StratusClient):
             self.logger.error(err_msg)
             self.shutdown()
 
-    def request(self, epa: str, **kwargs ) -> Dict:
-        msg = self.sendMessage( epa, json.dumps( kwargs ) )
+    def request(self, type: str, **kwargs ) -> Dict:
+        msg = self.sendMessage( type, kwargs )
         parts = msg.split("!")
         return json.loads( parts[1] )
 
@@ -93,10 +88,11 @@ class ZMQClient(StratusClient):
                 self.response_manager.term()
                 self.response_manager = None
 
-    def sendMessage(self, type: str, requestData=""):
-        self.log( "Sending {} request {} on port {}.".format( type, requestData, str(self.request_port) )  )
+    def sendMessage(self, type: str, requestData: Dict = {}):
+        msg = json.dumps( requestData )
+        self.log( "Sending {} request {} on port {}.".format( type, msg, str(self.request_port) )  )
         try:
-            message = "!".join( [ self.clientID, type, requestData ] )
+            message = "!".join( [ self.clientID, type, msg ] )
             self.request_socket.send_string( message )
             response = self.request_socket.recv_string()
         except zmq.error.ZMQError as err:
@@ -146,7 +142,7 @@ class ResponseManager(Thread):
             self.log("Run RM thread")
             response_socket: zmq.Socket = self.context.socket( zmq.SUB )
             response_port = ConnectionMode.connectSocket( response_socket, self.host, self.port )
-            response_socket.subscribe( self.clientId.encode('utf-8') )
+            response_socket.subscribe( s2b( self.clientId ) )
             self.log("Connected response socket on port {} with subscription (client) id: '{}'".format( response_port, self.clientId ) )
             while( self.active ):
                 self.processNextResponse( response_socket )
@@ -250,5 +246,6 @@ class ResponseManager(Thread):
 if __name__ == "__main__":
     client = ZMQClient()
     client.init( )
-    while True:
-        time.sleep(1)
+    response = client.request( "exe",  operations=[ dict( id="op1", epa="C" ), dict( id="op2", epa="D" ), dict( id="op3", epa="E" ), dict( id="op4", epa="X" ) ] )
+    print ( "response = " + str( response ) )
+

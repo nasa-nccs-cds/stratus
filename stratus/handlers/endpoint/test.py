@@ -7,8 +7,8 @@ class TestEndpoint(Endpoint):
     def __init__( self, **kwargs ):
         super(TestEndpoint, self).__init__( **kwargs )
 
-    def request(cls, epa: str, **kwargs ) -> Dict:
-        return dict( result=kwargs )
+    def request(cls, type: str, **kwargs ) -> Dict:
+        return dict( type=type, result=kwargs )
 
     def init( cls ): pass
 

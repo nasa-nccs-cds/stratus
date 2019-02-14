@@ -7,6 +7,7 @@ from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
 from stratus.handlers.zeromq.base import Responder, ErrorReport, DataPacket, Message, Response
 from stratus.handlers.manager import handlers
+from stratus.util.parsing import s2b, b2s
 from enum import Enum
 MB = 1024 * 1024
 
@@ -84,24 +85,6 @@ class StratusApp(StratusCore):
         self.request_socket.send_string( packaged_msg )
         return packaged_msg
 
-
-    # public static String getCurrentStackTrace() {
-    #     try{ throw new Exception("Current"); } catch(Exception ex)  {
-    #         Writer result = new StringWriter();
-    #         PrintWriter printWriter = new PrintWriter(result);
-    #         ex.printStackTrace(printWriter);
-    #         return result.toString();
-    #     }
-    # }
-
-    def getHostInfo(self) -> str:
-        try:
-            hostname = socket.gethostname()
-            address = socket.gethostbyname(hostname)
-            return  "{} ({})".format( hostname, address )
-        except Exception as e:
-            return "UNKNOWN"
-
     def run(self):
 
         try:
@@ -115,7 +98,7 @@ class StratusApp(StratusCore):
             self.logger.error( "@@Portal:  ------------------------------- StratusApp Init error: {} ------------------------------- ".format( err ) )
 
         while self.active:
-            self.logger.info(  "@@Portal:Listening for requests on port: {}, host: {}".format( self.request_port, self.getHostInfo() ) )
+            self.logger.info(  "@@Portal:Listening for requests on port: {}".format( self.request_port ) )
             request_header = self.request_socket.recv_string().strip().strip("'")
             parts = request_header.split("!")
             clientId = parts[0]
@@ -125,28 +108,29 @@ class StratusApp(StratusCore):
                 timeStamp = datetime.datetime.now().strftime("MM/dd HH:mm:ss")
                 self.logger.info( "@@Portal:  ###  Processing {} request @({})".format( rType, timeStamp) )
                 if rType == "epas":
-                    msg = { "epas": handlers.getEpas() }
-                    self.sendResponseMessage( Message( clientId, "epas", json.dumps( msg ) ) )
-                elif rType == "request":
-                    if len(parts) <= 2: raise Exception( "Missing parameters to utility request")
+                    response = { "epas": handlers.getEpas() }
+                    self.sendResponseMessage( Message( clientId, "epas", response  ) )
+                elif rType == "exe":
+                    if len(parts) <= 2: raise Exception( "Missing parameters to exe request")
                     request = json.loads( parts[2] )
                     responses = self.processWorkflow(request)
-                    self.sendResponseMessage( Message( clientId, "response", json.dumps(responses) )  )
+                    self.sendResponseMessage( Message( clientId, "response", responses )  )
                 elif rType == "quit" or rType == "shutdown":
-                    self.sendResponseMessage( Message( clientId, "quit", "Terminating") )
+                    response = {"status": "Terminating" }
+                    self.sendResponseMessage( Message( clientId, "quit", response ) )
                     self.logger.info("@@Portal: Received Shutdown Message")
                     exit(0)
                 else:
                     msg = "@@Portal: Unknown request type: " + rType
                     self.logger.info(msg)
-                    self.sendResponseMessage( Message(clientId, "error", msg) )
+                    response = {"error": msg }
+                    self.sendResponseMessage( Message(clientId, "error", response ) )
             except Exception as ex:
-                # clientId = elem( self.taskSpec, 0 )
-                # runargs = self.getRunArgs( self.taskSpec )
-                # jobId = runargs.getOrElse("jobId", self.randomIds.nextString)
+                tb = traceback.format_exc()
                 self.logger.error( "@@Portal: Execution error: " + str(ex) )
-                traceback.print_exc()
-                self.sendResponseMessage( Message( clientId, "error", str(ex)) )
+                self.logger.error( tb )
+                response = { "error": str(ex), "traceback": tb }
+                self.sendResponseMessage( Message( clientId, "error", response ) )
 
         self.logger.info( "@@Portal: EXIT EDASPortal")
 

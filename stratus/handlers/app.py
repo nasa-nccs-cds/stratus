@@ -8,14 +8,18 @@ from stratus.handlers.manager import handlers
 class OpSet():
 
     def __init__( self, client: StratusClient ):
-        self.ops: Set[Dict] = set()
+        self.logger = StratusLogger.getLogger()
+        self.ops: List[Dict] = []
         self.client: StratusClient = client
 
     def __iter__(self):
         return self.ops.__iter__()
 
     def add(self, op: Dict):
-        self.ops.add( op )
+        self.ops.append( op )
+
+    def new(self):
+        return OpSet(self.client)
 
     @property
     def name(self):
@@ -36,13 +40,15 @@ class OpSet():
     def __str__(self):
         return "C({}):[{}]".format( self.client, ",".join( [ str(op) for op in self.ops ] ) )
 
-    def getFilteredRequest(self, request: Dict ) -> str:
+    def getFilteredRequest(self, request: Dict ) -> Dict:
         filtered_request = dict( request )
         filtered_request["operations"] = list( self.ops )
-        return json.dumps( filtered_request )
+        return filtered_request
 
     def submit( self, request: Dict ) -> Dict:
-        return self.client.request( self.getFilteredRequest(request) )
+        filtered_request =  self.getFilteredRequest(request)
+        self.logger.info( "Client {}: submit operations {}".format( self.client.name, str( filtered_request['operations'] ) ) )
+        return self.client.request( "exe", **filtered_request )
 
 class StratusCore:
     HERE = os.path.dirname(__file__)
@@ -69,6 +75,7 @@ class StratusCore:
         ops = request.get("operations")
         clientMap: Dict[str,OpSet] = dict()
         for op in ops:
+            assert "epa" in op, "Operation must have an 'epa' parameter: " + str(op)
             epa = op["epa"]
             clients = StratusCore.getClients( epa )
             for client in clients:
@@ -76,15 +83,17 @@ class StratusCore:
                opSet.add( op )
 
         filtered_opsets: List[OpSet] = []
-        processed_ops: List[OpSet] = []
-        for opset in sorted( clientMap.values(), reverse=True ):
+        processed_ops: List[str] = []
+        sorted_opsets = sorted( clientMap.values(), reverse=True )
+        for opset in sorted_opsets:
+            new_opset = opset.new()
             for op in opset:
-                if op["id"] in processed_ops: opset.remove(op)
-                else: processed_ops.append( op["id"] )
-            if len( opset ) > 0: filtered_opsets.append( opset )
+                if op["epa"] not in processed_ops:
+                    processed_ops.append( op["epa"] )
+                    new_opset.add( op )
+            if len( new_opset ) > 0: filtered_opsets.append( new_opset )
 
         responses = { opset.name: opset.submit( request ) for opset in filtered_opsets }
-
         return responses
 
     def parm(self, name: str, default = None ) -> str:
