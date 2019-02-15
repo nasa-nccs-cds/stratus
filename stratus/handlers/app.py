@@ -73,21 +73,26 @@ class StratusCore:
         return handlers.getClients( epa )
 
     @classmethod
-    def processWorkflow(cls, request: Dict ) -> Dict[str,Dict]:
+    def geClientOpsets(cls, request: Dict ) -> Dict[str,OpSet]:
+        # Returns map of client id to list of ops in request that can be handled by that client
         ops = request.get("operations")
-        clientMap: Dict[str,OpSet] = dict()
+        clientOpsets: Dict[str,OpSet] = dict()
         for op in ops:
             for parm in [ "epa", "id"]:
                 assert parm in op, "Operation must have an '{}' parameter: {}".format( parm, str(op) )
             epa = op["epa"]
             clients = StratusCore.getClients( epa )
             for client in clients:
-               opSet = clientMap.setdefault( client.name, OpSet(client) )
+               opSet = clientOpsets.setdefault( client.name, OpSet(client) )
                opSet.add( op )
+        return clientOpsets
 
+    @classmethod
+    def distributeOps(cls,  clientOpsets: Dict[str, OpSet] ) -> List[OpSet]:
+        # Distributes ops to clients while maximizing locality of operations
         filtered_opsets: List[OpSet] = []
         processed_ops: List[str] = []
-        sorted_opsets: List[OpSet] = sorted( clientMap.items(), reverse=True, key=lambda x: x[1] )
+        sorted_opsets: List[OpSet] = list( sorted( clientOpsets.items(), reverse=True, key=lambda x: x[1] ) )
         while len( sorted_opsets ):
             cid, base_opset = sorted_opsets.pop(0)
             new_opset = base_opset.new()
@@ -98,9 +103,14 @@ class StratusCore:
                 if len( new_opset ) > 0: filtered_opsets.append( new_opset )
             for cid, opset in sorted_opsets:
                 opset.remove( processed_ops )
-            sorted_opsets = sorted( sorted_opsets, reverse=True, key=lambda x: x[1] )
+            sorted_opsets = list( sorted( sorted_opsets, reverse=True, key=lambda x: x[1] ) )
+        return filtered_opsets
 
-        responses = { opset.name: opset.submit( request ) for opset in filtered_opsets }
+    @classmethod
+    def processWorkflow(cls, request: Dict ) -> Dict[str,OpSet]:
+        clientOpsets: Dict[str, OpSet] = cls.geClientOpsets(request)
+        distributed_opSets = cls.distributeOps( clientOpsets )
+        responses = { opset.name: opset.submit( request ) for opset in distributed_opSets }
         return responses
 
     def parm(self, name: str, default = None ) -> str:
