@@ -9,14 +9,14 @@ class OpSet():
 
     def __init__( self, client: StratusClient ):
         self.logger = StratusLogger.getLogger()
-        self.ops: List[Dict] = []
+        self.ops: Dict[str,Dict] = {}
         self.client: StratusClient = client
 
     def __iter__(self):
-        return self.ops.__iter__()
+        return self.ops.values().__iter__()
 
     def add(self, op: Dict):
-        self.ops.append( op )
+        self.ops[ op["id"] ] = op
 
     def new(self):
         return OpSet(self.client)
@@ -25,8 +25,10 @@ class OpSet():
     def name(self):
         return self.client.name
 
-    def remove(self, op: Dict):
-        self.ops.remove( op )
+    def remove(self, opIds: List[str]):
+        for oid in opIds:
+            try: del self.ops[ oid ]
+            except: pass
 
     def __len__(self):
         return self.ops.__len__()
@@ -38,11 +40,11 @@ class OpSet():
         return len( self.ops ) < len( other )
 
     def __str__(self):
-        return "C({}):[{}]".format( self.client, ",".join( [ str(op) for op in self.ops ] ) )
+        return "C({}):[{}]".format( self.client, ",".join( [ op for op in self.ops.keys() ] ) )
 
     def getFilteredRequest(self, request: Dict ) -> Dict:
         filtered_request = dict( request )
-        filtered_request["operations"] = list( self.ops )
+        filtered_request["operations"] = list( self.ops.values() )
         return filtered_request
 
     def submit( self, request: Dict ) -> Dict:
@@ -75,7 +77,8 @@ class StratusCore:
         ops = request.get("operations")
         clientMap: Dict[str,OpSet] = dict()
         for op in ops:
-            assert "epa" in op, "Operation must have an 'epa' parameter: " + str(op)
+            for parm in [ "epa", "id"]:
+                assert parm in op, "Operation must have an '{}' parameter: {}".format( parm, str(op) )
             epa = op["epa"]
             clients = StratusCore.getClients( epa )
             for client in clients:
@@ -84,14 +87,18 @@ class StratusCore:
 
         filtered_opsets: List[OpSet] = []
         processed_ops: List[str] = []
-        sorted_opsets = sorted( clientMap.values(), reverse=True )
-        for opset in sorted_opsets:
-            new_opset = opset.new()
-            for op in opset:
-                if op["epa"] not in processed_ops:
-                    processed_ops.append( op["epa"] )
+        sorted_opsets: List[OpSet] = sorted( clientMap.items(), reverse=True, key=lambda x: x[1] )
+        while len( sorted_opsets ):
+            cid, base_opset = sorted_opsets.pop(0)
+            new_opset = base_opset.new()
+            for op in base_opset:
+                if op["id"] not in processed_ops:
+                    processed_ops.append( op["id"] )
                     new_opset.add( op )
-            if len( new_opset ) > 0: filtered_opsets.append( new_opset )
+                if len( new_opset ) > 0: filtered_opsets.append( new_opset )
+            for cid, opset in sorted_opsets:
+                opset.remove( processed_ops )
+            sorted_opsets = sorted( sorted_opsets, reverse=True, key=lambda x: x[1] )
 
         responses = { opset.name: opset.submit( request ) for opset in filtered_opsets }
         return responses

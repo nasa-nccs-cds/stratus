@@ -246,6 +246,6 @@ class ResponseManager(Thread):
 if __name__ == "__main__":
     client = ZMQClient()
     client.init( )
-    response = client.request( "exe",  operations=[ dict( id="op1", epa="C" ), dict( id="op2", epa="D" ), dict( id="op3", epa="E" ), dict( id="op4", epa="X" ) ] )
+    response = client.request( "exe",  operations=[ dict( id="op1", epa="A" ), dict( id="op2", epa="B" ), dict( id="op3", epa="C" ), dict( id="op4", epa="D" ), dict( id="op5", epa="E" ), dict( id="op6", epa="X" ), dict( id="op7", epa="J" ), dict( id="op8", epa="C" ) ] )
     print ( "response = " + str( response ) )
 
