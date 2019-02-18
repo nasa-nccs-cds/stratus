@@ -1,8 +1,7 @@
 import os, json
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Set, Tuple
-from stratus.util.config import Config, StratusLogger
+from stratus.util.config import Config, StratusLogger, UID
 from stratus.handlers.client import StratusClient
-from stratus.util.domain import UID
 from stratus.handlers.manager import handlers
 
 class OpSet():

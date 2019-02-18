@@ -6,15 +6,21 @@
 ___
 ### Installation
 
+Recommended: create and activate a python3 venv:
 ```
-    1. Create and activate a python 3.6.x venv-> From a python 3.6.x env:
         >> python3 -m venv /path/to/ENV
         >> source /path/to/ENV/bin/activate
-        
-    2. Install stratus:
-        (stratus)> git clone https://github.com/nasa-nccs-cds/stratus.git
-        (stratus)> cd stratus
-        (stratus)> python setup.py install
+```
+To install using pip:
+```
+    > pip install stratus
+```    
+Or (build from source):
+```
+    > git clone https://github.com/nasa-nccs-cds/stratus.git
+    > cd stratus
+    > python setup.py install
+
 ```
        
 ### Configuration

@@ -1,3 +1,22 @@
+import string, random
+
+class UID:
+    ndigits = 6
+
+    @staticmethod
+    def randomId( length: int ) -> str:
+        sample = string.ascii_lowercase+string.digits+string.ascii_uppercase
+        return ''.join(random.choice(sample) for i in range(length))
+
+    def __init__(self, uid = None ):
+        self.uid = uid if uid else self.randomId( UID.ndigits )
+
+    def __add__(self, other: str ):
+        return other if other.endswith(self.uid) else other + "-" + self.uid
+
+    def __str__(self): return self.uid
+
+
 import re
 import os, logging, time, socket
 from configparser import ConfigParser, ExtendedInterpolation

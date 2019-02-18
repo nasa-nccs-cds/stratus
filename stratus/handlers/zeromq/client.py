@@ -40,12 +40,10 @@ class ZMQClient(StratusClient):
 
     def __init__( self, **kwargs ):
         super(ZMQClient, self).__init__( "zeromq", **kwargs )
-        self.active = True
         self.host_address = self.parm( "host", "127.0.0.1" )
         self.default_request_port = int( self.parm( "request_port", 4556 ) )
         self.response_port = int( self.parm( "response_port", 4557 ) )
-        self.clientID = UID.randomId(6)
-        self.logger =  StratusLogger.getLogger()
+
 
     def init(self, **kwargs):
         try:

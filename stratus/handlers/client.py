@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
-import inspect, stratus.handlers
-from stratus.util.domain import UID
+from stratus.util.config import Config, StratusLogger, UID
+from stratus_endpoint.handler.base import Task, Status
 import abc, re
 import functools
 import importlib
@@ -23,13 +23,20 @@ class StratusClient:
         self.name: str = kwargs.get("name")
         self.parms = kwargs
         self.priority: float = float( self.parm( "priority", "0" ) )
+        self.active = False
+        self.clientID = UID.randomId(6)
+        self.logger =  StratusLogger.getLogger()
 
     def init( self ):
-        endPointData = self.request( "epas" )
-        self._endpointSpecs: List[EndpointSpec] = [EndpointSpec(epaSpec) for epaSpec in endPointData["epas"]]
+        endPointData = self.capabilities("epas")
+        self._endpointSpecs: List[EndpointSpec] = [ EndpointSpec(epaSpec) for epaSpec in endPointData["epas"] ]
+        self.active = True
 
     @abc.abstractmethod
-    def request(self, task: str, **kwargs ) -> Dict: pass
+    def request(self, task: str, **kwargs ) -> Task: pass
+
+    @abc.abstractmethod
+    def capabilities(self, type: str, **kwargs ) -> Dict: pass
 
     @property
     def endpointSpecs(self) -> List[str]:
