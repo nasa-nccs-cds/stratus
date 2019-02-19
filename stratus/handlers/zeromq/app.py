@@ -31,7 +31,7 @@ class StratusApp(StratusCore):
             self.logger.error( "@@Portal: Error initializing request socket on {}, port {}: {}".format( client_address,  request_port, err ) )
             self.logger.error( traceback.format_exc() )
 
-    def sendErrorReport( self, clientId: str, responseId: str, msg: str ):
+    def sendErrorReport( self, clientId: str, responseId: str, msg: Dict ):
         self.logger.info("@@Portal-----> SendErrorReport[" + clientId +":" + responseId + "]" )
         self.responder.sendResponse( ErrorReport(clientId,responseId,msg) )
 
