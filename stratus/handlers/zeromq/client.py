@@ -6,7 +6,9 @@ from stratus.util.config import Config, StratusLogger, UID
 from threading import Thread
 from typing import Sequence, List, Dict, Mapping, Optional
 from stratus.util.parsing import s2b, b2s
+from stratus_endpoint.handler.base import Task, Status
 import random, string, os
+import xarray as xa
 from enum import Enum
 MB = 1024 * 1024
 
@@ -60,10 +62,13 @@ class ZMQClient(StratusClient):
             self.logger.error(err_msg)
             self.shutdown()
 
-    def request(self, type: str, **kwargs ) -> Dict:
-        msg = self.sendMessage( type, kwargs )
-        parts = msg.split("!")
-        return json.loads( parts[1] )
+    def request(self, type: str, **kwargs ) -> Task:
+        response = self.sendMessage( type, kwargs )
+        self.log( str(response) )
+        return zmqTask( self.response_manager )
+
+    def capabilities(self, type: str, **kwargs ) -> Dict:
+        return self.sendMessage( type, kwargs )
 
     def log(self, msg: str ):
         self.logger.info( "[P] " + msg )
@@ -85,7 +90,7 @@ class ZMQClient(StratusClient):
                 self.response_manager.term()
                 self.response_manager = None
 
-    def sendMessage(self, type: str, requestData: Dict = {}):
+    def sendMessage(self, type: str, requestData: Dict ) -> Dict:
         msg = json.dumps( requestData )
         self.log( "Sending {} request {} on port {}.".format( type, msg, str(self.request_port) )  )
         try:
@@ -93,9 +98,10 @@ class ZMQClient(StratusClient):
             self.request_socket.send_string( message )
             response = self.request_socket.recv_string()
         except zmq.error.ZMQError as err:
-            self.logger.error( "Error sending message {0} on request socket: {1}".format( message, str(err) ) )
+            self.logger.error( "Error sending message {0} on request socket: {1}".format( msg, str(err) ) )
             response = str(err)
-        return response
+        parts = response.split("!")
+        return json.loads(parts[1])
 
     def waitUntilDone(self):
         self.response_manager.join()
@@ -239,6 +245,19 @@ class ResponseManager(Thread):
         except KeyboardInterrupt:
             self.log("Terminating wait for response")
             return []
+
+class zmqTask(Task):  # TODO: COMPLETE
+
+    def __init__(self, manager: ResponseManager, **kwargs):
+        super(zmqTask,self).__init__( **kwargs )
+        self.manager = manager
+
+    def getResult(self, timeout=None, block=False) ->  Optional[xa.Dataset]:
+        return self.manager.getResponses( "" )
+
+    def status(self) ->  Status:
+        return self._status
+
 
 if __name__ == "__main__":
     client = ZMQClient()

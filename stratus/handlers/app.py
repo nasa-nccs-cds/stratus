@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Opti
 from stratus.util.config import Config, StratusLogger, UID
 from stratus.handlers.client import StratusClient
 from stratus.handlers.manager import handlers
+from stratus_endpoint.handler.base import Task, Status
 
 class OpSet():
 
@@ -46,7 +47,7 @@ class OpSet():
         filtered_request["operations"] = list( self.ops.values() )
         return filtered_request
 
-    def submit( self, request: Dict ) -> Dict:
+    def submit( self, request: Dict ) -> Task:
         filtered_request =  self.getFilteredRequest(request)
         self.logger.info( "Client {}: submit operations {}".format( self.client.name, str( filtered_request['operations'] ) ) )
         return self.client.request( "exe", **filtered_request )
@@ -74,10 +75,12 @@ class StratusCore:
     @classmethod
     def geClientOpsets(cls, request: Dict ) -> Dict[str,OpSet]:
         # Returns map of client id to list of ops in request that can be handled by that client
-        ops = request.get("operations")
+        ops = request.get("operation")
+        assert ops is not None, "Missing 'operation' parameter in request: " + str( request )
         clientOpsets: Dict[str,OpSet] = dict()
         for op in ops:
-            for parm in [ "epa", "id"]:
+            if not "id" in op: op["id"] = UID.randomId( 6 )
+            for parm in [ "epa" ]:
                 assert parm in op, "Operation must have an '{}' parameter: {}".format( parm, str(op) )
             epa = op["epa"]
             clients = StratusCore.getClients( epa )
@@ -108,7 +111,7 @@ class StratusCore:
         return filtered_opsets
 
     @classmethod
-    def processWorkflow(cls, request: Dict ) -> Dict[str,OpSet]:
+    def processWorkflow(cls, request: Dict ) -> Dict[str,Task]:
         clientOpsets: Dict[str, OpSet] = cls.geClientOpsets(request)
         distributed_opSets = cls.distributeOps( clientOpsets )
         responses = { opset.name: opset.submit( request ) for opset in distributed_opSets }

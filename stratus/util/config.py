@@ -48,16 +48,16 @@ class StratusLogger:
     @classmethod
     def getLogger( cls ):
         if cls.logger is None:
+            cls.logger = logging.getLogger( UID.randomId(6) )
             LOG_DIR = os.path.expanduser(os.path.join(STRATUS_CONFIG, "logs"))
             if not os.path.exists(LOG_DIR):  os.makedirs(LOG_DIR)
             timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.gmtime())
-            cls.logger = logging.getLogger()
             cls.logger.setLevel(logging.DEBUG)
             fh = logging.FileHandler("{}stratus-{}.log".format(LOG_DIR, timestamp))
             fh.setLevel(logging.DEBUG)
             ch = logging.StreamHandler()
             ch.setLevel(logging.INFO)
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(process)d - %(thread)d - %(message)s')
             fh.setFormatter(formatter)
             ch.setFormatter(formatter)
             cls.logger.addHandler(fh)

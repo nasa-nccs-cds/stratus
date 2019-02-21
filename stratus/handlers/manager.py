@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Sequence, Callable, BinaryIO, TextIO, Values
 from stratus.handlers.client import StratusClient
 from stratus.util.config import Config, StratusLogger
 from stratus.handlers.base import Handler
-import itertools
+import itertools, traceback
 import importlib
 
 class Handlers:
@@ -56,7 +56,7 @@ class Handlers:
 
     def getClient( self, name: str, **kwargs ) -> StratusClient:
         service = self._handlers.get( name, None )
-        assert service is not None, "Attempt to access unknown service handler: " + name
+        assert service is not None, "Attempt to access unknown service handler: " + name + ", avaliable handlers = " + str( self._handlers.keys() )
         return service.client
 
     @property
@@ -76,7 +76,7 @@ class Handlers:
         if type is None:
             raise Exception( "Missing required 'type' parameter in service spec'{}'".format(name) )
         constructor = self._constructors.get( type, None )
-        assert constructor is not None, "No Handler registered of type '{}' for service spec '{}'".format( type, name )
+        assert constructor is not None, "No Handler registered of type '{}' for service spec '{}', handler types: {}".format( type, name, str(list(self._constructors.keys())) )
         return constructor( **service_spec )
 
     def listPackages(self):
@@ -88,15 +88,18 @@ class Handlers:
         return packages
 
     def addConstructors(self):
+        debug = False
         packageList = self.listPackages()
         for package_name in packageList:
             try:
-                module = importlib.import_module(package_name + ".base")
+                module = importlib.import_module(package_name + ".service")
                 constructor = getattr(module, "ServiceHandler")
                 type = package_name.split(".")[-1]
                 self.addConstructor( type, constructor )
             except Exception as err:
-                msg = "Unable to register constructor for {}: {} ({})".format( package_name, str(err), err.__class__.__name__ )
-                self.logger.warn( msg )
+                if debug:
+                    msg = "Unable to register constructor for {}: {} ({})".format( package_name, str(err), err.__class__.__name__ )
+                    self.logger.warn( msg )
+                    self.logger.warn( traceback.format_exc() )
 
 handlers = Handlers()

@@ -1,6 +1,6 @@
 import json, string, random, abc
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
-from stratus.handlers.endpoint.base import Endpoint
+from stratus_endpoint.handler.base import Endpoint
 
 class TestEndpoint(Endpoint):
 

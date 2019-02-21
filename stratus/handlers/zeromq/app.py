@@ -5,9 +5,10 @@ from stratus.util.config import Config, StratusLogger
 import zmq, traceback, time, logging, xml, socket
 from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
-from stratus.handlers.zeromq.base import Responder, ErrorReport, DataPacket, Message, Response
+from stratus.handlers.zeromq.service import Responder, ErrorReport, DataPacket, Message, Response
 from stratus.handlers.manager import handlers
 from stratus.util.parsing import s2b, b2s
+from stratus_endpoint.handler.base import Task, Status
 from enum import Enum
 MB = 1024 * 1024
 
@@ -22,6 +23,7 @@ class StratusApp(StratusCore):
         self.client_address = self.zeromq_parms["client.address"]
         self.request_port = self.zeromq_parms.get( "request_port", 4556 )
         self.response_port = self.zeromq_parms.get( "response_port", 4557 )
+        self.tasks = {}
 
     def initSocket(self, client_address, request_port):
         try:
@@ -44,7 +46,7 @@ class StratusApp(StratusCore):
         try:
             del self.handlers[ handlerId ]
         except:
-            self.logger.error( "Error removing handler: " + handlerId + ", existing handlers = " + str(self.handlers.keys()))
+            self.logger.error( "Error removing handler: " + handlerId + ", existing handlers = " + str(list(self.handlers.keys())))
 
     def setExeStatus( self, clientId: str, rid: str, status: str ):
         self.responder.setExeStatus(clientId,rid,status)
@@ -97,6 +99,7 @@ class StratusApp(StratusCore):
         except Exception as err:
             self.logger.error( "@@Portal:  ------------------------------- StratusApp Init error: {} ------------------------------- ".format( err ) )
 
+
         while self.active:
             self.logger.info(  "@@Portal:Listening for requests on port: {}".format( self.request_port ) )
             request_header = self.request_socket.recv_string().strip().strip("'")
@@ -113,8 +116,11 @@ class StratusApp(StratusCore):
                 elif rType == "exe":
                     if len(parts) <= 2: raise Exception( "Missing parameters to exe request")
                     request = json.loads( parts[2] )
-                    responses = self.processWorkflow(request)
-                    self.sendResponseMessage( Message( clientId, "response", responses )  )
+                    current_tasks = self.processWorkflow(request)
+                    self.logger.info( "Processing Request: '{}' '{}' '{}', tasks: {} ".format( str(parts[0]), str(parts[1]), str(parts[2]), str( current_tasks.keys() ) ) )
+                    self.tasks.update( current_tasks )
+                    response = { "status": "Executing", "tasks": str( list( current_tasks.keys() ) ) }
+                    self.sendResponseMessage( Message( clientId, "response", response )  )
                 elif rType == "quit" or rType == "shutdown":
                     response = {"status": "Terminating" }
                     self.sendResponseMessage( Message( clientId, "quit", response ) )

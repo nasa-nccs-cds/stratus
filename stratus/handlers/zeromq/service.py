@@ -1,5 +1,5 @@
 import json, string, random, abc, os
-from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
+from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
 from stratus.handlers.base import Handler
 from stratus.handlers.client import StratusClient
 from stratus.util.config import Config, StratusLogger
@@ -162,7 +162,4 @@ class Responder:
                 self.doSendErrorReport( self.socket, ErrorReport(response.clientId, response.responseId, "Job terminated by server shutdown.") );
             self.socket.close()
         except Exception: pass
-
-
-
 
