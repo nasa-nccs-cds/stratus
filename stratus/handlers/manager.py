@@ -10,14 +10,16 @@ class Handlers:
     HERE = os.path.dirname( __file__ )
     STRATUS_ROOT = os.path.dirname( os.path.dirname( HERE ) )
 
-    def __init__(self):
+    def __init__(self, **kwargs ):
         self.logger = StratusLogger.getLogger()
         self._handlers: Dict[str, Handler] = {}
+        self._parms = kwargs
         self._constructors: Dict[str, Callable[[], Handler]] = {}
         self.specFile = None
 
-    def init(self, handlersFile: str ):
+    def init(self, handlersFile: str, **kwargs ):
         if self.specFile is None:
+            self._parms.update( kwargs )
             self.specFile = self.getStratusFilePath(handlersFile.strip())
             self.addConstructors()
             spec = self.load_spec()
@@ -30,10 +32,10 @@ class Handlers:
                     print( err_msg )
                     self.logger.error( err_msg )
 
-    @classmethod
-    def getStratusFilePath(cls, handlersFile: str) -> str:
+    def getStratusFilePath(self, handlersFile: str) -> str:
         if handlersFile.startswith("/"): return handlersFile
-        return os.path.join( cls.STRATUS_ROOT, handlersFile )
+        root = self._parms.get("home", self.STRATUS_ROOT )
+        return os.path.join( root, handlersFile )
 
     def load_spec(self):
         with open( self.specFile, 'r') as stream:

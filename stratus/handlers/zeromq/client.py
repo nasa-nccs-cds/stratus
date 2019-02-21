@@ -2,8 +2,7 @@ from stratus.handlers.client import StratusClient
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
 import importlib
 import zmq, traceback, time, logging, xml, json
-from stratus.util.config import Config, StratusLogger
-from stratus.util.domain import UID
+from stratus.util.config import Config, StratusLogger, UID
 from threading import Thread
 from typing import Sequence, List, Dict, Mapping, Optional
 from stratus.util.parsing import s2b, b2s

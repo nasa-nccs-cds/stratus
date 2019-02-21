@@ -61,7 +61,7 @@ class StratusCore:
         self.config = Config(settings)
         self.parms = self.getConfigParms('stratus')
         handlersSpec = self["HANDLERS"]
-        handlers.init( handlersSpec )
+        handlers.init( handlersSpec, home=os.path.dirname( settings ) )
 
     def getConfigParms(self, module: str ) -> Dict:
         return self.config.get_map( module )
@@ -85,6 +85,8 @@ class StratusCore:
                opSet = clientOpsets.setdefault( client.name, OpSet(client) )
                opSet.add( op )
         return clientOpsets
+
+    def shutdown(self): pass
 
     @classmethod
     def distributeOps(cls,  clientOpsets: Dict[str, OpSet] ) -> List[OpSet]:

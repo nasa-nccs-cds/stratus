@@ -1,0 +1,3 @@
+pytest
+pyzmq
+stratus-endpoint
