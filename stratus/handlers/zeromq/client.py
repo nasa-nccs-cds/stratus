@@ -52,9 +52,6 @@ class ZMQClient(StratusClient):
             self.request_socket = self.context.socket(zmq.REQ)
             self.request_port = ConnectionMode.connectSocket(self.request_socket, self.host_address, self.default_request_port )
             self.log("[1]Connected request socket to server {0} on port: {1}".format( self.host_address, self.request_port ) )
-
-            self.response_manager = ResponseManager(self.context, self.clientID, self.host_address, self.response_port, **kwargs)
-            self.response_manager.start()
             super(ZMQClient, self).init()
 
         except Exception as err:
@@ -65,7 +62,9 @@ class ZMQClient(StratusClient):
     def request(self, type: str, **kwargs ) -> Task:
         response = self.sendMessage( type, kwargs )
         self.log( str(response) )
-        return zmqTask( self.response_manager )
+        response_manager = ResponseManager( self.context, response["id"], self.host_address, self.response_port,   **kwargs )
+        response_manager.start()
+        return zmqTask( response_manager )
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
         return self.sendMessage( type, kwargs )
@@ -91,30 +90,34 @@ class ZMQClient(StratusClient):
                 self.response_manager = None
 
     def sendMessage(self, type: str, requestData: Dict ) -> Dict:
+        rid = requestData.get( "id", UID.randomId(6) )
+        submissionId = self.clientID + rid
         msg = json.dumps( requestData )
-        self.log( "Sending {} request {} on port {}.".format( type, msg, str(self.request_port) )  )
+        self.log( "Sending {} request {} on port {}, submissionId = {}.".format( type, msg, str(self.request_port), submissionId )  )
         try:
-            message = "!".join( [ self.clientID, type, msg ] )
+            message = "!".join( [ submissionId, type, msg ] )
             self.request_socket.send_string( message )
             response = self.request_socket.recv_string()
         except zmq.error.ZMQError as err:
             self.logger.error( "Error sending message {0} on request socket: {1}".format( msg, str(err) ) )
             response = str(err)
         parts = response.split("!")
-        return json.loads(parts[1])
+        response = json.loads(parts[1])
+        response["id"] = submissionId
+        return response
 
     def waitUntilDone(self):
         self.response_manager.join()
 
 class ResponseManager(Thread):
 
-    def __init__(self, context: zmq.Context, clientId: str, host: str, port: int, **kwargs ):
+    def __init__(self, context: zmq.Context, subscribeId: str, host: str, port: int, **kwargs ):
         Thread.__init__(self)
         self.context = context
         self.logger = StratusLogger.getLogger()
         self.host = host
         self.port = port
-        self.clientId = clientId
+        self.subscribeId = subscribeId
         self.active = True
         self.mstate = MessageState.RESULT
         self.setName('STRATUS zeromq client Response Thread')
@@ -145,8 +148,8 @@ class ResponseManager(Thread):
             self.log("Run RM thread")
             response_socket: zmq.Socket = self.context.socket( zmq.SUB )
             response_port = ConnectionMode.connectSocket( response_socket, self.host, self.port )
-            response_socket.subscribe( s2b( self.clientId ) )
-            self.log("Connected response socket on port {} with subscription (client) id: '{}'".format( response_port, self.clientId ) )
+            response_socket.subscribe( s2b( self.subscribeId ) )
+            self.log("Connected response socket on port {} with subscription (client/request) id: '{}'".format( response_port, self.subscribeId ) )
             while( self.active ):
                 self.processNextResponse( response_socket )
 

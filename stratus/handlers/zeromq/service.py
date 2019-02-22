@@ -4,7 +4,9 @@ from stratus.handlers.base import Handler
 from stratus.handlers.client import StratusClient
 from stratus.util.config import Config, StratusLogger
 from .client import ZMQClient
+from threading import Thread
 import zmq, traceback, time, logging, xml, socket
+from stratus_endpoint.handler.base import Task, Status
 from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
 from stratus.util.parsing import s2b, b2s
@@ -78,21 +80,33 @@ class DataPacket(Response):
         "DataPacket[" + self._body + "]"
 
 
-class Responder:
+class Responder(Thread):
 
-    def __init__( self,  _context: zmq.Context,  _client_address: str,  _response_port: int ):
+    def __init__( self,  _context: zmq.Context,  _client_address: str,  _response_port: int, input_tasks: queue.Queue ):
         super(Responder, self).__init__()
         self.logger =  StratusLogger.getLogger()
         self.context: zmq.Context =  _context
         self.response_port = _response_port
         self.executing_jobs: Dict[str,Response] = {}
         self.status_reports: Dict[str,str] = {}
-        self.clients: Set[str] = set()
         self.client_address = _client_address
         self.socket: zmq.Socket = self.initSocket()
+        self.input_tasks = input_tasks
+        self.current_tasks: List[Task] = []
+        self.active = True
 
-    def registerClient( self, client: str ):
-        self.clients.add(client)
+    def run(self):
+
+        while self.active:
+            while not self.input_tasks.empty():
+                self.current_tasks.append(  self.input_tasks.get() )
+
+            for task in self.current_tasks:
+                status = task.status()
+                self.setExeStatus( status )
+                if status in [ Status.COMPLETED, Status.ERROR ]:
+                    result = task.getResult( )
+                    self.sendDataPacket( self.createDataPacker( result ) )
 
     def sendResponse( self, msg: Response ):
         self.logger.info( "@@R: Post Message to response queue: " + str(msg) )
@@ -119,14 +133,14 @@ class Responder:
     def doSendMessage(self, msg: Response, type: str = "response") -> str:
         msgStr = str(msg.message())
         self.logger.info("@@R: Sending {} MESSAGE: {}".format( type, msgStr ) )
-        self.socket.send_multipart( [ s2b( msg.clientId ), s2b( msg.responseId ), s2b( type ), s2b( msgStr )  ] )
+        self.socket.send_multipart( [ s2b( msg.clientId + msg.responseId ), s2b( type ), s2b( msgStr )  ] )
         return msgStr
 
     def doSendErrorReport( self, msg: Response  ):
         return self.doSendMessage( msg, "error")
 
     def doSendDataPacket( self, dataPacket: DataPacket ):
-        multipart_msg = [ s2b( dataPacket.clientId ), s2b( dataPacket.responseId ), b"data", dataPacket.getTransferHeader() ]
+        multipart_msg = [ s2b( dataPacket.clientId + dataPacket.responseId ), b"data", dataPacket.getTransferHeader() ]
         if dataPacket.hasData():
             bdata: bytes = dataPacket.getTransferData()
             multipart_msg.append( bdata )
@@ -156,6 +170,10 @@ class Responder:
             self.logger.error(traceback.format_exc())
         return socket
 
+    def shutdown(self):
+        self.active = False
+        self.close_connection()
+
     def close_connection( self ):
         try:
             for response in self.executing_jobs.values():
@@ -163,3 +181,14 @@ class Responder:
             self.socket.close()
         except Exception: pass
 
+    def createDataPacker( self, clientId: str, rid: str, origin: Sequence[int], shape: Sequence[int], data: bytes, metadata: Dict[str,str] ) -> DataPacket:
+        self.logger.debug( "@@Portal: Sending response data to client for rid {}, nbytes={}".format( rid, len(data) ) )
+        array_header_fields = [ "array", rid, self.ia2s(origin), self.ia2s(shape), self.m2s(metadata), "1" ]
+        array_header = "|".join(array_header_fields)
+        header_fields = [ rid, "array", array_header ]
+        header = "!".join(header_fields)
+        self.logger.debug("Sending header: " + header)
+        return DataPacket( clientId, rid, header, data )
+
+    def __del__(self):
+        self.shutdown()

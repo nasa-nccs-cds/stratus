@@ -18,12 +18,11 @@ class StratusApp(StratusCore):
         StratusCore.__init__(self, **kwargs )
         self.logger =  StratusLogger.getLogger()
         self.active = True
-        self.zeromq_parms = self.getConfigParms('zeromq')
         self.parms = self.getConfigParms('stratus')
-        self.client_address = self.zeromq_parms["client.address"]
-        self.request_port = self.zeromq_parms.get( "request_port", 4556 )
-        self.response_port = self.zeromq_parms.get( "response_port", 4557 )
-        self.tasks = {}
+        self.client_address = self.parms["client.address"]
+        self.request_port = self.parms.get( "request_port", 4556 )
+        self.response_port = self.parms.get( "response_port", 4557 )
+        self.tasks = queue.Queue()
 
     def initSocket(self, client_address, request_port):
         try:
@@ -51,34 +50,6 @@ class StratusApp(StratusCore):
     def setExeStatus( self, clientId: str, rid: str, status: str ):
         self.responder.setExeStatus(clientId,rid,status)
 
-    def sendArrayData( self, clientId: str, rid: str, origin: Sequence[int], shape: Sequence[int], data: bytes, metadata: Dict[str,str] ):
-        self.logger.debug( "@@Portal: Sending response data to client for rid {}, nbytes={}".format( rid, len(data) ) )
-        array_header_fields = [ "array", rid, self.ia2s(origin), self.ia2s(shape), self.m2s(metadata), "1" ]
-        array_header = "|".join(array_header_fields)
-        header_fields = [ rid, "array", array_header ]
-        header = "!".join(header_fields)
-        self.logger.debug("Sending header: " + header)
-        self.responder.sendDataPacket( DataPacket( clientId, rid, header, data ) )
-
-    def sendFile( self, clientId: str, jobId: str, name: str, filePath: str, sendData: bool ) -> str:
-        self.logger.debug( "@@Portal: Sending file data to client for {}, filePath={}".format( name, filePath ) )
-        with open(filePath, mode='rb') as file:
-            file_header_fields = [ "array", jobId, name, os.path.basename(filePath) ]
-            if not sendData: file_header_fields.append(filePath)
-            file_header = "|".join( file_header_fields )
-            header_fields = [ jobId,"file", file_header ]
-            header = "!".join(header_fields)
-            try:
-                data =  bytes(file.read()) if sendData else None
-                self.logger.debug("@@Portal ##sendDataPacket: clientId=" + clientId + " jobId=" + jobId + " name=" + name + " path=" + filePath )
-                self.responder.sendDataPacket( DataPacket( clientId, jobId, header, data ) )
-                self.logger.debug("@@Portal Done sending file data packet: " + header)
-            except Exception as ex:
-                self.logger.info( "@@Portal Error sending file : " + filePath + ": " + str(ex) )
-                traceback.print_exc()
-            return file.name
-
-
     def sendResponseMessage( self, msg: Response ) -> str:
         request_args = [ msg.id(), msg.message() ]
         packaged_msg = "!".join( request_args )
@@ -92,7 +63,7 @@ class StratusApp(StratusCore):
         try:
             self.zmqContext: zmq.Context = zmq.Context()
             self.request_socket: zmq.Socket = self.zmqContext.socket(zmq.REP)
-            self.responder = Responder( self.zmqContext, self.client_address, self.response_port )
+            self.responder = Responder( self.zmqContext, self.client_address, self.response_port, self.tasks )
             self.handlers = {}
             self.initSocket( self.client_address, self.request_port )
 
@@ -104,39 +75,40 @@ class StratusApp(StratusCore):
             self.logger.info(  "@@Portal:Listening for requests on port: {}".format( self.request_port ) )
             request_header = self.request_socket.recv_string().strip().strip("'")
             parts = request_header.split("!")
-            clientId = parts[0]
-            rType = parts[1]
-            self.responder.registerClient( clientId )
+            submissionId = str(parts[0])
+            rType =  str(parts[1])
+            self.responder.registerClient( submissionId )
             try:
                 timeStamp = datetime.datetime.now().strftime("MM/dd HH:mm:ss")
                 self.logger.info( "@@Portal:  ###  Processing {} request @({})".format( rType, timeStamp) )
                 if rType == "epas":
                     response = { "epas": handlers.getEpas() }
-                    self.sendResponseMessage( Message( clientId, "epas", response  ) )
+                    self.sendResponseMessage( Message( submissionId, "epas", response  ) )
                 elif rType == "exe":
                     if len(parts) <= 2: raise Exception( "Missing parameters to exe request")
                     request = json.loads( parts[2] )
+                    request["id"] = submissionId
                     current_tasks = self.processWorkflow(request)
-                    self.logger.info( "Processing Request: '{}' '{}' '{}', tasks: {} ".format( str(parts[0]), str(parts[1]), str(parts[2]), str( current_tasks.keys() ) ) )
-                    self.tasks.update( current_tasks )
+                    self.logger.info( "Processing Request: '{}' '{}' '{}', tasks: {} ".format( submissionId, rType, str(request), str( current_tasks.keys() ) ) )
+                    for task in current_tasks: self.tasks.put( task )                                                                                                               #   TODO: Send results when tasks complete.
                     response = { "status": "Executing", "tasks": str( list( current_tasks.keys() ) ) }
-                    self.sendResponseMessage( Message( clientId, "response", response )  )
+                    self.sendResponseMessage( Message( submissionId, "response", response )  )
                 elif rType == "quit" or rType == "shutdown":
                     response = {"status": "Terminating" }
-                    self.sendResponseMessage( Message( clientId, "quit", response ) )
+                    self.sendResponseMessage( Message( submissionId, "quit", response ) )
                     self.logger.info("@@Portal: Received Shutdown Message")
                     exit(0)
                 else:
                     msg = "@@Portal: Unknown request type: " + rType
                     self.logger.info(msg)
                     response = {"error": msg }
-                    self.sendResponseMessage( Message(clientId, "error", response ) )
+                    self.sendResponseMessage( Message(submissionId, "error", response ) )
             except Exception as ex:
                 tb = traceback.format_exc()
                 self.logger.error( "@@Portal: Execution error: " + str(ex) )
                 self.logger.error( tb )
                 response = { "error": str(ex), "traceback": tb }
-                self.sendResponseMessage( Message( clientId, "error", response ) )
+                self.sendResponseMessage( Message( submissionId, "error", response ) )
 
         self.logger.info( "@@Portal: EXIT EDASPortal")
 

@@ -1,7 +1,7 @@
 import string, random, abc, os, yaml, json
 from typing import List, Dict, Any, Sequence, Callable, BinaryIO, TextIO, ValuesView, Optional
 from stratus.handlers.client import StratusClient
-from stratus.util.config import Config, StratusLogger
+from stratus.util.config import Config, StratusLogger, UID
 from stratus.handlers.base import Handler
 import itertools, traceback
 import importlib
@@ -15,32 +15,39 @@ class Handlers:
         self._handlers: Dict[str, Handler] = {}
         self._parms = kwargs
         self._constructors: Dict[str, Callable[[], Handler]] = {}
-        self.specFile = None
+        self.configSpec: Config = None
 
-    def init(self, handlersFile: str, **kwargs ):
-        if self.specFile is None:
-            self._parms.update( kwargs )
-            self.specFile = self.getStratusFilePath(handlersFile.strip())
+    def init(self, configSpec: Config, **kwargs ):
+        if self.configSpec is None:
+            self.configSpec = configSpec
             self.addConstructors()
-            spec = self.load_spec()
-            for service_spec in spec['services']:
+            self._parms.update(kwargs)
+            hspecs = self.getHandlerSpecs()
+            for service_spec in hspecs:
+                htype = service_spec["type"]
                 try:
                     service = self.getHandler(service_spec)
                     self._handlers[ service.name ] = service
+                    self.logger.info( f"Initialized stratus for service {htype}" )
                 except Exception as err:
                     err_msg = "Error registering handler for service {}: {}".format( service_spec.get("name",""), str(err) )
                     print( err_msg )
                     self.logger.error( err_msg )
 
+    def getHandlerSpecs(self):
+        specs = []
+        htypes = self.listAvailableHandlers()
+        assert self.configSpec is not None, "Error, the handlers have not yet beeb initialized"
+        for name, spec in self.configSpec.items():
+            if spec.get("type") in htypes:
+                spec["name"] = name
+                specs.append( spec )
+        return specs
+
     def getStratusFilePath(self, handlersFile: str) -> str:
         if handlersFile.startswith("/"): return handlersFile
         root = self._parms.get("home", self.STRATUS_ROOT )
         return os.path.join( root, handlersFile )
-
-    def load_spec(self):
-        with open( self.specFile, 'r') as stream:
-            data_loaded = yaml.load(stream)
-        return data_loaded
 
     def __getitem__( self, key: str ) -> Handler:
         result =  self._handlers.get(key, None)
@@ -48,7 +55,7 @@ class Handlers:
         return result
 
     def getClients( self, epa: str, **kwargs ) -> List[StratusClient]:
-        assert self.specFile is not None, "Error, the handlers have not yet bee initialized ( requires a handlers.yaml spec )"
+        assert self.configSpec is not None, "Error, the handlers have not yet beeb initialized"
         return [service.client for service in self._handlers.values() if service.client.handles( epa, **kwargs)]
 
     def getEpas(self) -> List[str]:
@@ -69,6 +76,9 @@ class Handlers:
     def addConstructor( self, type: str, handler_constructor: Callable[[], Handler]  ):
         self.logger.info( "Adding constructor for " + type )
         self._constructors[type] = handler_constructor
+
+    def listAvailableHandlers(self) -> List[str]:
+        return list( self._constructors.keys() )
 
     def getHandler(self, service_spec: Dict[str,str] ) -> Handler:
         type = service_spec.get('type',None)

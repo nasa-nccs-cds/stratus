@@ -1,4 +1,4 @@
-import os, json
+import os, json, yaml
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Set, Tuple
 from stratus.util.config import Config, StratusLogger, UID
 from stratus.handlers.client import StratusClient
@@ -61,8 +61,7 @@ class StratusCore:
         settings = kwargs.get( "settings", os.environ.get( 'STRATUS_SETTINGS', self.SETTINGS ) )
         self.config = Config(settings)
         self.parms = self.getConfigParms('stratus')
-        handlersSpec = self["HANDLERS"]
-        handlers.init( handlersSpec, home=os.path.dirname( settings ) )
+        handlers.init( self.config, home=os.path.dirname( settings ) )
 
     def getConfigParms(self, module: str ) -> Dict:
         return self.config.get_map( module )

@@ -24,7 +24,7 @@ class DirectClient(StratusClient):
 
     def init(self, **kwargs):
         try:
-            self.endpoint = self.instantiateEndpoint()
+            self.endpoint: Endpoint = self.instantiateEndpoint()
             self.endpoint.init()
             super(DirectClient, self).init()
 

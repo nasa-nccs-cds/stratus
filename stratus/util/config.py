@@ -1,10 +1,11 @@
 import string, random
+from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
 
 class UID:
     ndigits = 6
 
     @staticmethod
-    def randomId( length: int ) -> str:
+    def randomId( length: int = 6 ) -> str:
         sample = string.ascii_lowercase+string.digits+string.ascii_uppercase
         return ''.join(random.choice(sample) for i in range(length))
 
@@ -161,10 +162,12 @@ class Config(ConfigParser):  # pylint: disable=too-many-ancestors
                 file_ = interpolate(self, 'defaults', 'overrides', file_, {})
                 self._extend(file_, override=True)
 
-    def get_map(self, section=None):
+    def get_map(self, section=None) -> Dict:
         """returns a dict representing the config set"""
         if section:
-            return dict(self.items(section))
+            if self.has_section( section ):
+                return dict(self.items(section))
+            else: return {}
 
         res = {}
         for section in self:  # pylint: disable=redefined-argument-from-local
