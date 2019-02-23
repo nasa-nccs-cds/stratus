@@ -93,6 +93,7 @@ class Responder(Thread):
         self.socket: zmq.Socket = self.initSocket()
         self.input_tasks = input_tasks
         self.current_tasks: List[Task] = []
+        self.pause_duration = 0.2
         self.active = True
 
     def processResults(self):
@@ -114,7 +115,7 @@ class Responder(Thread):
     def run(self):
         while self.active:
             self.processResults()
-            time.sleep(0.1)
+            time.sleep( self.pause_duration )
 
     def sendResponse( self, msg: Response ):
         self.logger.info( "@@R: Post Message to response queue: " + str(msg) )
