@@ -51,7 +51,7 @@ class StratusApp(StratusCore):
         self.responder.setExeStatus(clientId,rid,status)
 
     def sendResponseMessage( self, msg: Response ) -> str:
-        request_args = [ msg.id(), msg.message() ]
+        request_args = [ msg.id, msg.message() ]
         packaged_msg = "!".join( request_args )
         timeStamp =  datetime.datetime.now().strftime("MM/dd HH:mm:ss")
         self.logger.info( "@@Portal: Sending response {} on request_socket @({}): {}".format( msg.responseId, timeStamp, str(msg) ) )
@@ -123,16 +123,6 @@ class StratusApp(StratusCore):
         self.logger.info( "@@Portal: TERM responder")
         self.shutdown()
         self.logger.info( "@@Portal: shutdown complete")
-
-    def ia2s( self, array: Sequence[int] ) -> str:
-        return str(array).strip("[]")
-
-    def sa2s( self, array: Sequence[str] ) -> str:
-        return ",".join(array)
-
-    def m2s( self, metadata: Dict[str,str] ) -> str:
-        items = [ ":".join(item) for item in metadata.items() ]
-        return ";".join(items)
 
 if __name__ == "__main__":
     from stratus.handlers.manager import Handlers

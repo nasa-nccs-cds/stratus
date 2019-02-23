@@ -1,4 +1,4 @@
-import json, string, random, abc, os
+import json, string, random, abc, os, pickle, collections
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
 from stratus.handlers.base import Handler
 from stratus.handlers.client import StratusClient
@@ -9,7 +9,8 @@ import zmq, traceback, time, logging, xml, socket
 from stratus_endpoint.handler.base import Task, Status
 from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
-from stratus.util.parsing import s2b, b2s
+from stratus.util.parsing import s2b, b2s, ia2s, sa2s, m2s
+import xarray as xa
 from enum import Enum
 MB = 1024 * 1024
 
@@ -28,47 +29,33 @@ class ServiceHandler( Handler ):
 
 class Response:
 
-    def __init__(self, _rtype: str, _clientId: str, _responseId: str ):
-        self.clientId = _clientId
-        self.responseId = _responseId
-        self.rtype = _rtype
+    def __init__(self, sid: str, type: str ):
+        self._id = sid
+        self.rtype = type
         self._body = None
 
-    def id(self) -> str:
-        return self.clientId + ":" + self.responseId
+    @property
+    def id(self): return self._id
 
     def message(self) -> str: return self._body.strip()
 
-    def __str__(self) -> str: return self.__class__.__name__ + "[" + self.id() + "]: " + str(self._body)
-
-class Message ( Response ):
-
-    def __init__(self,  clientId: str,  responseId: str,  message: Dict ):
-        super(Message, self).__init__( "message", clientId, responseId )
-        self._body = json.dumps( message )
-
-class ErrorReport(Response):
-
-    def __init__( self,  clientId: str,  responseId: str,  message: Dict ):
-        super(ErrorReport, self).__init__( "error", clientId, responseId )
-        self._body = json.dumps( message )
-
+    def __str__(self) -> str: return self.__class__.__name__  + "]: " + str(self._body)
 
 class DataPacket(Response):
 
-    def __init__( self,  clientId: str,  responseId: str,  header: str, data: bytes = bytearray(0)  ):
-        super(DataPacket, self).__init__( "data", clientId, responseId )
-        self._body =  header
+    def __init__( self, sid: str, type, header: Dict, data: bytes = bytearray(0)  ):
+        super(DataPacket, self).__init__( sid, type )
+        self._header =  header
         self._data = data
 
     def hasData(self) -> bool:
         return ( self._data is not None ) and ( len( self._data ) > 0 )
 
     def getTransferHeader(self) -> bytes:
-        return s2b( self._body )
+        return s2b( self.getHeaderString() )
 
     def getHeaderString(self) -> str:
-        return self._body
+        return json.dumps( self._header )
 
     def getTransferData(self) -> bytes:
         return self._data
@@ -77,8 +64,7 @@ class DataPacket(Response):
         return self._data
 
     def toString(self) -> str: return \
-        "DataPacket[" + self._body + "]"
-
+        "DataPacket[" + self.getHeaderString() + "]"
 
 class Responder(Thread):
 
@@ -93,80 +79,58 @@ class Responder(Thread):
         self.socket: zmq.Socket = self.initSocket()
         self.input_tasks = input_tasks
         self.current_tasks: List[Task] = []
-        self.pause_duration = 0.2
+        self.completed_tasks = collections.deque()
+        self.pause_duration = 0.1
         self.active = True
 
-    def processResults(self):
+    def getDataPacket(self, status: Status, task: Task ):
+        if (status == Status.COMPLETED):
+            return self.createDataPacket(task.id, task.getResult())
+        elif (status == Status.ERROR):
+            return self.createMessage(task.id, {"error": task["error"]})
+
+    def importTasks(self):
         while not self.input_tasks.empty():
             self.current_tasks.append(self.input_tasks.get())
 
-        completed_tasks = []
+    def removeCompletedTasks(self):
+        while len( self.completed_tasks ):
+            self.current_tasks.remove( self.completed_tasks.popleft() )
+
+    def processResults(self):
+        self.importTasks()
         for task in self.current_tasks:
             status = task.status()
-            self.setExeStatus(status)
+            self.setExeStatus( task.id, status )
             if status in [Status.COMPLETED, Status.ERROR]:
-                result = task.getResult()
-                self.sendDataPacket(self.createDataPacker(result))
-            completed_tasks.append(status)
-
-        for task in completed_tasks:
-            self.current_tasks.remove(task)
+                dataPacket = self.getDataPacket( status, task )
+                self.sendDataPacket( dataPacket )
+                self.completed_tasks.append(status)
+        self.removeCompletedTasks()
 
     def run(self):
         while self.active:
             self.processResults()
             time.sleep( self.pause_duration )
 
-    def sendResponse( self, msg: Response ):
-        self.logger.info( "@@R: Post Message to response queue: " + str(msg) )
-        self.doSendResponse(msg)
-
-    def sendDataPacket( self, data: DataPacket ):
-        self.logger.info( "@@R: Posting DataPacket to response queue: " + str(data) )
-        self.doSendResponse( data )
-        self.logger.info("@@R: POST COMPLETE ")
-
-    def doSendResponse( self,  r: Response ):
-        if( r.rtype == "message" ):
-            packaged_msg: str = self.doSendMessage( r )
-            dateTime =  datetime.datetime.now()
-            self.logger.info( "@@R: Sent response: " + r.id() + " (" + dateTime.strftime("MM/dd HH:mm:ss") + "), content sample: " + packaged_msg.substring( 0, min( 300, len(packaged_msg) ) ) );
-        elif( r.rtype == "data" ):
-            self.doSendDataPacket( r )
-        elif( r.rtype == "error" ):
-                self.doSendErrorReport( r )
-        else:
-            self.logger.error( "@@R: Error, unrecognized response type: " + r.rtype )
-            self.doSendErrorReport( ErrorReport( r.clientId, r.responseId, "Error, unrecognized response type: " + r.rtype ) )
-
-    def doSendMessage(self, msg: Response, type: str = "response") -> str:
-        msgStr = str(msg.message())
-        self.logger.info("@@R: Sending {} MESSAGE: {}".format( type, msgStr ) )
-        self.socket.send_multipart( [ s2b( msg.clientId + msg.responseId ), s2b( type ), s2b( msgStr )  ] )
-        return msgStr
-
-    def doSendErrorReport( self, msg: Response  ):
-        return self.doSendMessage( msg, "error")
-
-    def doSendDataPacket( self, dataPacket: DataPacket ):
-        multipart_msg = [ s2b( dataPacket.clientId + dataPacket.responseId ), b"data", dataPacket.getTransferHeader() ]
+    def sendDataPacket( self, dataPacket: DataPacket ):
+        multipart_msg = [ s2b( dataPacket.id ), b"data", dataPacket.getTransferHeader() ]
         if dataPacket.hasData():
             bdata: bytes = dataPacket.getTransferData()
             multipart_msg.append( bdata )
-            self.logger.info("@@R: Sent data packet for " + dataPacket.id() + ", data Size: " + str(len(bdata)) )
-            self.logger.info("@@R: Data header: " + + dataPacket.getHeaderString())
+            self.logger.info("@@R: Sent data packet for " + dataPacket.id + ", data Size: " + str(len(bdata)) )
+            self.logger.info("@@R: Data header: " + dataPacket.getHeaderString())
         else:
-            self.logger.info( "@@R: Sent data header only for " + dataPacket.id() + "---> NO DATA!" )
-
+            self.logger.info( "@@R: Sent data header only for " + dataPacket.id + "---> NO DATA!" )
         self.socket.send_multipart( multipart_msg )
 
-    def setExeStatus( self, cId: str, rid: str, status: str ):
-        self.status_reports[rid] = status
+    def setExeStatus( self, sid: str, status: Status ):
+        self.status_reports[sid] = status
         try:
-            if status.startswith("executing"):
-                self.executing_jobs[rid] = Response( "executing", cId, rid )
-            elif (status.startswith("error")) or (status.startswith("completed") ):
-                del self.executing_jobs[rid]
+            if status == Status.EXECUTING:
+                self.executing_jobs[sid] = Response( sid, "executing" )
+            elif  status == Status.ERROR or status == Status.COMPLETED:
+                del self.executing_jobs[sid]
         except Exception: pass
 
     def initSocket(self) -> zmq.Socket:
@@ -186,18 +150,19 @@ class Responder(Thread):
     def close_connection( self ):
         try:
             for response in self.executing_jobs.values():
-                self.doSendErrorReport( self.socket, ErrorReport(response.clientId, response.responseId, "Job terminated by server shutdown.") );
+                self.sendDataPacket( self.createMessage( response.id, { "error": "Job terminated by server shutdown." } ) )
             self.socket.close()
         except Exception: pass
 
-    def createDataPacker( self, clientId: str, rid: str, origin: Sequence[int], shape: Sequence[int], data: bytes, metadata: Dict[str,str] ) -> DataPacket:
-        self.logger.debug( "@@Portal: Sending response data to client for rid {}, nbytes={}".format( rid, len(data) ) )
-        array_header_fields = [ "array", rid, self.ia2s(origin), self.ia2s(shape), self.m2s(metadata), "1" ]
-        array_header = "|".join(array_header_fields)
-        header_fields = [ rid, "array", array_header ]
-        header = "!".join(header_fields)
+    def createDataPacket( self, sid: str, dataset: xa.Dataset, metadata: Dict = None ) -> DataPacket:
+        data = pickle.dumps(dataset, protocol=-1)
+        header_fields = [ "xarray", ( metadata if metadata else {} )  ]
+        header = pickle.dumps( header_fields )
         self.logger.debug("Sending header: " + header)
-        return DataPacket( clientId, rid, header, data )
+        return DataPacket( sid, "data", header, data )
+
+    def createMessage(self, sid: str, message: Dict = None ) -> DataPacket:
+        return DataPacket( sid, "message", message )
 
     def __del__(self):
         self.shutdown()
