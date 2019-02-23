@@ -64,6 +64,7 @@ class StratusApp(StratusCore):
             self.zmqContext: zmq.Context = zmq.Context()
             self.request_socket: zmq.Socket = self.zmqContext.socket(zmq.REP)
             self.responder = Responder( self.zmqContext, self.client_address, self.response_port, self.tasks )
+            self.responder.start()
             self.handlers = {}
             self.initSocket( self.client_address, self.request_port )
 
@@ -77,7 +78,6 @@ class StratusApp(StratusCore):
             parts = request_header.split("!")
             submissionId = str(parts[0])
             rType =  str(parts[1])
-            self.responder.registerClient( submissionId )
             try:
                 timeStamp = datetime.datetime.now().strftime("MM/dd HH:mm:ss")
                 self.logger.info( "@@Portal:  ###  Processing {} request @({})".format( rType, timeStamp) )

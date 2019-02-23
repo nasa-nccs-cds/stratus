@@ -95,23 +95,26 @@ class Responder(Thread):
         self.current_tasks: List[Task] = []
         self.active = True
 
+    def processResults(self):
+        while not self.input_tasks.empty():
+            self.current_tasks.append(self.input_tasks.get())
+
+        completed_tasks = []
+        for task in self.current_tasks:
+            status = task.status()
+            self.setExeStatus(status)
+            if status in [Status.COMPLETED, Status.ERROR]:
+                result = task.getResult()
+                self.sendDataPacket(self.createDataPacker(result))
+            completed_tasks.append(status)
+
+        for task in completed_tasks:
+            self.current_tasks.remove(task)
+
     def run(self):
-
         while self.active:
-            while not self.input_tasks.empty():
-                self.current_tasks.append(  self.input_tasks.get() )
-
-            completed_tasks = []
-            for task in self.current_tasks:
-                status = task.status()
-                self.setExeStatus( status )
-                if status in [ Status.COMPLETED, Status.ERROR ]:
-                    result = task.getResult( )
-                    self.sendDataPacket( self.createDataPacker( result ) )
-                completed_tasks.append( status )
-
-            for task in completed_tasks:
-                self.current_tasks.remove( task )
+            self.processResults()
+            time.sleep(0.1)
 
     def sendResponse( self, msg: Response ):
         self.logger.info( "@@R: Post Message to response queue: " + str(msg) )
