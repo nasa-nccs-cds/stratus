@@ -4,16 +4,23 @@ os.environ["AIRFLOW_GPL_UNIDECODE"] = "true"
 
 def get_requirements():
     handlers = [ "celery", "endpoint", "zeromq", "openapi", "lambda", "rest" ]
+    requirement_files = []
     for handler in handlers:
         if handler in sys.argv:
             sys.argv.remove(handler)
-            return f"requirements/{handler}.txt"
-    raise Exception( "Usage: 'python setup.py install <handler>' where <handler> is one of " + str(handlers))
+            requirement_files.append( f"requirements/{handler}.txt" )
+    if len(requirement_files) == 0:
+        requirement_files = [ f"requirements/{handler}.txt" for handler in handlers ]
+    return requirement_files
 
-with open( get_requirements() ) as f:
-    deps = [dep for dep in f.read().split('\n') if dep.strip() != '' and not dep.startswith('-e')]
-    print( "Installing with deps: " + str(deps) )
-    install_requires = deps
+install_requires = set()
+for requirement_file in get_requirements():
+    with open( requirement_file ) as f:
+        for dep in f.read().split('\n'):
+            if dep.strip() != '' and not dep.startswith('-e'):
+                install_requires.add( dep )
+
+print( "Installing with dependencies: " + str(install_requires) )
 
 setup(name='stratus',
       version='1.0',
@@ -25,4 +32,4 @@ setup(name='stratus',
       package_data={'stratus': ['api/*.yaml']},
       zip_safe=False,
       include_package_data=True,
-      install_requires=install_requires)
+      install_requires=list(install_requires))
