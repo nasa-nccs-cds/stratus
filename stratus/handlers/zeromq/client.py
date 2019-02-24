@@ -165,8 +165,8 @@ class ResponseManager(Thread):
             sId = b2s( response[0] )
             header = json.loads( b2s( response[1] ) )
             type = header["type"]
-            self.log(f"[{sId}]: Received response: " +  str( header ) )
-            if type == "data" and len(response) > 2:
+            self.log(f"[{sId}]: Received response: " +  str( header ) + ", size = " + str( len(response) ) )
+            if type == "xarray" and len(response) > 2:
                 dataset = pickle.loads(response[2])
                 self.cacheResult( header, dataset )
             else:
