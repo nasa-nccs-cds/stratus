@@ -6,7 +6,7 @@ from stratus.util.config import Config, StratusLogger, UID
 from threading import Thread
 from typing import Sequence, List, Dict, Mapping, Optional
 from stratus.util.parsing import s2b, b2s
-from stratus_endpoint.handler.base import Task, Status
+from stratus_endpoint.handler.base import Task, Status, TaskResult
 import random, string, os, pickle, queue
 import xarray as xa
 from enum import Enum
@@ -109,11 +109,6 @@ class ZMQClient(StratusClient):
     def waitUntilDone(self):
         self.response_manager.join()
 
-class zmqResponse:
-    def __init__(self, header: Dict, data: Optional[xa.Dataset] ):
-        self.header = header
-        self.data = data
-
 class ResponseManager(Thread):
 
     def __init__(self, context: zmq.Context, subscribeId: str, host: str, port: int, **kwargs ):
@@ -126,15 +121,15 @@ class ResponseManager(Thread):
         self.active = True
         self.mstate = MessageState.RESULT
         self.setName('STRATUS zeromq client Response Thread')
-        self.cached_results: queue.Queue[zmqResponse] = queue.Queue()
+        self.cached_results: queue.Queue[TaskResult] = queue.Queue()
         self.setDaemon(True)
         self.cacheDir = kwargs.get( "cacheDir",  os.path.expanduser( "~/.edas/cache") )
         self.log("Created RM, cache dir = " + self.cacheDir )
 
     def cacheResult(self, header: Dict, data: Optional[xa.Dataset] ):
-        self.cached_results.put( zmqResponse(header,data)  )
+        self.cached_results.put( TaskResult(header,data)  )
 
-    def getResult( self, block=True, timeout=None ) -> Optional[zmqResponse]:
+    def getResult( self, block=True, timeout=None ) -> Optional[TaskResult]:
         try:                 return self.cached_results.get( block, timeout )
         except queue.Empty:  return None
 
@@ -188,14 +183,8 @@ class zmqTask(Task):
         self.logger = StratusLogger.getLogger()
         self.manager = manager
 
-    def getResult(self, block=True, timeout=None ) ->  Optional[xa.Dataset]:
-        result = self.manager.getResult(block,timeout)
-        if result is None: return None
-        if result.data is not None:
-            return result.data
-        else:
-            self.logger.info( "Got Message: " + str(result.header) )
-            return None
+    def getResult(self, block=True, timeout=None ) ->  Optional[TaskResult]:
+        return self.manager.getResult(block,timeout)
 
     def status(self) ->  Status:
         return self._status
