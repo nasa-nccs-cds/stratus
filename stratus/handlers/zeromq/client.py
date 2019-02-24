@@ -7,7 +7,7 @@ from threading import Thread
 from typing import Sequence, List, Dict, Mapping, Optional
 from stratus.util.parsing import s2b, b2s
 from stratus_endpoint.handler.base import Task, Status
-import random, string, os
+import random, string, os, pickle, queue
 import xarray as xa
 from enum import Enum
 MB = 1024 * 1024
@@ -109,6 +109,11 @@ class ZMQClient(StratusClient):
     def waitUntilDone(self):
         self.response_manager.join()
 
+class zmqResponse:
+    def __init__(self, header: Dict, data: Optional[xa.Dataset] ):
+        self.header = header
+        self.data = data
+
 class ResponseManager(Thread):
 
     def __init__(self, context: zmq.Context, subscribeId: str, host: str, port: int, **kwargs ):
@@ -121,26 +126,17 @@ class ResponseManager(Thread):
         self.active = True
         self.mstate = MessageState.RESULT
         self.setName('STRATUS zeromq client Response Thread')
-        self.cached_results = {}
-        self.cached_arrays = {}
-        self.filePaths = {}
+        self.cached_results: queue.Queue[zmqResponse] = queue.Queue()
         self.setDaemon(True)
         self.cacheDir = kwargs.get( "cacheDir",  os.path.expanduser( "~/.edas/cache") )
         self.log("Created RM, cache dir = " + self.cacheDir )
 
-    def cacheResult(self, id: str, result: str ):
-        self.logger.info( "Caching result array: " + id )
-        self.getResults(id).append(result)
+    def cacheResult(self, header: Dict, data: Optional[xa.Dataset] ):
+        self.cached_results.put( zmqResponse(header,data)  )
 
-    def getResults(self, id: str ) -> List[str]:
-        return self.cached_results.setdefault(id,[])
-
-    def cacheArray(self, id: str, array ):
-        print( "Caching array: " + id )
-        self.getArrays(id).append(array)
-
-    def getArrays(self, id: str ):
-        return self.cached_arrays.setdefault(id,[])
+    def getResult( self, block=True, timeout=None ) -> Optional[zmqResponse]:
+        try:                 return self.cached_results.get( block, timeout )
+        except queue.Empty:  return None
 
     def run(self):
         response_socket = None
@@ -149,12 +145,13 @@ class ResponseManager(Thread):
             response_socket: zmq.Socket = self.context.socket( zmq.SUB )
             response_port = ConnectionMode.connectSocket( response_socket, self.host, self.port )
             response_socket.subscribe( s2b( self.subscribeId ) )
-            self.log("Connected response socket on port {} with subscription (client/request) id: '{}'".format( response_port, self.subscribeId ) )
+            self.log("Connected response socket on port {} with subscription (client/request) id: '{}', active = {}".format( response_port, self.subscribeId, str(self.active) ) )
             while( self.active ):
                 self.processNextResponse( response_socket )
 
         except Exception as err:
-            self.log( "Error connecting response socket: " + str(err) )
+            self.log( "ResponseManager error: " + str(err) )
+            self.cacheResult( { "error": str(err) }, None )
         finally:
             if response_socket: response_socket.close()
 
@@ -163,100 +160,42 @@ class ResponseManager(Thread):
         if self.active:
             self.active = False
 
-    def popResponse(self) -> Optional[str]:
-        if( len( self.cached_results ) == 0 ):
-            return None
-        else:
-            return self.cached_results.pop()
-
-    def getMessageField(self, header, index ) -> str:
-        toks = header.split('|')
-        return toks[index]
-
     def log(self, msg: str, maxPrintLen = 300 ):
         self.logger.info( "[RM] " + msg )
-
-    def getItem(self, str_array: Sequence[str], itemIndex: int, default_val="NULL" ) -> str:
-        try: return str_array[itemIndex]
-        except Exception as err: return default_val
 
     def processNextResponse(self, socket: zmq.Socket ):
         try:
             self.log("Awaiting responses" )
             response = socket.recv_multipart()
-            cId = b2s( response[0] )
-            rId = b2s( response[1] )
-            type = b2s( response[2] )
-            msg = b2s( response[3] )
-            self.log("Received response, rid: " + rId + ", type: " + type )
-            if type == "array":
-                self.log( "\n\n #### Received array " + rId + ": " + msg )
-                data = response[4]
-                array = data # npArray.createInput(msg,data)
-                self.logger.info("Received array: {0}".format(rId))
-                self.cacheArray( rId, array )
-            elif type == "file":
-                data = response[4]
-                self.log("\n\n #### Received file " + rId + ": " + msg)
-                filePath = self.saveFile( msg, data )
-                self.filePaths[rId] = filePath
-                self.log("Saved file '{0}' for rid {1}".format(filePath,rId))
-            elif type == "error":
-                self.log(  "\n\n #### ERROR REPORT " + rId + ": " + msg )
-                print (" *** Execution Error Report: " + msg)
-                self.cacheResult( rId, msg )
-            elif type == "response":
-                if rId == "status":
-                    print (" *** Execution Status Report: " + msg)
-                else:
-                    self.log(  " Caching response message " + rId  + ", sample: " + msg[0:300] )
-                    self.cacheResult( rId, msg )
+            sId = b2s( response[0] )
+            header = json.loads( b2s( response[1] ) )
+            type = header["type"]
+            self.log(f"[{sId}]: Received response: " +  str( header ) )
+            if type == "data" and len(response) > 2:
+                dataset = pickle.loads(response[2])
+                self.cacheResult( header, dataset )
             else:
-                self.log(" #### EDASPortal.ResponseThread-> Received unrecognized message type: {0}".format(type))
+                self.cacheResult( header, None )
 
         except Exception as err:
             self.log( "EDAS error: {0}\n{1}\n".format(err, traceback.format_exc() ), 1000 )
 
-    def getFileCacheDir( self, role: str ) -> str:
-        filePath = os.path.join( self.cacheDir, "transfer", role )
-        if not os.path.exists(filePath): os.makedirs(filePath)
-        self.log(" ***->> getFileCacheDir = {0}".format(filePath) )
-        return filePath
 
-    def saveFile(self, header: str, data ):
-        header_toks = header.split('|')
-        id = header_toks[1]
-        role = header_toks[2]
-        fileName = os.path.basename(header_toks[3])
-        filePath = os.path.join( self.getFileCacheDir(role), fileName )
-        self.log(" %%%% filePath = {0}".format(filePath) )
-        with open( filePath, mode='wb') as file:
-            file.write( data )
-            self.log(" ***->> Saving File, path = {0}".format(filePath) )
-        return filePath
-
-
-    def getResponses( self, rId: str, wait: bool =True ):
-        self.log(  "Waiting for a response from the server... " )
-        try :
-            while( True ):
-                results = self.getResults(rId)
-                if( (len(results) > 0) or not wait): return results
-                else:
-                    print (".")
-                    time.sleep(0.25)
-        except KeyboardInterrupt:
-            self.log("Terminating wait for response")
-            return []
-
-class zmqTask(Task):  # TODO: COMPLETE
+class zmqTask(Task):
 
     def __init__(self, manager: ResponseManager, **kwargs):
-        super(zmqTask,self).__init__( **kwargs )
+        super(zmqTask,self).__init__( manager.subscribeId, **kwargs )
+        self.logger = StratusLogger.getLogger()
         self.manager = manager
 
-    def getResult(self, timeout=None, block=False) ->  Optional[xa.Dataset]:
-        return self.manager.getResponses( "" )
+    def getResult(self, block=True, timeout=None ) ->  Optional[xa.Dataset]:
+        result = self.manager.getResult(block,timeout)
+        if result is None: return None
+        if result.data is not None:
+            return result.data
+        else:
+            self.logger.info( "Got Message: " + str(result.header) )
+            return None
 
     def status(self) ->  Status:
         return self._status

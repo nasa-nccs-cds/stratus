@@ -5,7 +5,7 @@ from stratus.util.config import Config, StratusLogger
 import zmq, traceback, time, logging, xml, socket
 from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
-from stratus.handlers.zeromq.service import Responder, ErrorReport, DataPacket, Message, Response
+from stratus.handlers.zeromq.service import Responder, DataPacket, Response
 from stratus.handlers.manager import handlers
 from stratus.util.parsing import s2b, b2s
 from stratus_endpoint.handler.base import Task, Status
@@ -19,22 +19,18 @@ class StratusApp(StratusCore):
         self.logger =  StratusLogger.getLogger()
         self.active = True
         self.parms = self.getConfigParms('stratus')
-        self.client_address = self.parms["client.address"]
-        self.request_port = self.parms.get( "request_port", 4556 )
-        self.response_port = self.parms.get( "response_port", 4557 )
+        self.client_address = self.parms.get( "client.address","*" )
+        self.request_port = self.parms.get( "request.port", 4556 )
+        self.response_port = self.parms.get( "response.port", 4557 )
         self.tasks = queue.Queue()
 
-    def initSocket(self, client_address, request_port):
+    def initSocket( self ):
         try:
-            self.request_socket.bind( "tcp://{}:{}".format( client_address, request_port ) )
-            self.logger.info( "@@Portal --> Bound request socket to client at {} on port: {}".format( client_address, request_port ) )
+            self.request_socket.bind( "tcp://{}:{}".format( self.client_address, self.request_port ) )
+            self.logger.info( "@@Portal --> Bound request socket to client at {} on port: {}".format( self.client_address, self.request_port ) )
         except Exception as err:
-            self.logger.error( "@@Portal: Error initializing request socket on {}, port {}: {}".format( client_address,  request_port, err ) )
+            self.logger.error( "@@Portal: Error initializing request socket on {}, port {}: {}".format( self.client_address,  self.request_port, err ) )
             self.logger.error( traceback.format_exc() )
-
-    def sendErrorReport( self, clientId: str, responseId: str, msg: Dict ):
-        self.logger.info("@@Portal-----> SendErrorReport[" + clientId +":" + responseId + "]" )
-        self.responder.sendResponse( ErrorReport(clientId,responseId,msg) )
 
     def addHandler(self, clientId, jobId, handler ):
         self.handlers[ clientId + "-" + jobId ] = handler
@@ -47,14 +43,14 @@ class StratusApp(StratusCore):
         except:
             self.logger.error( "Error removing handler: " + handlerId + ", existing handlers = " + str(list(self.handlers.keys())))
 
-    def setExeStatus( self, clientId: str, rid: str, status: str ):
-        self.responder.setExeStatus(clientId,rid,status)
+    def setExeStatus( self, submissionId: str, status: Status ):
+        self.responder.setExeStatus( submissionId, status )
 
     def sendResponseMessage( self, msg: Response ) -> str:
-        request_args = [ msg.id, msg.message() ]
+        request_args = [ msg.id, msg.message ]
         packaged_msg = "!".join( request_args )
         timeStamp =  datetime.datetime.now().strftime("MM/dd HH:mm:ss")
-        self.logger.info( "@@Portal: Sending response {} on request_socket @({}): {}".format( msg.responseId, timeStamp, str(msg) ) )
+        self.logger.info( "@@Portal: Sending response {} on request_socket @({}): {}".format( msg.id, timeStamp, str(msg) ) )
         self.request_socket.send_string( packaged_msg )
         return packaged_msg
 
@@ -63,10 +59,10 @@ class StratusApp(StratusCore):
         try:
             self.zmqContext: zmq.Context = zmq.Context()
             self.request_socket: zmq.Socket = self.zmqContext.socket(zmq.REP)
-            self.responder = Responder( self.zmqContext, self.client_address, self.response_port, self.tasks )
+            self.responder = Responder( self.zmqContext, self.response_port, self.tasks, client_address = self.client_address )
             self.responder.start()
             self.handlers = {}
-            self.initSocket( self.client_address, self.request_port )
+            self.initSocket()
 
         except Exception as err:
             self.logger.error( "@@Portal:  ------------------------------- StratusApp Init error: {} ------------------------------- ".format( err ) )
@@ -83,32 +79,32 @@ class StratusApp(StratusCore):
                 self.logger.info( "@@Portal:  ###  Processing {} request @({})".format( rType, timeStamp) )
                 if rType == "epas":
                     response = { "epas": handlers.getEpas() }
-                    self.sendResponseMessage( Message( submissionId, "epas", response  ) )
+                    self.sendResponseMessage( Response( submissionId, response  ) )
                 elif rType == "exe":
                     if len(parts) <= 2: raise Exception( "Missing parameters to exe request")
                     request = json.loads( parts[2] )
                     request["id"] = submissionId
                     current_tasks = self.processWorkflow(request)
                     self.logger.info( "Processing Request: '{}' '{}' '{}', tasks: {} ".format( submissionId, rType, str(request), str( current_tasks.keys() ) ) )
-                    for task in current_tasks: self.tasks.put( task )                                                                                                               #   TODO: Send results when tasks complete.
+                    for task in current_tasks.values(): self.tasks.put( task )                                                                                                               #   TODO: Send results when tasks complete.
                     response = { "status": "Executing", "tasks": str( list( current_tasks.keys() ) ) }
-                    self.sendResponseMessage( Message( submissionId, "response", response )  )
+                    self.sendResponseMessage( Response( submissionId, response )  )
                 elif rType == "quit" or rType == "shutdown":
                     response = {"status": "Terminating" }
-                    self.sendResponseMessage( Message( submissionId, "quit", response ) )
+                    self.sendResponseMessage( Response( submissionId, response ) )
                     self.logger.info("@@Portal: Received Shutdown Message")
                     exit(0)
                 else:
                     msg = "@@Portal: Unknown request type: " + rType
                     self.logger.info(msg)
                     response = {"error": msg }
-                    self.sendResponseMessage( Message(submissionId, "error", response ) )
+                    self.sendResponseMessage( Response(submissionId, response ) )
             except Exception as ex:
                 tb = traceback.format_exc()
                 self.logger.error( "@@Portal: Execution error: " + str(ex) )
                 self.logger.error( tb )
                 response = { "error": str(ex), "traceback": tb }
-                self.sendResponseMessage( Message( submissionId, "error", response ) )
+                self.sendResponseMessage( Response( submissionId, response ) )
 
         self.logger.info( "@@Portal: EXIT EDASPortal")
 

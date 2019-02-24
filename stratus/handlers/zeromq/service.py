@@ -29,33 +29,29 @@ class ServiceHandler( Handler ):
 
 class Response:
 
-    def __init__(self, sid: str, type: str ):
+    def __init__(self, sid: str, body: Dict ):
         self._id = sid
-        self.rtype = type
-        self._body = None
+        self._body = body
 
     @property
     def id(self): return self._id
 
-    def message(self) -> str: return self._body.strip()
+    @property
+    def message(self) -> str: return json.dumps(self._body)
 
-    def __str__(self) -> str: return self.__class__.__name__  + "]: " + str(self._body)
+    def __str__(self) -> str: return "[" + self.__class__.__name__  + "]: " + self.message
 
 class DataPacket(Response):
 
-    def __init__( self, sid: str, type, header: Dict, data: bytes = bytearray(0)  ):
-        super(DataPacket, self).__init__( sid, type )
-        self._header =  header
+    def __init__( self, sid: str, header: Dict, data: bytes = bytearray(0)  ):
+        super(DataPacket, self).__init__( sid, header )
         self._data = data
 
     def hasData(self) -> bool:
         return ( self._data is not None ) and ( len( self._data ) > 0 )
 
     def getTransferHeader(self) -> bytes:
-        return s2b( self.getHeaderString() )
-
-    def getHeaderString(self) -> str:
-        return json.dumps( self._header )
+        return s2b( self.message )
 
     def getTransferData(self) -> bytes:
         return self._data
@@ -64,21 +60,21 @@ class DataPacket(Response):
         return self._data
 
     def toString(self) -> str: return \
-        "DataPacket[" + self.getHeaderString() + "]"
+        "DataPacket[" + self.message + "]"
 
 class Responder(Thread):
 
-    def __init__( self,  _context: zmq.Context,  _client_address: str,  _response_port: int, input_tasks: queue.Queue ):
+    def __init__( self,  _context: zmq.Context, _response_port: int, input_tasks: queue.Queue, **kwargs ):
         super(Responder, self).__init__()
         self.logger =  StratusLogger.getLogger()
         self.context: zmq.Context =  _context
         self.response_port = _response_port
         self.executing_jobs: Dict[str,Response] = {}
         self.status_reports: Dict[str,str] = {}
-        self.client_address = _client_address
+        self.client_address = kwargs.get( "client_address", "*" )
         self.socket: zmq.Socket = self.initSocket()
         self.input_tasks = input_tasks
-        self.current_tasks: List[Task] = []
+        self.current_tasks: Dict[str,Task] = {}
         self.completed_tasks = collections.deque()
         self.pause_duration = 0.1
         self.active = True
@@ -91,21 +87,23 @@ class Responder(Thread):
 
     def importTasks(self):
         while not self.input_tasks.empty():
-            self.current_tasks.append(self.input_tasks.get())
+            task = self.input_tasks.get()
+            self.current_tasks[task.id] = task
 
     def removeCompletedTasks(self):
-        while len( self.completed_tasks ):
-            self.current_tasks.remove( self.completed_tasks.popleft() )
+        for completed_task in self.completed_tasks:
+            del self.current_tasks[completed_task]
+        self.completed_tasks.clear()
 
     def processResults(self):
         self.importTasks()
-        for task in self.current_tasks:
-            status = task.status()
-            self.setExeStatus( task.id, status )
+        for tid, task in self.current_tasks.items():
+            status = task.status
+            self.setExeStatus( tid, status )
             if status in [Status.COMPLETED, Status.ERROR]:
                 dataPacket = self.getDataPacket( status, task )
                 self.sendDataPacket( dataPacket )
-                self.completed_tasks.append(status)
+                self.completed_tasks.append(tid)
         self.removeCompletedTasks()
 
     def run(self):
@@ -114,12 +112,12 @@ class Responder(Thread):
             time.sleep( self.pause_duration )
 
     def sendDataPacket( self, dataPacket: DataPacket ):
-        multipart_msg = [ s2b( dataPacket.id ), b"data", dataPacket.getTransferHeader() ]
+        multipart_msg = [ s2b( dataPacket.id ), dataPacket.getTransferHeader() ]
         if dataPacket.hasData():
             bdata: bytes = dataPacket.getTransferData()
             multipart_msg.append( bdata )
             self.logger.info("@@R: Sent data packet for " + dataPacket.id + ", data Size: " + str(len(bdata)) )
-            self.logger.info("@@R: Data header: " + dataPacket.getHeaderString())
+            self.logger.info("@@R: Data header: " + dataPacket.message)
         else:
             self.logger.info( "@@R: Sent data header only for " + dataPacket.id + "---> NO DATA!" )
         self.socket.send_multipart( multipart_msg )
@@ -128,7 +126,7 @@ class Responder(Thread):
         self.status_reports[sid] = status
         try:
             if status == Status.EXECUTING:
-                self.executing_jobs[sid] = Response( sid, "executing" )
+                self.executing_jobs[sid] = Response( sid, { "status": "executing" } )
             elif  status == Status.ERROR or status == Status.COMPLETED:
                 del self.executing_jobs[sid]
         except Exception: pass
@@ -150,19 +148,26 @@ class Responder(Thread):
     def close_connection( self ):
         try:
             for response in self.executing_jobs.values():
-                self.sendDataPacket( self.createMessage( response.id, { "error": "Job terminated by server shutdown." } ) )
+                self.sendErrorMessage( f"Job {response.id} terminated  by server shutdown.")
             self.socket.close()
         except Exception: pass
 
+    def sendMessage(self, sid: str, message: Dict = None):
+        dataPacket = self.createMessage( sid, message )
+        self.sendDataPacket(dataPacket)
+
+    def sendErrorMessage(self, sid: str, message: str = None):
+        self.sendMessage(sid, { "error": message }  )
+
     def createDataPacket( self, sid: str, dataset: xa.Dataset, metadata: Dict = None ) -> DataPacket:
         data = pickle.dumps(dataset, protocol=-1)
-        header_fields = [ "xarray", ( metadata if metadata else {} )  ]
-        header = pickle.dumps( header_fields )
-        self.logger.debug("Sending header: " + header)
-        return DataPacket( sid, "data", header, data )
+        header = metadata if metadata else {}
+        header["type"] = "xarray"
+        return DataPacket( sid, header, data )
 
     def createMessage(self, sid: str, message: Dict = None ) -> DataPacket:
-        return DataPacket( sid, "message", message )
+        if "type" not in message: message["type"] = "message"
+        return DataPacket( sid, message )
 
     def __del__(self):
         self.shutdown()
