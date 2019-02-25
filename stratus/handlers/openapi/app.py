@@ -20,8 +20,8 @@ class StratusResolver(Resolver):
         return operation.operation_id
 
     def function_resolver( self, operation_id: str ) :
-        clients = StratusCore.getClients( operation_id )
-        assert len(clients), "No handlers found for epa: " + operation_id
+        clients = StratusCore.getClients()
+        assert len(clients), "No handlers found for operation: " + operation_id
         return partial( clients[0].request, operation_id )
 
 class StratusApp(StratusCore):
@@ -35,7 +35,7 @@ class StratusApp(StratusCore):
         self.flask_parms[ 'SQLALCHEMY_DATABASE_URI' ] = self.flask_parms['DATABASE_URI']
         self.app.app.config.update( self.flask_parms )
 
-        api = self.getParameter( 'API' )
+        api = self.parm( 'API' )
         self.db = SQLAlchemy( self.app.app )
         self.app.add_api( api + ".yaml", resolver=StratusResolver(api) )
 
@@ -51,8 +51,6 @@ class StratusApp(StratusCore):
         traceback.print_exc()
         return Response(response=json.dumps({ 'message': getattr(ex, 'message', repr(ex)), "code": 500, "id": "", "status": "error" } ), status=500, mimetype="application/json")
 
-
-app = StratusApp()
-
 if __name__ == "__main__":
+    app = StratusApp()
     app.run()

@@ -1,0 +1,179 @@
+swagger: "2.0"
+info:
+  title: STRATUS WPS service
+  description: ESGF-CWT compliant WPS service implemented using STRATUS OpenAPI Service.
+  contact:
+    name: Thomas Maxwell
+    email: thomas.maxwell@nasa.gov
+  license:
+    name: APLv2
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  version: 0.1.0
+basePath: /cwt
+schemes:
+  - http
+consumes:
+  - application/xml
+produces:
+  - application/xml
+paths:
+  /wps:
+    get:
+      operationId: wps-get
+      description: Executes a WPS request
+      parameters:
+        - name: Request
+          in: query
+          description: Type of request- GetCapabilities, DescribeProcess, or Execute
+          required: true
+          type: string
+        - name: DataInputs
+          in: query
+          description: Request inputs
+          required: false
+          type: string
+      responses:
+        "200":
+          description: Status of analytic operation
+          schema:
+            $ref: '#/definitions/Status'
+        default:
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      operationId: wps-post
+      description: Executes a WPS request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/definitions/WPSRequest'
+      responses:
+        "200":
+          description: Status of analytic operation
+          schema:
+            $ref: '#/definitions/Status'
+        default:
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+definitions:
+
+  Status:
+    required:
+      - id
+      - status
+    properties:
+      id:
+        description: Request Id
+        type: string
+      status:
+        description: Execution status of result
+        type: string
+      uri:
+        description: Result data access uri
+        type: string
+
+  Error:
+    required:
+      - code
+      - message
+    properties:
+      code:
+        type: integer
+        format: int32
+      message:
+        type: string
+
+  Range:
+    required:
+    - axis
+    properties:
+      axis:
+        type: string
+      start:
+        type: string
+      end:
+        type: string
+      slice:
+        type: string
+      crs:
+        type: string
+
+  Domain:
+    required:
+    - name
+    properties:
+      name:
+        type: string
+      bounds:
+        type: array
+        items:
+          $ref: "#/definitions/Range"
+
+  Variable:
+    required:
+    - name
+    - uri
+    properties:
+      uri:
+        type: string
+      name:
+        type: string
+      domain:
+        type: string
+
+  Operation:
+    required:
+    - input
+    properties:
+      input:
+        type: string
+      axes:
+        type: string
+      domain:
+        type: string
+      groupby:
+        type: string
+      resample:
+        type: string
+      select:
+        type: string
+      args:
+        type: string
+
+  WPSRequest:
+    required:
+    - Request
+    - DataInputs
+    properties:
+      Request:
+        description: Type of request- GetCapabilities, DescribeProcess, or Execute
+        type: string
+      DataInputs:
+        description: Request inputs
+        schema:
+           $ref: '#/definitions/Operation'
+
+  RequestInputs:
+    required:
+    - operation
+    - domain
+    - variable
+    properties:
+      operation:
+        type: array
+        items:
+          $ref: '#/definitions/Operation'
+      domain:
+        type: array
+        items:
+          $ref: '#/definitions/Domain'
+      variable:
+        type: array
+        items:
+          $ref: '#/definitions/Variable'
+
+

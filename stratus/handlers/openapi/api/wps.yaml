@@ -1,0 +1,70 @@
+swagger: "2.0"
+info:
+  title: STRATUS WPS service
+  description: ESGF-CWT compliant WPS service implemented using STRATUS OpenAPI Service.
+  contact:
+    name: Thomas Maxwell
+    email: thomas.maxwell@nasa.gov
+  license:
+    name: APLv2
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  version: 0.1.0
+basePath: /cwt
+schemes:
+  - http
+consumes:
+  - application/xml
+produces:
+  - application/xml
+paths:
+  /wps:
+    get:
+      operationId: exe
+      description: Executes a WPS request
+      parameters:
+        - name: Request
+          in: query
+          description: Type of request- GetCapabilities, DescribeProcess, or Execute
+          required: true
+          type: string
+        - name: DataInputs
+          in: query
+          description: Request inputs
+          required: false
+          type: string
+      responses:
+        "200":
+          description: Status of analytic operation
+          schema:
+            $ref: '#/definitions/Status'
+        default:
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+definitions:
+
+  Status:
+    required:
+      - id
+      - status
+    properties:
+      id:
+        description: Request Id
+        type: string
+      status:
+        description: Execution status of result
+        type: string
+      uri:
+        description: Result data access uri
+        type: string
+
+  Error:
+    required:
+      - code
+      - message
+    properties:
+      code:
+        type: integer
+        format: int32
+      message:
+        type: string

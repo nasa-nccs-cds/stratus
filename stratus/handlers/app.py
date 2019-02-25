@@ -67,7 +67,7 @@ class StratusCore:
         return self.config.get_map( module )
 
     @classmethod
-    def getClients( cls, epa: str ) -> List[StratusClient]:
+    def getClients( cls, epa: str = None ) -> List[StratusClient]:
         from stratus.handlers.manager import handlers
         return handlers.getClients( epa )
 

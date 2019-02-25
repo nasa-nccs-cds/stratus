@@ -7,10 +7,15 @@ import importlib
 
 class EndpointSpec:
     def __init__(self, epaSpec: str ):
+        self.logger = StratusLogger.getLogger()
         self._epaSpec = epaSpec
 
     def handles( self, epa: str, **kwargs ) -> bool:
-        return ( re.match( self._epaSpec, epa ) is not None )
+        try:
+            return ( re.match( self._epaSpec, epa ) is not None )
+        except Exception as err:
+            self.logger.error( f"Error Checking EPA '{epa}' against epaSpec '{self._epaSpec}': {str(err)}")
+            return False
 
     def __str__(self):
         return self._epaSpec
