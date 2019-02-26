@@ -9,7 +9,7 @@ class RestAPI(RestAPIBase):
     def _createBlueprint( self ) -> Blueprint:
         bp = Blueprint( self.name, __name__, url_prefix=f'/{self.name}' )
 
-        @bp.route('/cwt', methods=('GET', 'POST'))
+        @bp.route('/exe', methods=('GET', 'POST'))
         def wps():
             if request.method == 'GET':
                 requestArgs = { key.lower():value for key,value in request.args.items() }

@@ -12,15 +12,16 @@ from stratus.handlers.app import StratusCore
 
 class StratusResolver(Resolver):
 
-    def __init__(self, api: str  ):
+    def __init__(self, api: str, stratus: StratusCore ):
         Resolver.__init__( self, self.function_resolver )
         self.api = api
+        self.stratus = stratus
 
     def resolve_operation_id( self, operation: AbstractOperation ) -> str:
         return operation.operation_id
 
     def function_resolver( self, operation_id: str ) :
-        clients = StratusCore.getClients()
+        clients = self.stratus.getClients()
         assert len(clients), "No handlers found for operation: " + operation_id
         return partial( clients[0].request, operation_id )
 
@@ -37,7 +38,7 @@ class StratusApp(StratusCore):
 
         api = self.parm( 'API' )
         self.db = SQLAlchemy( self.app.app )
-        self.app.add_api( api + ".yaml", resolver=StratusResolver(api) )
+        self.app.add_api( api + ".yaml", resolver=StratusResolver(api,self) )
 
     def run(self):
         port = self.flask_parms.get( 'PORT', 5000 )

@@ -10,29 +10,27 @@ class Handlers:
     HERE = os.path.dirname( __file__ )
     STRATUS_ROOT = os.path.dirname( os.path.dirname( HERE ) )
 
-    def __init__(self, **kwargs ):
+    def __init__(self, configSpec: Config, **kwargs ):
         self.logger = StratusLogger.getLogger()
         self._handlers: Dict[str, Handler] = {}
         self._parms = kwargs
         self._constructors: Dict[str, Callable[[], Handler]] = {}
-        self.configSpec: Config = None
+        self.configSpec: Config = configSpec
+        self.init()
 
-    def init(self, configSpec: Config, **kwargs ):
-        if self.configSpec is None:
-            self.configSpec = configSpec
-            self.addConstructors()
-            self._parms.update(kwargs)
-            hspecs = self.getHandlerSpecs()
-            for service_spec in hspecs:
-                htype = service_spec["type"]
-                try:
-                    service = self.getHandler(service_spec)
-                    self._handlers[ service.name ] = service
-                    self.logger.info( f"Initialized stratus for service {htype}" )
-                except Exception as err:
-                    err_msg = "Error registering handler for service {}: {}".format( service_spec.get("name",""), str(err) )
-                    print( err_msg )
-                    self.logger.error( err_msg )
+    def init( self ):
+        self.addConstructors()
+        hspecs = self.getHandlerSpecs()
+        for service_spec in hspecs:
+            htype = service_spec["type"]
+            try:
+                service = self.getHandler(service_spec)
+                self._handlers[ service.name ] = service
+                self.logger.info( f"Initialized stratus for service {htype}" )
+            except Exception as err:
+                err_msg = "Error registering handler for service {}: {}".format( service_spec.get("name",""), str(err) )
+                print( err_msg )
+                self.logger.error( err_msg )
 
     def getHandlerSpecs(self):
         specs = []
@@ -115,4 +113,3 @@ class Handlers:
                     self.logger.warn( msg )
                     self.logger.warn( traceback.format_exc() )
 
-handlers = Handlers()

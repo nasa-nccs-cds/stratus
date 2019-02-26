@@ -2,7 +2,7 @@ import os, json, yaml
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Set, Tuple
 from stratus.util.config import Config, StratusLogger, UID
 from stratus.handlers.client import StratusClient
-from stratus.handlers.manager import handlers
+from stratus.handlers.manager import Handlers
 from stratus_endpoint.handler.base import Task, Status
 
 class OpSet():
@@ -61,18 +61,18 @@ class StratusCore:
         settings = kwargs.get( "settings", os.environ.get( 'STRATUS_SETTINGS', self.SETTINGS ) )
         self.config = Config(settings)
         self.parms = self.getConfigParms('stratus')
-        handlers.init( self.config, home=os.path.dirname( settings ) )
+        self.handlers = Handlers( self.config, home=os.path.dirname( settings ) )
 
     def getConfigParms(self, module: str ) -> Dict:
         return self.config.get_map( module )
 
-    @classmethod
-    def getClients( cls, epa: str = None ) -> List[StratusClient]:
-        from stratus.handlers.manager import handlers
-        return handlers.getClients( epa )
+    def getClients( self, epa: str = None ) -> List[StratusClient]:
+        return self.handlers.getClients( epa )
 
-    @classmethod
-    def geClientOpsets(cls, request: Dict ) -> Dict[str,OpSet]:
+    def getClient(self, name: str, **kwargs) -> StratusClient:
+        return self.handlers.getClient( name, **kwargs )
+
+    def geClientOpsets(self, request: Dict ) -> Dict[str,OpSet]:
         # Returns map of client id to list of ops in request that can be handled by that client
         ops = request.get("operation")
         assert ops is not None, "Missing 'operation' parameter in request: " + str( request )
@@ -82,7 +82,7 @@ class StratusCore:
             for parm in [ "epa" ]:
                 assert parm in op, "Operation must have an '{}' parameter: {}".format( parm, str(op) )
             epa = op["epa"]
-            clients = StratusCore.getClients( epa )
+            clients = self.getClients( epa )
             for client in clients:
                opSet = clientOpsets.setdefault( client.name, OpSet(client) )
                opSet.add( op )
@@ -90,8 +90,7 @@ class StratusCore:
 
     def shutdown(self): pass
 
-    @classmethod
-    def distributeOps(cls,  clientOpsets: Dict[str, OpSet] ) -> List[OpSet]:
+    def distributeOps(self,  clientOpsets: Dict[str, OpSet] ) -> List[OpSet]:
         # Distributes ops to clients while maximizing locality of operations
         filtered_opsets: List[OpSet] = []
         processed_ops: List[str] = []
@@ -109,10 +108,9 @@ class StratusCore:
             sorted_opsets = list( sorted( sorted_opsets, reverse=True, key=lambda x: x[1] ) )
         return filtered_opsets
 
-    @classmethod
-    def processWorkflow(cls, request: Dict ) -> Dict[str,Task]:
-        clientOpsets: Dict[str, OpSet] = cls.geClientOpsets(request)
-        distributed_opSets = cls.distributeOps( clientOpsets )
+    def processWorkflow( self, request: Dict ) -> Dict[str,Task]:
+        clientOpsets: Dict[str, OpSet] = self.geClientOpsets(request)
+        distributed_opSets = self.distributeOps( clientOpsets )
         responses = { opset.name: opset.submit( request ) for opset in distributed_opSets }
         return responses
 

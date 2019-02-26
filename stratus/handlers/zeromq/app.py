@@ -6,7 +6,6 @@ import zmq, traceback, time, logging, xml, socket
 from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
 from stratus.handlers.zeromq.service import Responder, DataPacket, Response
-from stratus.handlers.manager import handlers
 from stratus.util.parsing import s2b, b2s
 from stratus_endpoint.handler.base import Task, Status
 from enum import Enum
@@ -78,7 +77,7 @@ class StratusApp(StratusCore):
                 timeStamp = datetime.datetime.now().strftime("MM/dd HH:mm:ss")
                 self.logger.info( "@@Portal:  ###  Processing {} request @({})".format( rType, timeStamp) )
                 if rType == "epas":
-                    response = { "epas": handlers.getEpas() }
+                    response = { "epas": self.handlers.getEpas() }
                     self.sendResponseMessage( Response( submissionId, response  ) )
                 elif rType == "exe":
                     if len(parts) <= 2: raise Exception( "Missing parameters to exe request")
