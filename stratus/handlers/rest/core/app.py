@@ -13,10 +13,11 @@ class RestAPI(RestAPIBase):
         def wps():
             if request.method == 'GET':
                 requestArgs = { key.lower():value for key,value in request.args.items() }
-                rType: str = requestArgs.get("request",None)
-#                clients = self.getClients( "edas.")
-#                assert len(clients), "Can't find edas client"
-#                assert rType is not None, "Missing 'Request' argument"
+                variable: str = requestArgs.get("variable",None)
+                domain: str = requestArgs.get("domain", None)
+                operation: str = requestArgs.get("operation", None)
+                clients = self.core.getClient( "edas")
+                assert len(clients), "Can't find edas client"
 #                if rType.lower() == "execute":
 #                    rInputs: str = requestArgs.get("datainputs", None)
 #             if request.method == 'POST':

@@ -1,5 +1,4 @@
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
-from stratus.handlers.client import StratusClient
 import os, traceback, abc
 from flask import Flask, Response, Blueprint, render_template
 import json, logging, importlib
@@ -11,15 +10,16 @@ from stratus.handlers.app import StratusCore
 class RestAPIBase:
     __metaclass__ = abc.ABCMeta
 
-    def __init__( self, name, **kwargs ):
+    def __init__( self, name: str, core: StratusCore, **kwargs ):
         self.logger = StratusLogger.getLogger()
         self.parms = kwargs
         self.name = name
+        self.core = core
 
     @abc.abstractmethod
     def _createBlueprint( self ): pass
 
-    def instantiate( self, app ):
+    def instantiate( self, app: Flask ):
         bp: Blueprint = self._createBlueprint()
         self.logger.info( f"Instantiating API: {bp.name}" )
         app.register_blueprint( bp )
@@ -49,13 +49,13 @@ class StratusApp(StratusCore):
         return app
 
     def addApis(self, app ):
-        apiList = self.parm("API","stratus").split(",")
+        apiList = self.parm("API","core").split(",")
         for apiName in apiList:
             try:
                 package_name = f"stratus.handlers.rest.{apiName}.app"
                 module = importlib.import_module( package_name )
                 constructor = getattr( module, "RestAPI" )
-                rest_api: StratusRestAPI = constructor( apiName )
+                rest_api: RestAPIBase = constructor( apiName, self )
                 rest_api.instantiate( app )
             except Exception as err:
                 self.logger.error( f"Error instantiating api {apiName}: {str(err)}")
