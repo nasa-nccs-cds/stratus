@@ -5,7 +5,7 @@ from stratus.util.config import Config, StratusLogger
 import zmq, traceback, time, logging, xml, socket
 from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
-from stratus.handlers.zeromq.service import Responder, DataPacket, Response
+from stratus.handlers.zeromq.service import Responder, DataPacket, StratusResponse
 from stratus.util.parsing import s2b, b2s
 from stratus_endpoint.handler.base import Task, Status
 from enum import Enum
@@ -45,7 +45,7 @@ class StratusApp(StratusCore):
     def setExeStatus( self, submissionId: str, status: Status ):
         self.responder.setExeStatus( submissionId, status )
 
-    def sendResponseMessage( self, msg: Response ) -> str:
+    def sendResponseMessage(self, msg: StratusResponse) -> str:
         request_args = [ msg.id, msg.message ]
         packaged_msg = "!".join( request_args )
         timeStamp =  datetime.datetime.now().strftime("MM/dd HH:mm:ss")
@@ -78,7 +78,7 @@ class StratusApp(StratusCore):
                 self.logger.info( "@@Portal:  ###  Processing {} request @({})".format( rType, timeStamp) )
                 if rType == "epas":
                     response = { "epas": self.handlers.getEpas() }
-                    self.sendResponseMessage( Response( submissionId, response  ) )
+                    self.sendResponseMessage(StratusResponse(submissionId, response))
                 elif rType == "exe":
                     if len(parts) <= 2: raise Exception( "Missing parameters to exe request")
                     request = json.loads( parts[2] )
@@ -88,23 +88,23 @@ class StratusApp(StratusCore):
                     self.logger.info( "Current tasks: {} ".format( str( current_tasks.keys() ) ) )
                     for task in current_tasks.values(): self.tasks.put( task )                                                                                                               #   TODO: Send results when tasks complete.
                     response = { "status": "Executing", "tasks": str( list( current_tasks.keys() ) ) }
-                    self.sendResponseMessage( Response( submissionId, response )  )
+                    self.sendResponseMessage(StratusResponse(submissionId, response))
                 elif rType == "quit" or rType == "shutdown":
                     response = {"status": "Terminating" }
-                    self.sendResponseMessage( Response( submissionId, response ) )
+                    self.sendResponseMessage(StratusResponse(submissionId, response))
                     self.logger.info("@@Portal: Received Shutdown Message")
                     exit(0)
                 else:
                     msg = "@@Portal: Unknown request type: " + rType
                     self.logger.info(msg)
                     response = {"error": msg }
-                    self.sendResponseMessage( Response(submissionId, response ) )
+                    self.sendResponseMessage(StratusResponse(submissionId, response))
             except Exception as ex:
                 tb = traceback.format_exc()
                 self.logger.error( "@@Portal: Execution error: " + str(ex) )
                 self.logger.error( tb )
                 response = { "error": str(ex), "traceback": tb }
-                self.sendResponseMessage( Response( submissionId, response ) )
+                self.sendResponseMessage(StratusResponse(submissionId, response))
 
         self.logger.info( "@@Portal: EXIT EDASPortal")
 

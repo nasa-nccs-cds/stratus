@@ -27,7 +27,7 @@ class ServiceHandler( Handler ):
 #   def success( results: xml.Node  ): pass
 #   def failure( msg: str ): pass
 
-class Response:
+class StratusResponse:
 
     def __init__(self, sid: str, body: Dict ):
         self._id = sid
@@ -41,7 +41,7 @@ class Response:
 
     def __str__(self) -> str: return "[" + self.__class__.__name__  + "]: " + self.message
 
-class DataPacket(Response):
+class DataPacket(StratusResponse):
 
     def __init__( self, sid: str, header: Dict, data: bytes = bytearray(0)  ):
         super(DataPacket, self).__init__( sid, header )
@@ -69,7 +69,7 @@ class Responder(Thread):
         self.logger =  StratusLogger.getLogger()
         self.context: zmq.Context =  _context
         self.response_port = _response_port
-        self.executing_jobs: Dict[str,Response] = {}
+        self.executing_jobs: Dict[str, StratusResponse] = {}
         self.status_reports: Dict[str,str] = {}
         self.client_address = kwargs.get( "client_address", "*" )
         self.socket: zmq.Socket = self.initSocket()
@@ -126,7 +126,7 @@ class Responder(Thread):
         self.status_reports[sid] = status
         try:
             if status == Status.EXECUTING:
-                self.executing_jobs[sid] = Response( sid, { "status": "executing" } )
+                self.executing_jobs[sid] = StratusResponse(sid, {"status": "executing"})
             elif  status == Status.ERROR or status == Status.COMPLETED:
                 del self.executing_jobs[sid]
         except Exception: pass

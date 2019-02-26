@@ -6,6 +6,7 @@ from functools import partial
 from stratus.util.config import Config, StratusLogger
 from flask_sqlalchemy import SQLAlchemy
 from stratus.handlers.app import StratusCore
+from jsonschema import validate
 
 class RestAPIBase:
     __metaclass__ = abc.ABCMeta
@@ -17,12 +18,24 @@ class RestAPIBase:
         self.core = core
 
     @abc.abstractmethod
-    def _createBlueprint( self ): pass
+    def _createBlueprint( self, app: Flask ): pass
 
     def instantiate( self, app: Flask ):
-        bp: Blueprint = self._createBlueprint()
+        bp: Blueprint = self._createBlueprint( app )
         self.logger.info( f"Instantiating API: {bp.name}" )
         app.register_blueprint( bp )
+
+    def jsonResponse(self, response: Dict, code: int = 500 ) -> Response:
+        return Response( response=json.dumps( response ), status=code, mimetype="application/json")
+
+    def jsonRequest(self, requestSpec: str, schema: Dict = None ) -> Dict:
+        try:
+            requestDict = json.loads(requestSpec)
+            if schema is not None: validate( instance=requestDict, schema=schema )
+            requestDict["status"] = "submitted"
+            return requestDict
+        except Exception as err:
+            return dict( status="error", message=f"Error parsing/validating request: '{requestSpec}'", error=str(err) )
 
 class StratusApp(StratusCore):
 
