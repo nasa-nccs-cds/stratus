@@ -12,21 +12,28 @@ Recommended: create and activate a python3 venv:
         >> source /path/to/ENV/bin/activate
 ```
 
-Build Stratus installation:
+Build Stratus installation by installing the *stratus-endpoint* and *stratus* packages:
 ```
+    >> git clone https://github.com/nasa-nccs-cds/stratus-endpoint.git
+    >> cd stratus-endpoint
+    >> python setup.py install
+
     > git clone https://github.com/nasa-nccs-cds/stratus.git
     > cd stratus
-    > python setup.py install <handler>
+    > python setup.py install <handlers(s)>
 ```
+The handlers(s) qualifier in the last install command tells the builder to only install dependencies for the listed service handlers.  E.g. to build a service that supports both zeromq and rest one would execute *“python setup.py install zeromq rest”*, or for only rest: *“python setup.py install rest”*.  Simply executing *“python setup.py install”* would install the dependencies for all supported stratus service handlers.
 
-The following are the currently available stratus handlers: 
+The following are the currently available stratus service handlers: 
 * endpoint
 * zeromq
 * openapi
 * rest
 * celery
 * lambda
-      
+
+
+     
 ### Configuration
 The stratus configuration file is located by ~/.stratus/settings.ini.  A sample can be found at stratus/settings.ini
 
