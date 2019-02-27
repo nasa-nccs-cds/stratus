@@ -12,15 +12,20 @@ class RestAPI(RestAPIBase):
         @bp.route('/exe', methods=('GET', 'POST'))
         def exe():
             if request.method == 'POST':    requestSpec: str = request.form["request"]
-            else:                           requestSpec: str = request.get("request",None)
+            else:                           requestSpec: str = request.args.get("request",None)
             client = self.core.getClient( "edas")
             requestDict: Dict = self.jsonRequest( requestSpec )
+            self.logger.info( f"GET--> {requestSpec} -> {str(requestDict)}" )
             task = client.request(  "exe", request=requestDict )
             return self.jsonResponse( dict( status="executing", id=task.id ) )
 
+        @bp.route('/epas', methods=('GET',))
+        def epas():
+            epaList: List[str] = self.core.handlers.getEpas()
+            return self.jsonResponse( dict(epas=epaList) )
 
-        @bp.route('/capabilities', methods=('GET'))
-        def exe():
+        @bp.route('/capabilities', methods=('GET',))
+        def capabilities():
             requestSpec: str = request.get("request", None)
 
             client = self.core.getClient("edas")

@@ -38,7 +38,7 @@ class StratusClient:
         self.active = True
 
     @abc.abstractmethod
-    def request(self, task: str, **kwargs ) -> Task: pass
+    def request(self, task: str, request: Dict, **kwargs ) -> Task: pass
 
     @abc.abstractmethod
     def capabilities(self, type: str, **kwargs ) -> Dict: pass

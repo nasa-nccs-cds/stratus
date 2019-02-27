@@ -17,25 +17,24 @@ class MessageState(Enum):
 
 class RestClient(StratusClient):
 
-    def __init__( self, **kwargs ):
-        super(RestClient, self).__init__( "zeromq", **kwargs )
-        self.host = self["address"]
+    def __init__( self, host_address, **kwargs ):
+        super(RestClient, self).__init__( "rest", **kwargs )
+        self.host = host_address
 
-    def request(self, type: str, **kwargs ) -> Task:
-        response = self.sendMessage( type, kwargs )
-        self.log( str(response) )
+    def request(self, type: str, request: Dict, **kwargs ) -> Task:
+        response = self.postMessage( type, request, **kwargs )
+        self.log( "Got response: " + str(response) )
         response_manager = ResponseManager( response["id"], self.host,   **kwargs )
         response_manager.start()
         return restTask(response_manager)
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
-        return self.sendMessage( type, kwargs )
+        return self.getMessage( type, kwargs )
 
     def log(self, msg: str ):
         self.logger.info( "[P] " + msg )
 
     def __del__(self):
-        self.log(  " Portal client being deleted " )
         self.shutdown()
 
     def createResponseManager(self) -> "ResponseManager":
@@ -48,34 +47,35 @@ class RestClient(StratusClient):
                 self.response_manager.term()
                 self.response_manager = None
 
-    def sendMessage(self, type: str, requestData: Dict ) -> Dict:
-        response = requests.get( self.host, params=requestData )
-        rid = requestData.get( "id", UID.randomId(6) )
+    def getMessage(self, type: str, request: Dict, **kwargs ) -> Dict:
+        rid = request.get( "id", UID.randomId(6) )
         submissionId = self.clientID + rid
-        msg = json.dumps( requestData )
-        self.log( "Sending {} request {}, submissionId = {}.".format( type, msg, submissionId )  )
-        try:
-            message = "!".join( [ submissionId, type, msg ] )
-            self.request_socket.send_string( message )
-            response = self.request_socket.recv_string()
-        except Exception as err:
-            self.logger.error( "Error sending message {0} on request socket: {1}".format( msg, str(err) ) )
-            response = str(err)
-        parts = response.split("!")
-        response = json.loads(parts[1])
-        response["id"] = submissionId
-        return response
+        request["sid"] = submissionId
+        response: requests.Response = requests.get( f"{self.host}/{type}", params=request )
+        print( f"RESPONSE({response.url}): {str(response)}: {response.text}"  )
+        result = response.json()
+        result["id"] = submissionId
+        return result
+
+    def postMessage(self, type: str, request: Dict, **kwargs ) -> Dict:
+        rid = request.get( "id", UID.randomId(6) )
+        submissionId = self.clientID + rid
+        request["sid"] = submissionId
+        response: requests.Response = requests.post( f"{self.host}/{type}", json=request )
+        print( f"RESPONSE({response.url}): {str(response)}: {response.text}"  )
+        result = response.json()
+        result["id"] = submissionId
+        return result
 
     def waitUntilDone(self):
         self.response_manager.join()
 
 class ResponseManager(Thread):
 
-    def __init__(self, subscribeId: str, host: str, port: int, **kwargs ):
+    def __init__(self, subscribeId: str, host: str, **kwargs ):
         Thread.__init__(self)
         self.logger = StratusLogger.getLogger()
         self.host = host
-        self.port = port
         self.subscribeId = subscribeId
         self.active = True
         self.mstate = MessageState.RESULT
@@ -84,6 +84,7 @@ class ResponseManager(Thread):
         self.setDaemon(True)
         self.cacheDir = kwargs.get( "cacheDir",  os.path.expanduser( "~/.edas/cache") )
         self.log("Created RM, cache dir = " + self.cacheDir )
+        self.poll_freq = kwargs.get( "poll_freq", 1.0 )
 
     def cacheResult(self, header: Dict, data: Optional[xa.Dataset] ):
         self.cached_results.put( TaskResult(header,data)  )
@@ -96,12 +97,9 @@ class ResponseManager(Thread):
         response_socket = None
         try:
             self.log("Run RM thread")
-            response_socket: zmq.Socket = self.context.socket( zmq.SUB )
-            response_port = ConnectionMode.connectSocket( response_socket, self.host, self.port )
-            response_socket.subscribe( s2b( self.subscribeId ) )
-            self.log("Connected response socket on port {} with subscription (client/request) id: '{}', active = {}".format( response_port, self.subscribeId, str(self.active) ) )
             while( self.active ):
-                self.processNextResponse( response_socket )
+                self.processNextResponse()
+                time.sleep( self.poll_freq )
 
         except Exception as err:
             self.log( "ResponseManager error: " + str(err) )
@@ -117,20 +115,10 @@ class ResponseManager(Thread):
     def log(self, msg: str, maxPrintLen = 300 ):
         self.logger.info( "[RM] " + msg )
 
-    def processNextResponse(self, socket: zmq.Socket ):
+    def processNextResponse( self ):
         try:
-            self.log("Awaiting responses" )
-            response = socket.recv_multipart()
-            sId = b2s( response[0] )
-            header = json.loads( b2s( response[1] ) )
-            type = header["type"]
-            self.log(f"[{sId}]: Received response: " +  str( header ) + ", size = " + str( len(response) ) )
-            if type == "xarray" and len(response) > 2:
-                dataset = pickle.loads(response[2])
-                self.cacheResult( header, dataset )
-            else:
-                self.cacheResult( header, None )
-
+            response = requests.get( self.host, params=dict( type="status") ).json()
+            self.log(f"Received Status Response: " + str( response ) )
         except Exception as err:
             self.log( "EDAS error: {0}\n{1}\n".format(err, traceback.format_exc() ), 1000 )
 
@@ -150,8 +138,16 @@ class restTask(Task):
 
 
 if __name__ == "__main__":
-    client = RestClient()
-    client.init( )
-    response = client.request( "exe",  operations=[ dict( id="op1", epa="A" ), dict( id="op2", epa="B" ), dict( id="op3", epa="C" ), dict( id="op4", epa="D" ), dict( id="op5", epa="E" ), dict( id="op6", epa="X" ), dict( id="op7", epa="J" ), dict( id="op8", epa="C" ) ] )
+    from stratus.util.test import TestDataManager as mgr
+    client = RestClient( "http://127.0.0.1:5000/core" )
+    client.init()
+    request = dict(
+        domain=[{"name": "d0", "lat": {"start": 50, "end": 55, "system": "values"},
+                 "lon": {"start": 40, "end": 42, "system": "values"},
+                 "time": {"start": "1980-01-01", "end": "1981-12-31", "crs": "timestamps"}}],
+        input=[{"uri": mgr.getAddress("merra2", "tas"), "name": "tas:v0", "domain": "d0"}],
+        operation=[ { "epa": "edas.subset", "input": "v0"} ]
+    )
+    response = client.request( "exe", request )
     print ( "response = " + str( response ) )
 
