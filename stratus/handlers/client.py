@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
 from stratus.util.config import Config, StratusLogger, UID
-from stratus_endpoint.handler.base import Task, Status
+from stratus_endpoint.handler.base import Task, Status, TestTask
 import abc, re
 import functools
 import importlib
@@ -59,5 +59,19 @@ class StratusClient:
 
     def parm(self, key: str, default: str ) -> str:
         return self.parms.get( key, default  )
+
+class TestClient(StratusClient):
+
+    def __init__(self, **kwargs):
+        StratusClient.__init__(self, "test", **kwargs)
+
+    def capabilities(self, type: str, **kwargs ) -> Dict:
+        if type == "epas":
+            return dict( epas=[ "test\.[A-Za-z0-9._]+" ] )
+        elif type == "capabilities":
+            return dict(capabilities="test")
+
+    def request(self, task: str, request: Dict, **kwargs ) -> Task:
+        return TestTask( task, request, **kwargs )
 
 

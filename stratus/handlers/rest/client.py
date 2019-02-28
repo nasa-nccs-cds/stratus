@@ -63,8 +63,13 @@ class RestClient(StratusClient):
         request["sid"] = submissionId
         response: requests.Response = requests.post( f"{self.host}/{type}", json=request )
         print( f"RESPONSE({response.url}): {str(response)}: {response.text}"  )
-        result = response.json()
-        result["id"] = submissionId
+        if( response.ok ):
+            result = response.json()
+            result["id"] = submissionId
+        else:
+            result = {   "error": response.status_code,
+                         "message": response.text,
+                         "id": submissionId           }
         return result
 
     def waitUntilDone(self):
@@ -146,7 +151,7 @@ if __name__ == "__main__":
                  "lon": {"start": 40, "end": 42, "system": "values"},
                  "time": {"start": "1980-01-01", "end": "1981-12-31", "crs": "timestamps"}}],
         input=[{"uri": mgr.getAddress("merra2", "tas"), "name": "tas:v0", "domain": "d0"}],
-        operation=[ { "epa": "edas.subset", "input": "v0"} ]
+        operation=[ { "epa": "test.subset", "input": "v0"} ]
     )
     response = client.request( "exe", request )
     print ( "response = " + str( response ) )

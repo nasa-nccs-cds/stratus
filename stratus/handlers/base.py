@@ -1,6 +1,6 @@
 import string, random, abc, os, yaml, json
 from typing import List, Dict, Any, Sequence, Callable, BinaryIO, TextIO, ValuesView, Optional
-from stratus.handlers.client import StratusClient
+from stratus.handlers.client import StratusClient, TestClient
 
 import abc, sys, pkgutil
 
@@ -35,3 +35,13 @@ class Handler:
 
     def __repr__(self):
         return json.dumps( self.parms )
+
+class TestHandler(Handler):
+
+    def __init__(self, **kwargs):
+        Handler.__init__(self,"test",**kwargs)
+
+    def newClient(self) -> StratusClient:
+        return TestClient(**self.parms)
+
+

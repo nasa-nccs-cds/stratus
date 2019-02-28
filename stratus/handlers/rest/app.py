@@ -25,7 +25,7 @@ class RestAPIBase:
         self.logger.info( f"Instantiating API: {bp.name}" )
         app.register_blueprint( bp )
 
-    def jsonResponse(self, response: Dict, code: int = 500 ) -> Response:
+    def jsonResponse(self, response: Dict, code: int = 200 ) -> Response:
         return Response( response=json.dumps( response ), status=code, mimetype="application/json")
 
     def jsonRequest(self, requestSpec: str, schema: Dict = None ) -> Dict:

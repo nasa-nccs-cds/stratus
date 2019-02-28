@@ -2,7 +2,7 @@ import string, random, abc, os, yaml, json
 from typing import List, Dict, Any, Sequence, Callable, BinaryIO, TextIO, ValuesView, Optional
 from stratus.handlers.client import StratusClient
 from stratus.util.config import Config, StratusLogger, UID
-from stratus.handlers.base import Handler
+from stratus.handlers.base import Handler, TestHandler
 import itertools, traceback
 import importlib
 
@@ -12,7 +12,7 @@ class Handlers:
 
     def __init__(self, configSpec: Config, **kwargs ):
         self.logger = StratusLogger.getLogger()
-        self._handlers: Dict[str, Handler] = {}
+        self._handlers: Dict[str, Handler] = { }
         self._parms = kwargs
         self._constructors: Dict[str, Callable[[], Handler]] = {}
         self.configSpec: Config = configSpec
@@ -86,9 +86,12 @@ class Handlers:
         name = service_spec.get('name', "")
         if type is None:
             raise Exception( "Missing required 'type' parameter in service spec'{}'".format(name) )
-        constructor = self._constructors.get( type, None )
-        assert constructor is not None, "No Handler registered of type '{}' for service spec '{}', handler types: {}".format( type, name, str(list(self._constructors.keys())) )
-        return constructor( **service_spec )
+        if type == "test":
+            return TestHandler( **service_spec )
+        else:
+            constructor = self._constructors.get( type, None )
+            assert constructor is not None, "No Handler registered of type '{}' for service spec '{}', handler types: {}".format( type, name, str(list(self._constructors.keys())) )
+            return constructor( **service_spec )
 
     def listPackages(self):
         package = __import__("stratus")
@@ -100,6 +103,7 @@ class Handlers:
 
     def addConstructors(self):
         debug = False
+        self.addConstructor( "test", TestHandler )
         packageList = self.listPackages()
         for package_name in packageList:
             try:

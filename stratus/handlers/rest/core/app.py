@@ -11,13 +11,12 @@ class RestAPI(RestAPIBase):
 
         @bp.route('/exe', methods=('GET', 'POST'))
         def exe():
-            if request.method == 'POST':    requestSpec: str = request.form["request"]
-            else:                           requestSpec: str = request.args.get("request",None)
-            client = self.core.getClient( "edas")
-            requestDict: Dict = self.jsonRequest( requestSpec )
-            self.logger.info( f"GET--> {requestSpec} -> {str(requestDict)}" )
+            if request.method == 'POST':    requestDict: Dict = request.form.to_dict()
+            else:                           requestDict: Dict = self.jsonRequest( request.args.get("request",None) )
+            client = self.core.getClient( "test")
+            self.logger.info( f"{request.method}--> {str(requestDict)}" )
             task = client.request(  "exe", request=requestDict )
-            return self.jsonResponse( dict( status="executing", id=task.id ) )
+            return self.jsonResponse( dict( status="executing", id=task.id ), code=202 )
 
         @bp.route('/epas', methods=('GET',))
         def epas():
