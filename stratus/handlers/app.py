@@ -59,6 +59,7 @@ class StratusCore:
     def __init__(self, **kwargs ):
         self.logger = StratusLogger.getLogger()
         settings = kwargs.get( "settings", os.environ.get( 'STRATUS_SETTINGS', self.SETTINGS ) )
+        assert os.path.isfile(settings), "Settings file does not exist: " + settings
         self.config = Config(settings)
         self.parms = self.getConfigParms('stratus')
         self.handlers = Handlers( self.config, home=os.path.dirname( settings ) )

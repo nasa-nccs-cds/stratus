@@ -5,6 +5,7 @@ from stratus.util.config import Config, StratusLogger, UID
 from threading import Thread
 from stratus.util.parsing import s2b, b2s
 from stratus_endpoint.handler.base import Task, Status, TaskResult
+from stratus.handlers.app import StratusCore
 import random, string, os, pickle, queue
 import xarray as xa
 from enum import Enum
@@ -131,7 +132,11 @@ class restTask(Task):
 
 if __name__ == "__main__":
     from stratus.util.test import TestDataManager as mgr
-    client = RestClient( "http://127.0.0.1:5000/core" )
+    HERE = os.path.dirname(os.path.abspath(__file__))
+    SETTINGS_FILE = os.path.join(HERE, "client_test_settings.ini")
+
+    core = StratusCore( settings=SETTINGS_FILE )
+    client = core.getClient("rest")
     client.init()
     request = dict(
         domain=[{"name": "d0", "lat": {"start": 50, "end": 55, "system": "values"},

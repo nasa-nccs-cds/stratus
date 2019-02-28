@@ -102,7 +102,7 @@ class Handlers:
         return packages
 
     def addConstructors(self):
-        debug = False
+        debug = True
         self.addConstructor( "test", TestHandler )
         packageList = self.listPackages()
         for package_name in packageList:

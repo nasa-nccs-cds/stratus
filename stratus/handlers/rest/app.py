@@ -98,6 +98,6 @@ class StratusApp(StratusCore):
 
 if __name__ == "__main__":
     HERE = os.path.dirname(os.path.abspath(__file__))
-    SETTINGS_FILE = os.path.join(HERE, "test_settings.ini")
+    SETTINGS_FILE = os.path.join(HERE, "server_test_settings.ini")
     app = StratusApp( settings=SETTINGS_FILE )
     app.run()
