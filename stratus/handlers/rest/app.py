@@ -3,7 +3,9 @@ import os, traceback, abc
 from flask import Flask, Response, Blueprint, render_template
 import json, logging, importlib
 from functools import partial
+from collections import ChainMap
 from stratus.util.config import Config, StratusLogger
+from stratus_endpoint.handler.base import Task, Status
 from flask_sqlalchemy import SQLAlchemy
 from stratus.handlers.app import StratusCore
 from jsonschema import validate
@@ -16,6 +18,19 @@ class RestAPIBase:
         self.parms = kwargs
         self.name = name
         self.core = core
+        self.tasks = {}
+
+    def addTask( self, task: Task ):
+        client_tasks = self.tasks.setdefault( task.cid, {} )
+        client_tasks[ task.sid ] = task
+        return task.sid
+
+    def getStatus( self, cid: str = None ) -> Dict[str,Status]:
+        client_tasks = self.tasks.get( cid, {} ) if cid is not None else dict(ChainMap(*self.tasks.values()))
+        statusMap = { rid: task.status for rid, task in client_tasks.items() }
+        for rid, status in statusMap.items():
+            if status in [ Status.ERROR, Status.COMPLETED ]:  del client_tasks[rid]
+        return { rid: str(status) for rid, status in statusMap.items() }
 
     @abc.abstractmethod
     def _createBlueprint( self, app: Flask ): pass
@@ -40,6 +55,7 @@ class RestAPIBase:
 class StratusApp(StratusCore):
 
     def __init__( self, **kwargs ):
+        self.apis = []
         StratusCore.__init__( self, **kwargs )
         self.flask_parms = self.getConfigParms('flask')
         self.flask_parms['SQLALCHEMY_DATABASE_URI'] = self.flask_parms['DATABASE_URI']
@@ -70,6 +86,7 @@ class StratusApp(StratusCore):
                 constructor = getattr( module, "RestAPI" )
                 rest_api: RestAPIBase = constructor( apiName, self )
                 rest_api.instantiate( app )
+                self.apis.append( rest_api )
             except Exception as err:
                 self.logger.error( f"Error instantiating api {apiName}: {str(err)}")
 

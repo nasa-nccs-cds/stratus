@@ -24,12 +24,12 @@ class StratusClient:
     __metaclass__ = abc.ABCMeta
 
     def __init__( self, type: str, **kwargs ):
+        self.cid = UID.randomId(6)
         self.type: str = type
         self.name: str = kwargs.get("name")
         self.parms = kwargs
         self.priority: float = float( self.parm( "priority", "0" ) )
         self.active = False
-        self.clientID = UID.randomId(6)
         self.logger =  StratusLogger.getLogger()
 
     def init( self ):
@@ -60,6 +60,9 @@ class StratusClient:
     def parm(self, key: str, default: str ) -> str:
         return self.parms.get( key, default  )
 
+    def sid(self, rid: str ) -> str:
+        return self.cid + "-" + rid
+
 class TestClient(StratusClient):
 
     def __init__(self, **kwargs):
@@ -72,6 +75,6 @@ class TestClient(StratusClient):
             return dict(capabilities="test")
 
     def request(self, task: str, request: Dict, **kwargs ) -> Task:
-        return TestTask( task, request, **kwargs )
+        return TestTask( task, request, status=Status.EXECUTING, **kwargs )
 
 

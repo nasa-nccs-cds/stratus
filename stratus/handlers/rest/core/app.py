@@ -13,10 +13,17 @@ class RestAPI(RestAPIBase):
         def exe():
             if request.method == 'POST':    requestDict: Dict = request.form.to_dict()
             else:                           requestDict: Dict = self.jsonRequest( request.args.get("request",None) )
-            client = self.core.getClient( "test")
+            client = self.core.getClient( "test" )
             self.logger.info( f"{request.method}--> {str(requestDict)}" )
             task = client.request(  "exe", request=requestDict )
-            return self.jsonResponse( dict( status="executing", id=task.id ), code=202 )
+            tid = self.addTask( task )
+            return self.jsonResponse( dict( status="executing", id=tid ), code=202 )
+
+        @bp.route('/status', methods=('GET',))
+        def status():
+            cid = request.args.get("cid", None)
+            statusMap = self.getStatus( cid )
+            return self.jsonResponse( statusMap )
 
         @bp.route('/epas', methods=('GET',))
         def epas():
@@ -31,21 +38,6 @@ class RestAPI(RestAPIBase):
             requestDict: Dict = self.jsonRequest(requestSpec)
             task = client.request("exe", request=requestDict)
             return self.jsonResponse(dict(status="executing", id=task.id))
-
-                # response = server.request( "stat", id=response['id'] )
-    # print( response )
-    #
-    # response = server.request( "kill", id=response['id'] )
-    # print( response ) )
-
-#                if rType.lower() == "execute":
-#                    rInputs: str = requestArgs.get("datainputs", None)
-#             if request.method == 'POST':
-#                 requestArgs = {key.lower(): value for key, value in request.form.items()}
-#                 rType: str = requestArgs.get("request", None)
-#                 assert rType is not None, "Missing 'Request' argument"
-#                if rType.lower() == "execute":
-#                    rInputs: str = requestArgs.get("datainputs", None)
 
         return bp
 

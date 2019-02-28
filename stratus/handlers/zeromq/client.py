@@ -91,7 +91,7 @@ class ZMQClient(StratusClient):
 
     def sendMessage(self, type: str, requestData: Dict ) -> Dict:
         rid = requestData.get( "id", UID.randomId(6) )
-        submissionId = self.clientID + rid
+        submissionId = self.sid(rid)
         msg = json.dumps( requestData )
         self.log( "Sending {} request {} on port {}, submissionId = {}.".format( type, msg, str(self.request_port), submissionId )  )
         try:
