@@ -98,7 +98,7 @@ class Responder(Thread):
     def processResults(self):
         self.importTasks()
         for tid, task in self.current_tasks.items():
-            status = task.status
+            status = task.status()
             self.setExeStatus( tid, status )
             if status in [Status.COMPLETED, Status.ERROR]:
                 dataPacket = self.getDataPacket( status, task )

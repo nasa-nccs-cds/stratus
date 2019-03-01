@@ -85,7 +85,7 @@ class StratusApp(StratusCore):
                     request["id"] = submissionId
                     self.logger.info( "Processing Request: '{}' '{}' '{}'".format( submissionId, rType, str(request)) )
                     current_tasks = self.processWorkflow(request)
-                    self.logger.info( "Current tasks: {} ".format( str( current_tasks.keys() ) ) )
+                    self.logger.info( "Current tasks: {} ".format( str( list(current_tasks.keys() ) ) ) )
                     for task in current_tasks.values(): self.tasks.put( task )                                                                                                               #   TODO: Send results when tasks complete.
                     response = { "status": "Executing", "tasks": str( list( current_tasks.keys() ) ) }
                     self.sendResponseMessage(StratusResponse(submissionId, response))

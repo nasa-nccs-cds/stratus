@@ -16,31 +16,21 @@ class Handlers:
         self._parms = kwargs
         self._constructors: Dict[str, Callable[[], Handler]] = {}
         self.configSpec: Config = configSpec
-        self.init()
+        self._init()
 
-    def init( self ):
-        self.addConstructors()
-        hspecs = self.getHandlerSpecs()
+    def _init( self ):
+        self._addConstructors()
+        hspecs = self._getHandlerSpecs()
         for service_spec in hspecs:
             htype = service_spec["type"]
             try:
-                service = self.getHandler(service_spec)
+                service = self._getHandler(service_spec)
                 self._handlers[ service.name ] = service
                 self.logger.info( f"Initialized stratus for service {htype}" )
             except Exception as err:
                 err_msg = "Error registering handler for service {}: {}".format( service_spec.get("name",""), str(err) )
                 print( err_msg )
                 self.logger.error( err_msg )
-
-    def getHandlerSpecs(self):
-        specs = []
-        htypes = self.listAvailableHandlers()
-        assert self.configSpec is not None, "Error, the handlers have not yet beeb initialized"
-        for name, spec in self.configSpec.items():
-            if spec.get("type") in htypes:
-                spec["name"] = name
-                specs.append( spec )
-        return specs
 
     def getStratusFilePath(self, handlersFile: str) -> str:
         if handlersFile.startswith("/"): return handlersFile
@@ -62,26 +52,47 @@ class Handlers:
             epas.extend( service.client.endpointSpecs )
         return epas
 
-    def getClient( self, name: str, **kwargs ) -> StratusClient:
-        service = self._handlers.get( name, None )
-        assert service is not None, "Attempt to access unknown service handler: " + name + ", avaliable handlers = " + str( self._handlers.keys() )
+    def getClient( self, **kwargs ) -> StratusClient:
+        service = self.findHandler( **kwargs )
+        assert service is not None, "Attempt to access unknown service handler: " + str(kwargs) + ", avaliable handlers = " + str( self._handlers.keys() )
         return service.client
+
+    def findHandler(self, **kwargs ):
+        name = kwargs.get( "service_name", None )
+        if name is not None:
+            return self._handlers.get( name, None )
+        type = kwargs.get("service_type", None)
+        if type is  None: raise Exception( "Missing handler specification, must have 'service_name' or 'service_type' parameter in [stratus] ini configuration: " + str(kwargs))
+        for handler in self._handlers.values():
+            if handler.type == type:
+                return handler
+        return None
 
     @property
     def available(self) -> Dict[str, Handler]:
         return self._handlers
 
-    def __repr__(self):
-        return json.dumps({key: s.parms for key,s in self._handlers.items()})
-
-    def addConstructor( self, type: str, handler_constructor: Callable[[], Handler]  ):
-        self.logger.info( "Adding constructor for " + type )
-        self._constructors[type] = handler_constructor
-
     def listAvailableHandlers(self) -> List[str]:
         return list( self._constructors.keys() )
 
-    def getHandler(self, service_spec: Dict[str,str] ) -> Handler:
+    def __repr__(self):
+        return json.dumps({key: s.parms for key, s in self._handlers.items()})
+
+    def _getHandlerSpecs(self):
+        specs = []
+        htypes = self.listAvailableHandlers()
+        assert self.configSpec is not None, "Error, the handlers have not yet beeb initialized"
+        for name, spec in self.configSpec.items():
+            if spec.get("type") in htypes:
+                spec["name"] = name
+                specs.append( spec )
+        return specs
+
+    def _addConstructor(self, type: str, handler_constructor: Callable[[], Handler]):
+        self.logger.info( "Adding constructor for " + type )
+        self._constructors[type] = handler_constructor
+
+    def _getHandler(self, service_spec: Dict[str,str] ) -> Handler:
         type = service_spec.get('type',None)
         name = service_spec.get('name', "")
         if type is None:
@@ -93,7 +104,7 @@ class Handlers:
             assert constructor is not None, "No Handler registered of type '{}' for service spec '{}', handler types: {}".format( type, name, str(list(self._constructors.keys())) )
             return constructor( **service_spec )
 
-    def listPackages(self):
+    def _listPackages(self):
         package = __import__("stratus")
         import pkgutil
         packages = []
@@ -101,16 +112,16 @@ class Handlers:
             if is_pkg: packages.append(module_name)
         return packages
 
-    def addConstructors(self):
-        debug = True
-        self.addConstructor( "test", TestHandler )
-        packageList = self.listPackages()
+    def _addConstructors(self):
+        debug = False
+        self._addConstructor("test", TestHandler)
+        packageList = self._listPackages()
         for package_name in packageList:
             try:
                 module = importlib.import_module(package_name + ".service")
                 constructor = getattr(module, "ServiceHandler")
                 type = package_name.split(".")[-1]
-                self.addConstructor( type, constructor )
+                self._addConstructor(type, constructor)
             except Exception as err:
                 if debug:
                     msg = "Unable to register constructor for {}: {} ({})".format( package_name, str(err), err.__class__.__name__ )

@@ -21,16 +21,14 @@ class RestAPIBase:
         self.tasks = {}
 
     def addTask( self, task: Task ):
-        client_tasks = self.tasks.setdefault( task.cid, {} )
-        client_tasks[ task.sid ] = task
+        self.tasks[ task.sid ] = task
         return task.sid
 
     def getStatus( self, cid: str = None ) -> Dict[str,Status]:
-        client_tasks = self.tasks.get( cid, {} ) if cid is not None else dict(ChainMap(*self.tasks.values()))
-        statusMap = { rid: task.status for rid, task in client_tasks.items() }
-        for rid, status in statusMap.items():
-            if status in [ Status.ERROR, Status.COMPLETED ]:  del client_tasks[rid]
-        return { rid: str(status) for rid, status in statusMap.items() }
+        statusMap = { sid: task.status() for sid, task in self.tasks.items() if ( cid is None or task.cid == cid ) }
+        for sid, status in statusMap.items():
+            if status in [ Status.ERROR, Status.COMPLETED ]:  del self.tasks[sid]
+        return { sid: str(status) for sid, status in statusMap.items() }
 
     @abc.abstractmethod
     def _createBlueprint( self, app: Flask ): pass
@@ -81,7 +79,7 @@ class StratusApp(StratusCore):
         apiList = self.parm("API","core").split(",")
         for apiName in apiList:
             try:
-                package_name = f"stratus.handlers.rest.{apiName}.app"
+                package_name = f"stratus.handlers.rest.api.{apiName}.app"
                 module = importlib.import_module( package_name )
                 constructor = getattr( module, "RestAPI" )
                 rest_api: RestAPIBase = constructor( apiName, self )

@@ -50,7 +50,7 @@ class OpSet():
     def submit( self, request: Dict ) -> Task:
         filtered_request =  self.getFilteredRequest(request)
         self.logger.info( "Client {}: submit operations {}".format( self.client.name, str( filtered_request['operations'] ) ) )
-        return self.client.request( "exe", **filtered_request )
+        return self.client.request( "exe", filtered_request )
 
 class StratusCore:
     HERE = os.path.dirname(__file__)
@@ -70,8 +70,9 @@ class StratusCore:
     def getClients( self, epa: str = None ) -> List[StratusClient]:
         return self.handlers.getClients( epa )
 
-    def getClient(self, name: str, **kwargs) -> StratusClient:
-        return self.handlers.getClient( name, **kwargs )
+    def getClient( self, **kwargs ) -> StratusClient:
+        client_parms = { **kwargs, **self.parms }
+        return self.handlers.getClient( **client_parms )
 
     def geClientOpsets(self, request: Dict ) -> Dict[str,OpSet]:
         # Returns map of client id to list of ops in request that can be handled by that client

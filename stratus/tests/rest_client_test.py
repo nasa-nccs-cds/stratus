@@ -7,7 +7,7 @@ SETTINGS_FILE = os.path.join( HERE, "settings.ini" )
 if __name__ == "__main__":
 
     stratus = StratusCore( settings=SETTINGS_FILE )
-    server = stratus.getClient( "rest-hpda1" )
+    server = stratus.getClient()
 
     variables=[ dict( name='tas:v0', uri='collection://merra2')  ]
     bounds = [ dict( axis='lat', start=-50, end=50, crs='values' ) ]

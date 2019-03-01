@@ -11,13 +11,22 @@ class RestAPI(RestAPIBase):
 
         @bp.route('/exe', methods=('GET', 'POST'))
         def exe():
-            if request.method == 'POST':    requestDict: Dict = request.form.to_dict()
+            if request.method == 'POST':    requestDict: Dict = request.json
             else:                           requestDict: Dict = self.jsonRequest( request.args.get("request",None) )
-            client = self.core.getClient( "test" )
-            self.logger.info( f"{request.method}--> {str(requestDict)}" )
-            task = client.request(  "exe", request=requestDict )
-            tid = self.addTask( task )
-            return self.jsonResponse( dict( status="executing", id=tid ), code=202 )
+            self.logger.info(f"Processing Request: '{str(requestDict)}'")
+            current_tasks = self.core.processWorkflow( requestDict )
+            self.logger.info("Current tasks: {} ".format(str(list(current_tasks.keys()))))
+            for task in current_tasks.values(): self.addTask( task )
+            return self.jsonResponse( dict( status="executing", id=requestDict['sid'] ), code=202 )
+
+        # @bp.route('/result', methods=('GET'))
+        # def exe():
+        #     sid = request.args.get("sid", None)
+        #     client = self.core.getClient()
+        #     self.logger.info( f"{request.method}--> {str(requestDict)}" )
+        #     task = client.request(  "exe", request=requestDict )
+        #     tid = self.addTask( task )
+        #     return self.jsonResponse( dict( status="executing", id=tid ), code=202 )
 
         @bp.route('/status', methods=('GET',))
         def status():
@@ -33,8 +42,7 @@ class RestAPI(RestAPIBase):
         @bp.route('/capabilities', methods=('GET',))
         def capabilities():
             requestSpec: str = request.get("request", None)
-
-            client = self.core.getClient("edas")
+            client = self.core.getClient()
             requestDict: Dict = self.jsonRequest(requestSpec)
             task = client.request("exe", request=requestDict)
             return self.jsonResponse(dict(status="executing", id=task.id))
