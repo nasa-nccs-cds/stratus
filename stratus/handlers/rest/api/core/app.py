@@ -9,7 +9,8 @@ import os, abc, json
 class RestAPI(RestAPIBase):
 
     def _createBlueprint( self, app: Flask ) -> Blueprint:
-        bp = Blueprint( self.name, __name__, url_prefix=f'/{self.name}' )
+        bpName = self.name
+        bp = Blueprint( bpName, __name__, url_prefix=f'/{bpName}' )
 
         @bp.route('/exe', methods=('GET', 'POST'))
         def exe():
@@ -17,28 +18,20 @@ class RestAPI(RestAPIBase):
             else:                           requestDict: Dict = self.jsonRequest( request.args.get("request",None) )
             self.logger.info(f"Processing Request: '{str(requestDict)}'")
             current_tasks = self.core.processWorkflow( requestDict )
-            self.logger.info("Current tasks: {} ".format(str(list(current_tasks.keys()))))
+            self.logger.info("Current tasks: {} ".format(str(list(current_tasks.items()))))
             for task in current_tasks.values(): self.addTask( task )
             return self.jsonResponse( dict( status="executing", id=requestDict['sid'] ), code=202 )
 
-        # @bp.route('/result', methods=('GET'))
-        # def exe():
-        #     sid = request.args.get("sid", None)
-        #     client = self.core.getClient()
-        #     self.logger.info( f"{request.method}--> {str(requestDict)}" )
-        #     task = client.request(  "exe", request=requestDict )
-        #     tid = self.addTask( task )
-        #     return self.jsonResponse( dict( status="executing", id=tid ), code=202 )
-
         @bp.route('/status', methods=('GET',))
         def status():
-            cid = request.args.get("cid", None)
-            statusMap = self.getStatus( cid )
+            cid = self.getParameter( "cid", None, False)
+            statusMap = self.getStatus(cid)
+            self.logger.info( "Status Map: " + str(statusMap) )
             return self.jsonResponse( statusMap )
 
         @bp.route('/result', methods=('GET',))
-        def status():
-            sid = request.args.get("sid", None)
+        def result():
+            sid = self.getParameter("sid")
             task: Task = self.tasks.get( sid, None )
             assert task is not None, f"Can't find task for sid {sid}, current tasks: {str(list(self.tasks.keys()))}"
             result: Optional[TaskResult] = task.getResult()

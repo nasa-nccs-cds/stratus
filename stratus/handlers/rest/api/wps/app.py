@@ -6,8 +6,9 @@ import os, abc
 
 class RestAPI(RestAPIBase):
 
-    def _createBlueprint( self ) -> Blueprint:
-        bp = Blueprint( self.name, __name__, url_prefix=f'/{self.name}' )
+    def _createBlueprint( self, app: Flask ) -> Blueprint:
+        bpName = self.name
+        bp = Blueprint( bpName, __name__, url_prefix=f'/{bpName}' )
 
         @bp.route('/cwt', methods=('GET', 'POST'))
         def wps():

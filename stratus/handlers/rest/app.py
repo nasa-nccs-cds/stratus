@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
 import os, traceback, abc
-from flask import Flask, Response, Blueprint, render_template
+from flask import Flask, Response, Blueprint, request
 import json, logging, importlib
 from functools import partial
 from stratus.util.config import Config, StratusLogger
@@ -24,10 +24,15 @@ class RestAPIBase:
         return task.sid
 
     def getStatus( self, cid: str = None ) -> Dict[str,Status]:
-        statusMap = { sid: task.status() for sid, task in self.tasks.items() if ( cid is None or task.cid == cid ) }
+        statusMap = { sid: task.status for sid, task in self.tasks.items() if ( cid is None or task.cid == cid ) }
         for sid, status in statusMap.items():
             if status in [ Status.ERROR, Status.COMPLETED ]:  del self.tasks[sid]
         return { sid: str(status) for sid, status in statusMap.items() }
+
+    def getParameter(self, name: str, default = None, required = True ):
+        param = request.args.get( name, default )
+        assert required is False or param is not None, f"Missing required parameter: '{name}'"
+        return param
 
     @abc.abstractmethod
     def _createBlueprint( self, app: Flask ): pass

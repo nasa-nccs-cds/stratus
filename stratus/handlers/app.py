@@ -50,7 +50,7 @@ class OpSet():
     def submit( self, request: Dict ) -> Task:
         filtered_request =  self.getFilteredRequest(request)
         self.logger.info( "Client {}: submit operations {}".format( self.client.name, str( filtered_request['operations'] ) ) )
-        return self.client.request( "exe", filtered_request )
+        return self.client.request( filtered_request )
 
 class StratusCore:
     HERE = os.path.dirname(__file__)

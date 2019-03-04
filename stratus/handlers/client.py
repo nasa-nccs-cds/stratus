@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
+from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
 from stratus.util.config import Config, StratusLogger, UID
 from stratus_endpoint.handler.base import Task, Status, TestTask
 import abc, re
@@ -38,7 +38,10 @@ class StratusClient:
         self.active = True
 
     @abc.abstractmethod
-    def request(self, task: str, request: Dict, **kwargs ) -> Task: pass
+    def request(self, request: Dict, **kwargs ) -> Task: pass
+
+    @abc.abstractmethod
+    def status(self, **kwargs ) -> Status: pass
 
     @abc.abstractmethod
     def capabilities(self, type: str, **kwargs ) -> Dict: pass
@@ -57,7 +60,7 @@ class StratusClient:
         assert result is not None, "Missing required parameter in {}: {} ".format( self.__class__.__name__, key )
         return result
 
-    def parm(self, key: str, default: str ) -> str:
+    def parm(self, key: str, default: str = None) -> Optional[str]:
         return self.parms.get( key, default  )
 
     def sid( self, rid: str = None ) -> str:

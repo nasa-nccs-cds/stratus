@@ -18,23 +18,26 @@ class MessageState(Enum):
 
 class RestClient(StratusClient):
 
-    def __init__( self, host_address, **kwargs ):
+    def __init__( self, **kwargs ):
         super(RestClient, self).__init__( "rest", **kwargs )
-        self.host = host_address
-        self.response_manager = ResponseManager.getManger( host_address )
+        self.host = self["host"]
+        self.port = self["port"]
+        self.api = self["api"]
+        self.response_manager = ResponseManager.getManger( f"http://{self.host}:{self.port}/{self.api}" )
         self.response_manager.start()
 
-    def request(self, type: str, request: Dict, **kwargs ) -> Task:
-        rid = request.get("id",None)
-        response = self.response_manager.postMessage( self.sid(rid), type, request, **kwargs )
+    def request( self, requestSpec: Dict, **kwargs ) -> Task:
+        requestDict = dict(requestSpec)
+        requestDict["sid"] = self.sid( self.parm("id",None) )
+        response = self.response_manager.postMessage( "exe", requestDict, **kwargs )
         self.log( "Got response: " + str(response) )
-        return restTask( request['sid'], self.response_manager )
+        return restTask( requestDict['sid'], self.response_manager )
 
-    def status(self, **kwargs ) -> Dict:
-        return self.response_manager.getMessage( self.sid(), "status", kwargs )
+    def status(self, **kwargs ) -> Status:
+        return self.response_manager.getStatus( self.sid() )
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
-        return self.response_manager.getMessage( self.sid(), type, kwargs )
+        return self.response_manager.getMessage( type, {}, **kwargs )
 
     def log(self, msg: str ):
         self.logger.info( "[P] " + msg )
@@ -75,11 +78,13 @@ class ResponseManager(Thread):
         return cls.managers.setdefault( host_address, ResponseManager(host_address) )
 
     def run(self):
+        debug = False
         try:
             self.log("Run RM thread")
             while( self.active ):
                 statMap = self._getStatusMap()
-                for sid,stat in statMap.items(): self.statusMap[sid] = Status.decode(stat)
+                if debug: self.logger.info( "Server Job Status: " + str( statMap ) )
+                self.statusMap.update( statMap )
                 time.sleep( self.poll_freq )
 
         except Exception as err:
@@ -87,35 +92,38 @@ class ResponseManager(Thread):
             self.log( traceback.format_exc() )
             self.statusMap.clear()
 
-    def getMessage(self, sid: str, type: str, request: Dict, **kwargs ) -> Dict:
-        request["sid"] = sid
-        response: requests.Response = requests.get( f"{self.host_address}/{type}", params=request )
-        print( f"RESPONSE[{response.encoding}]({response.url}): {str(response)}: {response.text}"  )
-        return self.unpackResponse( sid, response )
+    def getMessage(self, type: str, requestSpec: Dict, **kwargs ) -> Dict:
+        debug = False
+        request_params = dict(requestSpec)
+        request_params.update(kwargs)
+        address = f"{self.host_address}/{type}"
+        if debug: self.log(f"REQUEST[{address}](status): {str(request_params)}")
+        response: requests.Response = requests.get( address, params=request_params )
+        if debug: self.log( f"RESPONSE[{response.encoding}]({response.url}): {str(response)}: {response.text}"  )
+        return self.unpackResponse( response )
 
-    def postMessage(self, sid: str, type: str, request: Dict, **kwargs ) -> Dict:
-        request["sid"] = sid
-        self.logger.info( f"POSTing request: {str(request)}")
-        response: requests.Response = requests.post( f"{self.host_address}/{type}", json=request )
-        print( f"RESPONSE[{response.encoding}]({response.url}): {str(response)}: {response.text}"  )
-        return self.unpackResponse( sid, response )
+    def postMessage(self, type: str, requestSpec: Dict, **kwargs ) -> Dict:
+        request_params = dict(requestSpec)
+        request_params.update(kwargs)
+        self.logger.info( f"POSTing request: {str(requestSpec)}")
+        response: requests.Response = requests.post( f"{self.host_address}/{type}", json=requestSpec )
+        self.log( f"RESPONSE[{response.encoding}]({response.url}): {str(response)}: {response.text}"  )
+        return self.unpackResponse( response )
 
-    def unpackResponse(self, sid: str, response: requests.Response)-> Dict:
+    def unpackResponse(self, response: requests.Response )-> Dict:
         if( response.ok ):
-            if response.encoding == "application/octet-stream":  result = { "content": pickle.loads( response.content ) }
-            else:                                                result = response.json()
-        else:                                                    result = {"error": response.status_code, "message": response.text}
-        result["id"] = sid
-        return result
+            if response.encoding == "application/octet-stream":  response = { "content": pickle.loads( response.content ) }
+            else:                                                response = response.json()
+        else:                                                    response = {"error": response.status_code, "message": response.text}
+        return response
 
     def getResult(self, sid: str, block=True, timeout=None  ) ->  Optional[TaskResult]:
         if block: self.waitUntilReady( sid, timeout )
-        result = self.getMessage( sid, "result", {} )
+        result = self.getMessage( "result", dict(sid=sid) )
         return result["content"]
 
     def _getStatusMap(self) -> Dict:
-        response: requests.Response = requests.get( f"{self.host_address}/status", timeout=self.timeout )
-        return response.json()
+        return self.getMessage( "status", {}, timeout=self.timeout  )
 
     def getStatus( self, sid ) -> Status:
         return self.statusMap.get( sid, Status.UNKNOWN )
