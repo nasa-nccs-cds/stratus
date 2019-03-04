@@ -67,9 +67,12 @@ class RestClient(StratusClient):
         request["sid"] = submissionId
         self.logger.info( f"POSTing request: {str(request)}")
         response: requests.Response = requests.post( f"{self.host}/{type}", json=request )
-        print( f"RESPONSE({response.url}): {str(response)}: {response.text}"  )
+        print( f"RESPONSE[{response.encoding}]({response.url}): {str(response)}: {response.text}"  )
         if( response.ok ):
-            result = response.json()
+            if response.encoding == "application/octet-stream":
+                result = pickle.loads( response.content )
+            else:
+                result = response.json()
             result["id"] = submissionId
         else:
             result = {   "error": response.status_code,

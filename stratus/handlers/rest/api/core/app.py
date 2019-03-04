@@ -1,5 +1,7 @@
 from stratus.handlers.rest.app import StratusApp
-from flask import Flask, Response, request, Blueprint
+from flask import Flask, Response, request, Blueprint, make_response
+from stratus_endpoint.handler.base import Task, Status, TaskResult
+import pickle
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
 from stratus.handlers.rest.app import RestAPIBase
 import os, abc, json
@@ -33,6 +35,19 @@ class RestAPI(RestAPIBase):
             cid = request.args.get("cid", None)
             statusMap = self.getStatus( cid )
             return self.jsonResponse( statusMap )
+
+        @bp.route('/result', methods=('GET',))
+        def status():
+            sid = request.args.get("sid", None)
+            task: Task = self.tasks.get( sid, None )
+            assert task is not None, f"Can't find task for sid {sid}, current tasks: {str(list(self.tasks.keys()))}"
+            result: Optional[TaskResult] = task.getResult()
+            if result is None:
+                return self.jsonResponse( dict(status="executing", id=task.sid) )
+            else:
+                response = make_response( pickle.dumps( result ) )
+                response.headers.set('Content-Type', 'application/octet-stream')
+                return response
 
         @bp.route('/epas', methods=('GET',))
         def epas():

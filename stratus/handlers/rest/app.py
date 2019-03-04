@@ -3,7 +3,6 @@ import os, traceback, abc
 from flask import Flask, Response, Blueprint, render_template
 import json, logging, importlib
 from functools import partial
-from collections import ChainMap
 from stratus.util.config import Config, StratusLogger
 from stratus_endpoint.handler.base import Task, Status
 from flask_sqlalchemy import SQLAlchemy
