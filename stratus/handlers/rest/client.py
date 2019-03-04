@@ -25,15 +25,16 @@ class RestClient(StratusClient):
         self.response_manager.start()
 
     def request(self, type: str, request: Dict, **kwargs ) -> Task:
-        response = self.postMessage( type, request, **kwargs )
+        rid = request.get("id",None)
+        response = self.response_manager.postMessage( self.sid(rid), type, request, **kwargs )
         self.log( "Got response: " + str(response) )
         return restTask( request['sid'], self.response_manager )
 
     def status(self, **kwargs ) -> Dict:
-        return self.getMessage( "status", kwargs )
+        return self.response_manager.getMessage( self.sid(), "status", kwargs )
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
-        return self.getMessage( type, kwargs )
+        return self.response_manager.getMessage( self.sid(), type, kwargs )
 
     def log(self, msg: str ):
         self.logger.info( "[P] " + msg )
@@ -50,35 +51,6 @@ class RestClient(StratusClient):
             if not (self.response_manager is None):
                 self.response_manager.term()
                 self.response_manager = None
-
-    def getMessage(self, type: str, request: Dict, **kwargs ) -> Dict:
-        rid = request.get( "id", UID.randomId(6) )
-        submissionId = self.sid(rid)
-        request["sid"] = submissionId
-        response: requests.Response = requests.get( f"{self.host}/{type}", params=request )
-        print( f"RESPONSE({response.url}): {str(response)}: {response.text}"  )
-        result = response.json()
-        result["id"] = submissionId
-        return result
-
-    def postMessage(self, type: str, request: Dict, **kwargs ) -> Dict:
-        rid = request.get( "id", UID.randomId(6) )
-        submissionId = self.sid(rid)
-        request["sid"] = submissionId
-        self.logger.info( f"POSTing request: {str(request)}")
-        response: requests.Response = requests.post( f"{self.host}/{type}", json=request )
-        print( f"RESPONSE[{response.encoding}]({response.url}): {str(response)}: {response.text}"  )
-        if( response.ok ):
-            if response.encoding == "application/octet-stream":
-                result = pickle.loads( response.content )
-            else:
-                result = response.json()
-            result["id"] = submissionId
-        else:
-            result = {   "error": response.status_code,
-                         "message": response.text,
-                         "id": submissionId           }
-        return result
 
     def waitUntilDone(self):
         self.response_manager.join()
@@ -115,6 +87,32 @@ class ResponseManager(Thread):
             self.log( traceback.format_exc() )
             self.statusMap.clear()
 
+    def getMessage(self, sid: str, type: str, request: Dict, **kwargs ) -> Dict:
+        request["sid"] = sid
+        response: requests.Response = requests.get( f"{self.host_address}/{type}", params=request )
+        print( f"RESPONSE[{response.encoding}]({response.url}): {str(response)}: {response.text}"  )
+        return self.unpackResponse( sid, response )
+
+    def postMessage(self, sid: str, type: str, request: Dict, **kwargs ) -> Dict:
+        request["sid"] = sid
+        self.logger.info( f"POSTing request: {str(request)}")
+        response: requests.Response = requests.post( f"{self.host_address}/{type}", json=request )
+        print( f"RESPONSE[{response.encoding}]({response.url}): {str(response)}: {response.text}"  )
+        return self.unpackResponse( sid, response )
+
+    def unpackResponse(self, sid: str, response: requests.Response)-> Dict:
+        if( response.ok ):
+            if response.encoding == "application/octet-stream":  result = { "content": pickle.loads( response.content ) }
+            else:                                                result = response.json()
+        else:                                                    result = {"error": response.status_code, "message": response.text}
+        result["id"] = sid
+        return result
+
+    def getResult(self, sid: str, block=True, timeout=None  ) ->  Optional[TaskResult]:
+        if block: self.waitUntilReady( sid, timeout )
+        result = self.getMessage( sid, "result", {} )
+        return result["content"]
+
     def _getStatusMap(self) -> Dict:
         response: requests.Response = requests.get( f"{self.host_address}/status", timeout=self.timeout )
         return response.json()
@@ -125,8 +123,15 @@ class ResponseManager(Thread):
     def completed(self, sid ) -> bool :
         return self.getStatus(sid) in [Status.COMPLETED, Status.ERROR ]
 
-    def waitUntilReady( self, sid: str ):
-        while not self.completed( sid ): time.sleep(0.2)
+    def waitUntilReady( self, sid: str, timeout: float = None ):
+        accum_time = 0.0
+        while not self.completed( sid ):
+            time.sleep(0.2)
+            if timeout is not None:
+                accum_time += 0.2
+                if( accum_time >= timeout ):
+                    return False
+        return True
 
     def log(self, msg: str ):
         self.logger.info( "[RM] " + msg )
@@ -142,7 +147,7 @@ class restTask(Task):
         self.manager: ResponseManager = manager
 
     def getResult(self, block=True, timeout=None ) ->  Optional[TaskResult]:
-        return self.manager.getResult(block,timeout)
+        return self.manager.getResult( self.sid, block,timeout )
 
     def status(self) ->  Status:
         return self.manager.getStatus( self.sid )

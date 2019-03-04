@@ -22,6 +22,7 @@ class EndpointSpec:
 
 class StratusClient:
     __metaclass__ = abc.ABCMeta
+    logger = StratusLogger.getLogger()
 
     def __init__( self, type: str, **kwargs ):
         self.cid = UID.randomId(6)
@@ -30,7 +31,6 @@ class StratusClient:
         self.parms = kwargs
         self.priority: float = float( self.parm( "priority", "0" ) )
         self.active = False
-        self.logger =  StratusLogger.getLogger()
 
     def init( self ):
         endPointData = self.capabilities("epas")
@@ -60,8 +60,8 @@ class StratusClient:
     def parm(self, key: str, default: str ) -> str:
         return self.parms.get( key, default  )
 
-    def sid(self, rid: str ) -> str:
-        return self.cid + "-" + rid
+    def sid( self, rid: str = None ) -> str:
+        return self.cid + "-" + UID.randomId(6) if rid is None else self.cid + "-" + rid
 
 class TestClient(StratusClient):
 

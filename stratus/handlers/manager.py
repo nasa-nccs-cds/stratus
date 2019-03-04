@@ -58,10 +58,10 @@ class Handlers:
         return service.client
 
     def findHandler(self, **kwargs ):
-        name = kwargs.get( "service_name", None )
+        name = kwargs.get( "service_name", kwargs.get( "name", None ) )
         if name is not None:
             return self._handlers.get( name, None )
-        type = kwargs.get("service_type", None)
+        type = kwargs.get("service_type", kwargs.get("type", None ) )
         if type is  None: raise Exception( "Missing handler specification, must have 'service_name' or 'service_type' parameter in [stratus] ini configuration: " + str(kwargs))
         for handler in self._handlers.values():
             if handler.type == type:
