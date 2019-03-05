@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Sequence, Callable, BinaryIO, TextIO, Values
 from stratus.handlers.client import StratusClient
 from stratus.util.config import Config, StratusLogger, UID
 from stratus.handlers.base import Handler, TestHandler
+from stratus.handlers.app import StratusAppBase
 import itertools, traceback
 import importlib
 
@@ -56,6 +57,11 @@ class Handlers:
         service = self.findHandler( **kwargs )
         assert service is not None, "Attempt to access unknown service handler: " + str(kwargs) + ", avaliable handlers = " + str( self._handlers.keys() )
         return service.client
+
+    def getApplication( self, **kwargs ) -> StratusAppBase:
+        service = self.findHandler( **kwargs )
+        assert service is not None, "Attempt to access unknown service handler: " + str(kwargs) + ", avaliable handlers = " + str( self._handlers.keys() )
+        return service.app
 
     def findHandler(self, **kwargs ):
         name = kwargs.get( "service_name", kwargs.get( "name", None ) )

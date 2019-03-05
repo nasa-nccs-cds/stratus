@@ -74,23 +74,25 @@ class StratusCore:
         client_parms = { **kwargs, **self.parms }
         return self.handlers.getClient( **client_parms )
 
-    def geClientOpsets(self, request: Dict ) -> Dict[str,OpSet]:
-        # Returns map of client id to list of ops in request that can be handled by that client
-        ops = request.get("operation")
-        assert ops is not None, "Missing 'operation' parameter in request: " + str( request )
-        clientOpsets: Dict[str,OpSet] = dict()
-        for op in ops:
-            if not "id" in op: op["id"] = UID.randomId( 6 )
-            for parm in [ "epa" ]:
-                assert parm in op, "Operation must have an '{}' parameter: {}".format( parm, str(op) )
-            epa = op["epa"]
-            clients = self.getClients( epa )
-            for client in clients:
-               opSet = clientOpsets.setdefault( client.name, OpSet(client) )
-               opSet.add( op )
-        return clientOpsets
+    def getApplication( self, **kwargs ) -> "StratusAppBase":
+        app_parms = { **kwargs, **self.parms, "core": self }
+        return self.handlers.getApplication( **app_parms )
 
-    def shutdown(self): pass
+    def parm(self, name: str, default = None ) -> str:
+        parm = self.parms.get( name, default )
+        if parm is None: raise Exception( "Missing required stratus parameter in settings.ini: " + name )
+        return parm
+
+    def __getitem__( self, key: str ) -> str:
+        result =  self.parms.get( key, None )
+        assert result is not None, "Missing required parameter in {}: {} ".format( self.__class__.__name__, key )
+        return result
+
+class StratusAppBase:
+
+    def __init__( self, _core: StratusCore ):
+        self.logger = StratusLogger.getLogger()
+        self.core = _core
 
     def distributeOps(self,  clientOpsets: Dict[str, OpSet] ) -> List[OpSet]:
         # Distributes ops to clients while maximizing locality of operations
@@ -116,15 +118,32 @@ class StratusCore:
         responses = { opset.name: opset.submit( request ) for opset in distributed_opSets }
         return responses
 
+    def geClientOpsets(self, request: Dict ) -> Dict[str,OpSet]:
+        # Returns map of client id to list of ops in request that can be handled by that client
+        ops = request.get("operation")
+        assert ops is not None, "Missing 'operation' parameter in request: " + str( request )
+        clientOpsets: Dict[str,OpSet] = dict()
+        for op in ops:
+            if not "id" in op: op["id"] = UID.randomId( 6 )
+            for parm in [ "epa" ]:
+                assert parm in op, "Operation must have an '{}' parameter: {}".format( parm, str(op) )
+            epa = op["epa"]
+            clients = self.core.getClients( epa )
+            for client in clients:
+               opSet = clientOpsets.setdefault( client.name, OpSet(client) )
+               opSet.add( op )
+        return clientOpsets
+
+    def shutdown(self): pass
+
     def parm(self, name: str, default = None ) -> str:
-        parm = self.parms.get( name, default )
-        if parm is None: raise Exception( "Missing required stratus parameter in settings.ini: " + name )
-        return parm
+        return self.core.parm( name, default )
 
     def __getitem__( self, key: str ) -> str:
-        result =  self.parms.get( key, None )
-        assert result is not None, "Missing required parameter in {}: {} ".format( self.__class__.__name__, key )
-        return result
+        return self.core[key]
+
+    def getConfigParms(self, module: str ) -> Dict:
+        return self.core.getConfigParms( module )
 
 if __name__ == "__main__":
 #        sCore = StratusCore()

@@ -6,7 +6,7 @@ from functools import partial
 from stratus.util.config import Config, StratusLogger
 from stratus_endpoint.handler.base import Task, Status
 from flask_sqlalchemy import SQLAlchemy
-from stratus.handlers.app import StratusCore
+from stratus.handlers.app import StratusCore, StratusAppBase
 from jsonschema import validate
 
 class RestAPIBase:
@@ -63,11 +63,11 @@ class RestAPIBase:
         except Exception as err:
             return dict( status="error", message=f"Error parsing/validating request: '{requestSpec}'", error=str(err) )
 
-class StratusApp(StratusCore):
+class StratusApp(StratusAppBase):
 
-    def __init__( self, **kwargs ):
+    def __init__( self, core: StratusCore ):
         self.apis = []
-        StratusCore.__init__( self, **kwargs )
+        StratusAppBase.__init__( self, core )
         self.flask_parms = self.getConfigParms('flask')
         self.flask_parms['SQLALCHEMY_DATABASE_URI'] = self.flask_parms['DATABASE_URI']
         self.app = self.create_app( self.flask_parms )
@@ -110,5 +110,6 @@ class StratusApp(StratusCore):
 if __name__ == "__main__":
     HERE = os.path.dirname(os.path.abspath(__file__))
     SETTINGS_FILE = os.path.join(HERE, "server_test_settings.ini")
-    app = StratusApp( settings=SETTINGS_FILE )
+    core = StratusCore( settings=SETTINGS_FILE  )
+    app = core.getApplication()
     app.run()

@@ -1,4 +1,4 @@
-from stratus.handlers.app import StratusCore
+from stratus.handlers.app import StratusCore, StratusAppBase
 import json, string, random, abc, os
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
 from stratus.util.config import Config, StratusLogger
@@ -11,10 +11,10 @@ from stratus_endpoint.handler.base import Task, Status
 from enum import Enum
 MB = 1024 * 1024
 
-class StratusApp(StratusCore):
+class StratusApp(StratusAppBase):
 
-    def __init__( self, **kwargs ):
-        StratusCore.__init__(self, **kwargs )
+    def __init__( self, core: StratusCore ):
+        StratusAppBase.__init__(self, core )
         self.logger =  StratusLogger.getLogger()
         self.active = True
         self.parms = self.getConfigParms('stratus')

@@ -1,6 +1,7 @@
 import string, random, abc, os, yaml, json
 from typing import List, Dict, Any, Sequence, Callable, BinaryIO, TextIO, ValuesView, Optional
 from stratus.handlers.client import StratusClient, TestClient
+from stratus.handlers.app import StratusAppBase, StratusCore
 
 import abc, sys, pkgutil
 
@@ -12,6 +13,7 @@ class Handler:
         self.name = self['name']
         self.type: str = htype
         self._client = None
+        self._app: StratusAppBase = None
         htype1 = self.parms.pop("type")
         assert htype1 == htype, "Sanity check of Handler type failed: {} vs {}".format(htype1,htype)
 
@@ -26,12 +28,18 @@ class Handler:
     @abc.abstractmethod
     def newClient(self) -> StratusClient: pass
 
+    @abc.abstractmethod
+    def newApplication(self, core: StratusCore ) -> StratusAppBase: pass
+
     @property
     def client(self) -> StratusClient:
         if self._client is None:
             self._client = self.newClient()
             self._client.init()
         return self._client
+
+    def app(self, core: StratusCore ) -> StratusAppBase:
+        return self.newApplication(core)
 
     def __repr__(self):
         return json.dumps( self.parms )
@@ -44,4 +52,5 @@ class TestHandler(Handler):
     def newClient(self) -> StratusClient:
         return TestClient(**self.parms)
 
-
+    def newApplication(self, core: StratusCore ) -> StratusAppBase:
+        return StratusAppBase(core)
