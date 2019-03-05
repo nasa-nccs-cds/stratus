@@ -34,12 +34,19 @@ class RestAPIBase:
         assert required is False or param is not None, f"Missing required parameter: '{name}'"
         return param
 
+    def _blueprint( self, app: Flask ):
+        bp = Blueprint( self.name, __name__, url_prefix=f'/{self.name}' )
+        self.logger.info( f"Instantiating API: {bp.name}" )
+        app.register_blueprint( bp )
+        return bp
+
     @abc.abstractmethod
-    def _createBlueprint( self, app: Flask ): pass
+    def _addOperations( self, bp: Blueprint ): pass
 
     def instantiate( self, app: Flask ):
-        bp: Blueprint = self._createBlueprint( app )
+        bp = Blueprint( self.name, __name__, url_prefix=f'/{self.name}' )
         self.logger.info( f"Instantiating API: {bp.name}" )
+        self._addOperations( bp )
         app.register_blueprint( bp )
 
     def jsonResponse(self, response: Dict, code: int = 200 ) -> Response:

@@ -34,6 +34,8 @@ class StratusClient:
 
     def init( self ):
         endPointData = self.capabilities("epas")
+        if "error" in endPointData: raise Exception( "Error accessing endpoint data: " + endPointData["message"] )
+        self.logger.info( "EndpointSpecs: " + str(endPointData))
         self._endpointSpecs: List[EndpointSpec] = [ EndpointSpec(epaSpec) for epaSpec in endPointData["epas"] ]
         self.active = True
 

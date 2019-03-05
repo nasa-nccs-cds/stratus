@@ -6,9 +6,8 @@ import os, abc
 
 class RestAPI(RestAPIBase):
 
-    def _createBlueprint( self, app: Flask ) -> Blueprint:
-        bpName = self.name
-        bp = Blueprint( bpName, __name__, url_prefix=f'/{bpName}' )
+    def instantiate( self, app: Flask ):
+        bp = self._blueprint( app )
 
         @bp.route('/cwt', methods=('GET', 'POST'))
         def wps():
@@ -27,7 +26,7 @@ class RestAPI(RestAPIBase):
 #                if rType.lower() == "execute":
 #                    rInputs: str = requestArgs.get("datainputs", None)
                 return "Hello!"
-        return bp
+
 
 
 

@@ -8,9 +8,7 @@ import os, abc, json
 
 class RestAPI(RestAPIBase):
 
-    def _createBlueprint( self, app: Flask ) -> Blueprint:
-        bpName = self.name
-        bp = Blueprint( bpName, __name__, url_prefix=f'/{bpName}' )
+    def _addOperations( self, bp: Blueprint ):
 
         @bp.route('/exe', methods=('GET', 'POST'))
         def exe():
@@ -54,8 +52,6 @@ class RestAPI(RestAPIBase):
             requestDict: Dict = self.jsonRequest(requestSpec)
             task = client.request("exe", request=requestDict)
             return self.jsonResponse(dict(status="executing", id=task.id))
-
-        return bp
 
 
 

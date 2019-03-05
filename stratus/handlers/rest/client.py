@@ -93,7 +93,7 @@ class ResponseManager(Thread):
             self.statusMap.clear()
 
     def getMessage(self, type: str, requestSpec: Dict, **kwargs ) -> Dict:
-        debug = False
+        debug = True
         request_params = dict(requestSpec)
         request_params.update(kwargs)
         address = f"{self.host_address}/{type}"
