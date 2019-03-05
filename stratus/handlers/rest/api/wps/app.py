@@ -6,8 +6,7 @@ import os, abc
 
 class RestAPI(RestAPIBase):
 
-    def instantiate( self, app: Flask ):
-        bp = self._blueprint( app )
+    def _addRoutes(self, bp: Blueprint):
 
         @bp.route('/cwt', methods=('GET', 'POST'))
         def wps():

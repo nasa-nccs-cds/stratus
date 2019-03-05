@@ -23,10 +23,12 @@ class RestAPIBase:
         self.tasks[ task.sid ] = task
         return task.sid
 
+    def removeTask( self, sid: str ):
+        if sid in self.tasks:
+            del self.tasks[ sid ]
+
     def getStatus( self, cid: str = None ) -> Dict[str,Status]:
         statusMap = { sid: task.status for sid, task in self.tasks.items() if ( cid is None or task.cid == cid ) }
-        for sid, status in statusMap.items():
-            if status in [ Status.ERROR, Status.COMPLETED ]:  del self.tasks[sid]
         return { sid: str(status) for sid, status in statusMap.items() }
 
     def getParameter(self, name: str, default = None, required = True ):
@@ -41,12 +43,12 @@ class RestAPIBase:
         return bp
 
     @abc.abstractmethod
-    def _addOperations( self, bp: Blueprint ): pass
+    def _addRoutes(self, bp: Blueprint): pass
 
     def instantiate( self, app: Flask ):
         bp = Blueprint( self.name, __name__, url_prefix=f'/{self.name}' )
         self.logger.info( f"Instantiating API: {bp.name}" )
-        self._addOperations( bp )
+        self._addRoutes(bp)
         app.register_blueprint( bp )
 
     def jsonResponse(self, response: Dict, code: int = 200 ) -> Response:

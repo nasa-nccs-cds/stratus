@@ -34,7 +34,7 @@ class StratusFileLogger:
     @classmethod
     def getLogger(cls, lname ):
         if cls.logger is None:
-            cls.logger = logging.getLogger()
+            cls.logger = logging.getLogger( "stratus-file" )
             LOG_DIR = os.path.expanduser(os.path.join(STRATUS_CONFIG, "logs"))
             if not os.path.exists(LOG_DIR):  os.makedirs(LOG_DIR)
             timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.gmtime())
@@ -49,7 +49,7 @@ class StratusLogger:
     @classmethod
     def getLogger( cls ):
         if cls.logger is None:
-            cls.logger = logging.getLogger( UID.randomId(6) )
+            cls.logger = logging.getLogger( "stratus" )
             LOG_DIR = os.path.expanduser(os.path.join(STRATUS_CONFIG, "logs"))
             if not os.path.exists(LOG_DIR):  os.makedirs(LOG_DIR)
             timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.gmtime())

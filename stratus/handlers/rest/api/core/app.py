@@ -7,16 +7,17 @@ from stratus.handlers.rest.app import RestAPIBase
 import os, abc, json
 
 class RestAPI(RestAPIBase):
+    debug = False
 
-    def _addOperations( self, bp: Blueprint ):
+    def _addRoutes(self, bp: Blueprint):
 
         @bp.route('/exe', methods=('GET', 'POST'))
         def exe():
             if request.method == 'POST':    requestDict: Dict = request.json
             else:                           requestDict: Dict = self.jsonRequest( request.args.get("request",None) )
-            self.logger.info(f"Processing Request: '{str(requestDict)}'")
+            if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
             current_tasks = self.core.processWorkflow( requestDict )
-            self.logger.info("Current tasks: {} ".format(str(list(current_tasks.items()))))
+            if self.debug: self.logger.info("Current tasks: {} ".format(str(list(current_tasks.items()))))
             for task in current_tasks.values(): self.addTask( task )
             return self.jsonResponse( dict( status="executing", id=requestDict['sid'] ), code=202 )
 
@@ -24,7 +25,7 @@ class RestAPI(RestAPIBase):
         def status():
             cid = self.getParameter( "cid", None, False)
             statusMap = self.getStatus(cid)
-            self.logger.info( "Status Map: " + str(statusMap) )
+            if self.debug: self.logger.info( "Status Map: " + str(statusMap) )
             return self.jsonResponse( statusMap )
 
         @bp.route('/result', methods=('GET',))
@@ -38,6 +39,7 @@ class RestAPI(RestAPIBase):
             else:
                 response = make_response( pickle.dumps( result ) )
                 response.headers.set('Content-Type', 'application/octet-stream')
+                self.removeTask( sid )
                 return response
 
         @bp.route('/epas', methods=('GET',))
