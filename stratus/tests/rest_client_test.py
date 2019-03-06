@@ -1,12 +1,12 @@
 from stratus.handlers.openapi.client import OpenApiClient
-from stratus.handlers.app import StratusCore
+from stratus.handlers.core import StratusCore
 import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 SETTINGS_FILE = os.path.join( HERE, "settings.ini" )
 
 if __name__ == "__main__":
 
-    stratus = StratusCore( settings=SETTINGS_FILE )
+    stratus = StratusCore( SETTINGS_FILE )
     server = stratus.getClient()
 
     variables=[ dict( name='tas:v0', uri='collection://merra2')  ]

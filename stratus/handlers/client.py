@@ -59,7 +59,7 @@ class StratusClient:
 
     def __getitem__( self, key: str ) -> str:
         result =  self.parms.get( key, None )
-        assert result is not None, "Missing required parameter in {}: {} ".format( self.__class__.__name__, key )
+        assert result is not None, "Missing required parameter in {}: {}, params: {} ".format( self.__class__.__name__, key, str(self.parms) )
         return result
 
     def parm(self, key: str, default: str = None) -> Optional[str]:

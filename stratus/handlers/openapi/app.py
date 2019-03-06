@@ -2,13 +2,14 @@ from connexion.resolver import Resolver
 from connexion.operations import AbstractOperation
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
 from stratus.handlers.client import StratusClient
-import os, traceback
+import os, traceback, abc
 from flask import Flask, Response
 import connexion, json, logging
 from functools import partial
 from stratus.util.config import Config, StratusLogger
 from flask_sqlalchemy import SQLAlchemy
-from stratus.handlers.app import StratusCore
+from stratus.handlers.core import StratusCore
+from stratus.handlers.app import StratusAppBase, ExecMode
 
 class StratusResolver(Resolver):
 
@@ -25,10 +26,10 @@ class StratusResolver(Resolver):
         assert len(clients), "No handlers found for operation: " + operation_id
         return partial( clients[0].request, operation_id )
 
-class StratusApp(StratusCore):
+class StratusApp(StratusAppBase):
 
-    def __init__( self, **kwargs ):
-        StratusCore.__init__( self, **kwargs )
+    def __init__( self, core: StratusCore ):
+        StratusAppBase.__init__( self, core )
         self.app = connexion.FlaskApp("stratus.handlers.openapi", specification_dir='api/', debug=True )
         self.app.add_error_handler( 500, self.render_server_error )
         self.app.app.register_error_handler( TypeError, self.render_server_error )
@@ -38,9 +39,9 @@ class StratusApp(StratusCore):
 
         api = self.parm( 'API' )
         self.db = SQLAlchemy( self.app.app )
-        self.app.add_api( api + ".yaml", resolver=StratusResolver(api,self) )
+        self.app.add_api( api + ".yaml", resolver=StratusResolver( api, self.core ) )
 
-    def run(self):
+    def run(self, eMode: ExecMode = ExecMode.INLINE):
         port = self.flask_parms.get( 'PORT', 5000 )
         host = self.flask_parms.get('HOST', "127.0.0.1" )
         self.db.create_all( )
@@ -52,6 +53,3 @@ class StratusApp(StratusCore):
         traceback.print_exc()
         return Response(response=json.dumps({ 'message': getattr(ex, 'message', repr(ex)), "code": 500, "id": "", "status": "error" } ), status=500, mimetype="application/json")
 
-if __name__ == "__main__":
-    app = StratusApp()
-    app.run()

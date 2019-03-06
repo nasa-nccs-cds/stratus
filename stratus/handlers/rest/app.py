@@ -4,19 +4,20 @@ from flask import Flask, Response, Blueprint, request
 import json, logging, importlib
 from functools import partial
 from stratus.util.config import Config, StratusLogger
+from stratus.handlers.core import StratusCore
 from stratus_endpoint.handler.base import Task, Status
 from flask_sqlalchemy import SQLAlchemy
-from stratus.handlers.app import StratusCore, StratusAppBase
+from stratus.handlers.app import StratusAppBase, ExecMode, StratusFactory
 from jsonschema import validate
 
 class RestAPIBase:
     __metaclass__ = abc.ABCMeta
 
-    def __init__( self, name: str, core: StratusCore, **kwargs ):
+    def __init__( self, name: str, app: StratusAppBase, **kwargs ):
         self.logger = StratusLogger.getLogger()
         self.parms = kwargs
         self.name = name
-        self.core = core
+        self.app = app
         self.tasks = {}
 
     def addTask( self, task: Task ):
@@ -75,7 +76,7 @@ class StratusApp(StratusAppBase):
         try:            os.makedirs(self.app.instance_path)
         except OSError: pass
 
-    def run(self):
+    def run(self, execMode: ExecMode = ExecMode.INLINE ):
         port = self.flask_parms.get( 'PORT', 5000 )
         host = self.flask_parms.get( 'HOST', "127.0.0.1" )
         self.db.create_all( )
@@ -110,6 +111,6 @@ class StratusApp(StratusAppBase):
 if __name__ == "__main__":
     HERE = os.path.dirname(os.path.abspath(__file__))
     SETTINGS_FILE = os.path.join(HERE, "server_test_settings.ini")
-    core = StratusCore( settings=SETTINGS_FILE  )
+    core = StratusCore( SETTINGS_FILE  )
     app = core.getApplication()
     app.run()

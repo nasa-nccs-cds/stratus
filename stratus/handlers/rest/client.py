@@ -5,7 +5,7 @@ from stratus.util.config import Config, StratusLogger, UID
 from threading import Thread
 from stratus.util.parsing import s2b, b2s
 from stratus_endpoint.handler.base import Task, Status, TaskResult
-from stratus.handlers.app import StratusCore
+from stratus.handlers.core import StratusCore
 import random, string, os, pickle, queue
 import xarray as xa
 from enum import Enum
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     HERE = os.path.dirname(os.path.abspath(__file__))
     SETTINGS_FILE = os.path.join(HERE, "client_test_settings.ini")
 
-    core = StratusCore( settings=SETTINGS_FILE )
+    core = StratusCore( SETTINGS_FILE )
     client = core.getClient()
     client.init()
     request = dict(
@@ -202,7 +202,7 @@ if __name__ == "__main__":
         input=[{"uri": mgr.getAddress("merra2", "tas"), "name": "tas:v0", "domain": "d0"}],
         operation=[ { "epa": "test.subset", "input": "v0"} ]
     )
-    task: Task = client.request( "exe", request )
+    task: Task = client.request( request )
     time.sleep(1.5)
     status = task.status()
     print ( "status response = " + str(status))

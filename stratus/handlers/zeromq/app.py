@@ -1,14 +1,14 @@
-from stratus.handlers.app import StratusCore, StratusAppBase
+from stratus.handlers.app import StratusAppBase, ExecMode
+from stratus.handlers.core import StratusCore
 import json, string, random, abc, os
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
 from stratus.util.config import Config, StratusLogger
 import zmq, traceback, time, logging, xml, socket
 from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
-from stratus.handlers.zeromq.service import Responder, DataPacket, StratusResponse
+from .responder import StratusZMQResponder, StratusResponse
 from stratus.util.parsing import s2b, b2s
 from stratus_endpoint.handler.base import Task, Status
-from enum import Enum
 MB = 1024 * 1024
 
 class StratusApp(StratusAppBase):
@@ -21,6 +21,7 @@ class StratusApp(StratusAppBase):
         self.client_address = self.parms.get( "client.address","*" )
         self.request_port = self.parms.get( "request.port", 4556 )
         self.response_port = self.parms.get( "response.port", 4557 )
+        self.active_handlers = {}
         self.tasks = queue.Queue()
 
     def initSocket( self ):
@@ -32,15 +33,15 @@ class StratusApp(StratusAppBase):
             self.logger.error( traceback.format_exc() )
 
     def addHandler(self, clientId, jobId, handler ):
-        self.handlers[ clientId + "-" + jobId ] = handler
+        self.active_handlers[ clientId + "-" + jobId ] = handler
         return handler
 
     def removeHandler(self, clientId, jobId ):
         handlerId = clientId + "-" + jobId
         try:
-            del self.handlers[ handlerId ]
+            del self.active_handlers[ handlerId ]
         except:
-            self.logger.error( "Error removing handler: " + handlerId + ", existing handlers = " + str(list(self.handlers.keys())))
+            self.logger.error( "Error removing handler: " + handlerId + ", active handlers = " + str(list(self.active_handlers.keys())))
 
     def setExeStatus( self, submissionId: str, status: Status ):
         self.responder.setExeStatus( submissionId, status )
@@ -53,14 +54,13 @@ class StratusApp(StratusAppBase):
         self.request_socket.send_string( packaged_msg )
         return packaged_msg
 
-    def run(self):
+    def run(self, execMode: ExecMode = ExecMode.INLINE ):
 
         try:
             self.zmqContext: zmq.Context = zmq.Context()
             self.request_socket: zmq.Socket = self.zmqContext.socket(zmq.REP)
-            self.responder = Responder( self.zmqContext, self.response_port, self.tasks, client_address = self.client_address )
+            self.responder = StratusZMQResponder(self.zmqContext, self.response_port, self.tasks, client_address = self.client_address)
             self.responder.start()
-            self.handlers = {}
             self.initSocket()
 
         except Exception as err:
@@ -77,7 +77,7 @@ class StratusApp(StratusAppBase):
                 timeStamp = datetime.datetime.now().strftime("MM/dd HH:mm:ss")
                 self.logger.info( "@@Portal:  ###  Processing {} request @({})".format( rType, timeStamp) )
                 if rType == "epas":
-                    response = { "epas": self.handlers.getEpas() }
+                    response = { "epas": self.core.handlers.getEpas() }
                     self.sendResponseMessage(StratusResponse(submissionId, response))
                 elif rType == "exe":
                     if len(parts) <= 2: raise Exception( "Missing parameters to exe request")
@@ -121,7 +121,7 @@ class StratusApp(StratusAppBase):
         self.logger.info( "@@Portal: shutdown complete")
 
 if __name__ == "__main__":
-    from stratus.handlers.manager import Handlers
-    app = StratusApp( settings=Handlers.getStratusFilePath( "stratus/handlers/zeromq/test_settings1.ini" ) )
+    core = StratusCore( "test_settings1.ini" )
+    app = core.getApplication()
     app.run()
 

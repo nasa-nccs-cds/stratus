@@ -1,9 +1,14 @@
-import os, json, yaml
-from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Set, Tuple
+import os, json, yaml, abc
+from typing import List, Union, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Set, Tuple
 from stratus.util.config import Config, StratusLogger, UID
 from stratus.handlers.client import StratusClient
-from stratus.handlers.manager import Handlers
+from enum import Enum
 from stratus_endpoint.handler.base import Task, Status
+
+class ExecMode(Enum):
+    INLINE = 0
+    THREAD = 1
+    SUBPROCESS = 2
 
 class OpSet():
 
@@ -52,31 +57,33 @@ class OpSet():
         self.logger.info( "Client {}: submit operations {}".format( self.client.name, str( filtered_request['operations'] ) ) )
         return self.client.request( filtered_request )
 
-class StratusCore:
+class StratusCoreBase:
     HERE = os.path.dirname(__file__)
     SETTINGS = os.path.join( HERE, 'settings.ini')
 
-    def __init__(self, **kwargs ):
+    def __init__(self, configSpec: Union[str,Dict[str,Dict]], **kwargs ):
         self.logger = StratusLogger.getLogger()
-        settings = kwargs.get( "settings", os.environ.get( 'STRATUS_SETTINGS', self.SETTINGS ) )
-        assert os.path.isfile(settings), "Settings file does not exist: " + settings
-        self.config = Config(settings)
+        self.config = self.getSettings( configSpec )
         self.parms = self.getConfigParms('stratus')
-        self.handlers = Handlers( self.config, home=os.path.dirname( settings ) )
+
+    @classmethod
+    def getSettings( cls, configSpec: Union[str,Dict[str,Dict]] ) -> Dict[str,Dict]:
+        result = {}
+        if isinstance(configSpec, str ):
+            assert os.path.isfile(configSpec), "Settings file does not exist: " + configSpec
+            if configSpec.endswith( ".ini" ):
+                config =  Config(configSpec)
+                for section in config.sections():
+                    result[section] = config.get_map( section )
+            elif ( configSpec.endswith( ".yml" ) or configSpec.endswith( ".yaml" ) ):
+                with open(configSpec, 'r') as stream:
+                    result =  yaml.load(stream)
+        else:
+            result = configSpec
+        return result
 
     def getConfigParms(self, module: str ) -> Dict:
-        return self.config.get_map( module )
-
-    def getClients( self, epa: str = None ) -> List[StratusClient]:
-        return self.handlers.getClients( epa )
-
-    def getClient( self, **kwargs ) -> StratusClient:
-        client_parms = { **kwargs, **self.parms }
-        return self.handlers.getClient( **client_parms )
-
-    def getApplication( self, **kwargs ) -> "StratusAppBase":
-        app_parms = { **kwargs, **self.parms, "core": self }
-        return self.handlers.getApplication( **app_parms )
+        return self.config.get( module, {} )
 
     def parm(self, name: str, default = None ) -> str:
         parm = self.parms.get( name, default )
@@ -88,9 +95,13 @@ class StratusCore:
         assert result is not None, "Missing required parameter in {}: {} ".format( self.__class__.__name__, key )
         return result
 
-class StratusAppBase:
+    @abc.abstractmethod
+    def getClients( self, epa ) -> List[StratusClient]: pass
 
-    def __init__( self, _core: StratusCore ):
+class StratusAppBase:
+    __metaclass__ = abc.ABCMeta
+
+    def __init__( self, _core: StratusCoreBase ):
         self.logger = StratusLogger.getLogger()
         self.core = _core
 
@@ -145,22 +156,32 @@ class StratusAppBase:
     def getConfigParms(self, module: str ) -> Dict:
         return self.core.getConfigParms( module )
 
-if __name__ == "__main__":
-#        sCore = StratusCore()
-#        request = { "operations": [ {"epa": "1"}, {"epa": "2"}, {"epa": "3"} ]}
-#        print( sCore.processWorkflow( request ) )
+    @abc.abstractmethod
+    def run(self, execMode: ExecMode = ExecMode.INLINE ): pass
 
-    clientMap = dict()
-    opSet2 = clientMap.setdefault( "t2", OpSet("t2") )
-    opSet2.add( "op2"  )
-    opSet2.add( "op3" )
+class StratusFactory:
+    __metaclass__ = abc.ABCMeta
 
+    def __init__(self, htype: str, **kwargs):
+        self.parms = kwargs
+        self.name = self['name']
+        self.type: str = htype
+        htype1 = self.parms.pop("type")
+        assert htype1 == htype, "Sanity check of Handler type failed: {} vs {}".format(htype1,htype)
 
-    opSet1 = clientMap.setdefault( "t1", OpSet("t1") )
-    opSet1.add( "op1"  )
+    @abc.abstractmethod
+    def client(self) -> StratusClient: pass
 
+    @abc.abstractmethod
+    def app(self, core: StratusCoreBase ) -> StratusAppBase: pass
 
-    for value in sorted(clientMap.values(),reverse=True):
-        print( str(value)  )
+    def __getitem__( self, key: str ) -> str:
+        result =  self.parms.get( key, None )
+        assert result is not None, "Missing required parameter in {}: {} ".format( self.__class__.__name__, key )
+        return result
 
+    def parm(self, key: str, default: str) -> str:
+        return self.parms.get(key, default)
 
+    def __repr__(self):
+        return json.dumps(self.parms)

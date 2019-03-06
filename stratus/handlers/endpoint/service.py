@@ -2,7 +2,8 @@ import json, string, random, abc, os
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
 from stratus.handlers.base import Handler
 from stratus.handlers.client import StratusClient
-from stratus.handlers.app import StratusCore, StratusAppBase
+from stratus.handlers.app import StratusAppBase
+from stratus.handlers.core import StratusCore
 from .client import DirectClient
 
 class ServiceHandler( Handler ):

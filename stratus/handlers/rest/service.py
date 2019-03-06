@@ -2,7 +2,7 @@ import json, string, random, abc, os, pickle, collections
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
 from stratus.handlers.base import Handler
 from stratus.handlers.client import StratusClient
-from stratus.handlers.app import StratusCore
+from stratus.handlers.core import StratusCore
 from stratus.util.config import Config, StratusLogger
 from .client import RestClient
 from .app import StratusApp
@@ -25,4 +25,4 @@ class ServiceHandler( Handler ):
         return RestClient( **self.parms )
 
     def newApplication(self, core: StratusCore ) -> StratusApp:
-        return StratusApp( **self.parms )
+        return StratusApp( core )

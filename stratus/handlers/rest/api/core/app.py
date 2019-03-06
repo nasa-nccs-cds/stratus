@@ -1,4 +1,3 @@
-from stratus.handlers.rest.app import StratusApp
 from flask import Flask, Response, request, Blueprint, make_response
 from stratus_endpoint.handler.base import Task, Status, TaskResult
 import pickle
@@ -16,7 +15,7 @@ class RestAPI(RestAPIBase):
             if request.method == 'POST':    requestDict: Dict = request.json
             else:                           requestDict: Dict = self.jsonRequest( request.args.get("request",None) )
             if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
-            current_tasks = self.core.processWorkflow( requestDict )
+            current_tasks = self.app.processWorkflow(requestDict)
             if self.debug: self.logger.info("Current tasks: {} ".format(str(list(current_tasks.items()))))
             for task in current_tasks.values(): self.addTask( task )
             return self.jsonResponse( dict( status="executing", id=requestDict['sid'] ), code=202 )
@@ -44,13 +43,13 @@ class RestAPI(RestAPIBase):
 
         @bp.route('/epas', methods=('GET',))
         def epas():
-            epaList: List[str] = self.core.handlers.getEpas()
+            epaList: List[str] = self.app.core.getEpas()
             return self.jsonResponse( dict(epas=epaList) )
 
         @bp.route('/capabilities', methods=('GET',))
         def capabilities():
             requestSpec: str = request.get("request", None)
-            client = self.core.getClient()
+            client = self.app.getClient()
             requestDict: Dict = self.jsonRequest(requestSpec)
             task = client.request("exe", request=requestDict)
             return self.jsonResponse(dict(status="executing", id=task.id))
