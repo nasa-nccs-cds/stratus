@@ -11,7 +11,7 @@ class DirectClient(StratusClient):
 
     def instantiateEndpoint( self ):
         module = self["module"]
-        class_name = self["class"]
+        class_name = self["object"]
         module = importlib.import_module(module)
         epclass = getattr(module, class_name)
         return epclass( **self.parms )
