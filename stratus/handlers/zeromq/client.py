@@ -45,7 +45,6 @@ class ZMQClient(StratusClient):
         self.default_request_port = int( self.parm( "request_port", 4556 ) )
         self.response_port = int( self.parm( "response_port", 4557 ) )
 
-
     def init(self, **kwargs):
         try:
             self.context = zmq.Context()
@@ -59,37 +58,29 @@ class ZMQClient(StratusClient):
             self.logger.error(err_msg)
             self.shutdown()
 
-    def request(self, type: str, **kwargs ) -> Task:
-        response = self.sendMessage( type, kwargs )
+    def request(self, request: Dict, **kwargs ) -> Task:
+        response = self.sendMessage( "exe", request, **kwargs )
         self.log( str(response) )
         response_manager = ResponseManager( self.context, response["id"], self.host_address, self.response_port,   **kwargs )
         response_manager.start()
         return zmqTask( response_manager )
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
-        return self.sendMessage( type, kwargs )
+        return self.sendMessage( type, {}, **kwargs )
 
     def log(self, msg: str ):
         self.logger.info( "[P] " + msg )
 
     def __del__(self):
-        self.log(  " Portal client being deleted " )
         self.shutdown()
-
-    def createResponseManager(self) -> "ResponseManager":
-        return self.response_manager
 
     def shutdown(self):
         if self.active:
-            self.log(  " ############################## Disconnect Portal Client from Server & shutdown Client ##############################"  )
             self.active = False
             try: self.request_socket.close()
             except Exception: pass
-            if not (self.response_manager is None):
-                self.response_manager.term()
-                self.response_manager = None
 
-    def sendMessage(self, type: str, requestData: Dict ) -> Dict:
+    def sendMessage(self, type: str, requestData: Dict, **kwargs ) -> Dict:
         rid = requestData.get( "id", UID.randomId(6) )
         submissionId = self.sid(rid)
         msg = json.dumps( requestData )
@@ -105,9 +96,6 @@ class ZMQClient(StratusClient):
         response = json.loads(parts[1])
         response["id"] = submissionId
         return response
-
-    def waitUntilDone(self):
-        self.response_manager.join()
 
 class ResponseManager(Thread):
 
@@ -151,7 +139,6 @@ class ResponseManager(Thread):
             if response_socket: response_socket.close()
 
     def term(self):
-        self.log("Terminate RM thread")
         if self.active:
             self.active = False
 
@@ -188,6 +175,9 @@ class zmqTask(Task):
 
     def status(self) ->  Status:
         return self._status
+
+    def __del__(self):
+        self.manager.term()
 
 
 if __name__ == "__main__":

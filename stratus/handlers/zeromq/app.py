@@ -1,4 +1,4 @@
-from stratus.handlers.app import StratusAppBase, ExecMode
+from stratus.handlers.app import StratusAppBase
 from stratus.handlers.core import StratusCore
 import json, string, random, abc, os
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
@@ -18,9 +18,9 @@ class StratusApp(StratusAppBase):
         self.logger =  StratusLogger.getLogger()
         self.active = True
         self.parms = self.getConfigParms('stratus')
-        self.client_address = self.parms.get( "client.address","*" )
-        self.request_port = self.parms.get( "request.port", 4556 )
-        self.response_port = self.parms.get( "response.port", 4557 )
+        self.client_address = self.parms.get( "client_address","*" )
+        self.request_port = self.parms.get( "request_port", 4556 )
+        self.response_port = self.parms.get( "response_port", 4557 )
         self.active_handlers = {}
         self.tasks = queue.Queue()
 
@@ -54,7 +54,7 @@ class StratusApp(StratusAppBase):
         self.request_socket.send_string( packaged_msg )
         return packaged_msg
 
-    def run(self, execMode: ExecMode = ExecMode.INLINE ):
+    def run(self):
 
         try:
             self.zmqContext: zmq.Context = zmq.Context()

@@ -9,7 +9,7 @@ from functools import partial
 from stratus.util.config import Config, StratusLogger
 from flask_sqlalchemy import SQLAlchemy
 from stratus.handlers.core import StratusCore
-from stratus.handlers.app import StratusAppBase, ExecMode
+from stratus.handlers.app import StratusAppBase
 
 class StratusResolver(Resolver):
 
@@ -41,7 +41,7 @@ class StratusApp(StratusAppBase):
         self.db = SQLAlchemy( self.app.app )
         self.app.add_api( api + ".yaml", resolver=StratusResolver( api, self.core ) )
 
-    def run(self, eMode: ExecMode = ExecMode.INLINE):
+    def run(self):
         port = self.flask_parms.get( 'PORT', 5000 )
         host = self.flask_parms.get('HOST', "127.0.0.1" )
         self.db.create_all( )

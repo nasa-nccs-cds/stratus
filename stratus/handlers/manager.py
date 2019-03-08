@@ -28,9 +28,10 @@ class Handlers:
                 service = self._getHandler(service_spec)
                 if service.name == "stratus":
                     self._app_handler = service
+                    self.logger.info(f"Initialized stratus node for service {htype}")
                 else:
                     self._handlers[ service.name ] = service
-                    self.logger.info( f"Initialized stratus for service {htype}" )
+                    self.logger.info(f"Adding stratus handler for service {htype}")
             except Exception as err:
                 err_msg = "Error registering handler for service {}: {}".format( service_spec.get("name",""), str(err) )
                 print( err_msg )

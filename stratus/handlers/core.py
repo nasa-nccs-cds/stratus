@@ -22,7 +22,9 @@ class StratusCore(StratusCoreBase):
     def getApplication( self ) -> StratusAppBase:
         service = self.handlers.getApplicationHandler()
         assert service is not None, "Can't find [stratus] handler: missing configuration?"
-        return service.app(self)
+        app =  service.app(self)
+        self.logger.info( "Starting Stratus Node: " + str(app.__class__) )
+        return app
 
     def getEpas(self) -> List[str]:
         return self.handlers.getEpas()

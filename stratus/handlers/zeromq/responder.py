@@ -71,7 +71,7 @@ class StratusZMQResponder(Thread):
     def importTasks(self):
         while not self.input_tasks.empty():
             task = self.input_tasks.get()
-            self.current_tasks[task.id] = task
+            self.current_tasks[task.sid] = task
 
     def removeCompletedTasks(self):
         for completed_task in self.completed_tasks:
@@ -107,6 +107,7 @@ class StratusZMQResponder(Thread):
 
     def setExeStatus( self, sid: str, status: Status ):
         self.status_reports[sid] = status
+        self.logger.info(f"@@R: --> Set Execution Status[{sid}]: {str(status)}")
         try:
             if status == Status.EXECUTING:
                 self.executing_jobs[sid] = StratusResponse(sid, {"status": "executing"})

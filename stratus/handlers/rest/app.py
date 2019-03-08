@@ -7,7 +7,7 @@ from stratus.util.config import Config, StratusLogger
 from stratus.handlers.core import StratusCore
 from stratus_endpoint.handler.base import Task, Status
 from flask_sqlalchemy import SQLAlchemy
-from stratus.handlers.app import StratusAppBase, ExecMode, StratusFactory
+from stratus.handlers.app import StratusAppBase, StratusFactory
 from jsonschema import validate
 
 class RestAPIBase:
@@ -76,7 +76,7 @@ class StratusApp(StratusAppBase):
         try:            os.makedirs(self.app.instance_path)
         except OSError: pass
 
-    def run(self, execMode: ExecMode = ExecMode.INLINE ):
+    def run(self):
         port = self.flask_parms.get( 'PORT', 5000 )
         host = self.flask_parms.get( 'HOST', "127.0.0.1" )
         self.db.create_all( )
