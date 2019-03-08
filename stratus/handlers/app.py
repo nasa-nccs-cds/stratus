@@ -4,11 +4,9 @@ from stratus.util.config import Config, StratusLogger, UID
 from stratus.handlers.client import StratusClient
 from enum import Enum
 from stratus_endpoint.handler.base import Task, Status
+from multiprocessing import Process as SubProcess
+import sys
 
-class ExecMode(Enum):
-    INLINE = 0
-    THREAD = 1
-    SUBPROCESS = 2
 
 class OpSet():
 
@@ -157,7 +155,12 @@ class StratusAppBase:
         return self.core.getConfigParms( module )
 
     @abc.abstractmethod
-    def run(self, execMode: ExecMode = ExecMode.INLINE ): pass
+    def run(self): pass
+
+    def exec(self) -> SubProcess:
+        proc = SubProcess( target=self.run )
+        proc.start()
+        return proc
 
 class StratusFactory:
     __metaclass__ = abc.ABCMeta
