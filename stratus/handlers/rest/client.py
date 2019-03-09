@@ -23,18 +23,18 @@ class RestClient(StratusClient):
         self.host = self["host"]
         self.port = self["port"]
         self.api = self["api"]
-        self.response_manager = ResponseManager.getManger( f"http://{self.host}:{self.port}/{self.api}" )
+        self.response_manager = ResponseManager.getManger( self.cid, f"http://{self.host}:{self.port}/{self.api}" )
         self.response_manager.start()
 
     def request( self, requestSpec: Dict, **kwargs ) -> Task:
-        requestDict = dict(requestSpec)
-        requestDict["sid"] = self.sid( self.parm("id",None) )
+        requestDict = self.customizeRequest(requestSpec)
         response = self.response_manager.postMessage( "exe", requestDict, **kwargs )
         self.log( "Got response: " + str(response) )
-        return RestTask(requestDict['sid'], self.response_manager)
+        return RestTask( requestDict['rid'], self.cid, self.response_manager )
 
     def status(self, **kwargs ) -> Status:
-        return self.response_manager.getStatus( self.sid() )
+        result = self.response_manager.getMessage( "status", {"cid":self.cid}, **kwargs)
+        return result[kwargs.get("rid")]
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
         result = self.response_manager.getMessage( type, {}, **kwargs )
@@ -65,11 +65,12 @@ class ResponseManager(Thread):
 
     managers: Dict[str,"ResponseManager"] = {}
 
-    def __init__(self, host_address: str, **kwargs ):
+    def __init__(self, cid: str, host_address: str, **kwargs ):
         Thread.__init__(self)
         self.logger = StratusLogger.getLogger()
         self.host_address = host_address
         self.active = True
+        self.cid = cid
         self.debug = False
         self.setName('STRATUS zeromq client Response Thread')
         self.setDaemon(True)
@@ -78,8 +79,8 @@ class ResponseManager(Thread):
         self.statusMap: Dict[str,Status] = {}
 
     @classmethod
-    def getManger( cls, host_address: str)  ->  "ResponseManager":
-        return cls.managers.setdefault( host_address, ResponseManager(host_address) )
+    def getManger( cls, cid: str, host_address: str)  ->  "ResponseManager":
+        return cls.managers.setdefault(host_address, ResponseManager( cid, host_address ) )
 
     def run(self):
         debug = False
@@ -98,9 +99,9 @@ class ResponseManager(Thread):
 
     def updateStatus(self, message: Dict ) -> Dict:
         if "status" in message:
-            sid = message["id"]
+            rid = message["rid"]
             status = Status.decode( message["status"] )
-            self.statusMap[ sid ] = status
+            self.statusMap[ rid ] = status
             message["status"] = status
         return message
 
@@ -130,9 +131,9 @@ class ResponseManager(Thread):
         else:                                               result = { "type": "error",  "code": response.status_code, "message": response.text }
         return result
 
-    def getResult(self, sid: str, block=True, timeout=None  ) ->  Optional[TaskResult]:
-        if block: self.waitUntilReady( sid, timeout )
-        result = self.getMessage( "result", dict(sid=sid) )
+    def getResult(self, rid: str, block=True, timeout=None  ) ->  Optional[TaskResult]:
+        if block: self.waitUntilReady( rid, timeout )
+        result = self.getMessage( "result", dict(rid=rid) )
         rtype = result["type"]
         if   rtype == "error":  raise Exception( result["message"] )
         elif rtype == "json":   return TaskResult( result["json"] )
@@ -140,25 +141,25 @@ class ResponseManager(Thread):
         else:                   raise Exception( f"Unrecognized result type: {rtype}")
 
     def _getStatusMap(self) -> Dict:
-        result = self.getMessage( "status", {}, timeout=self.timeout  )
+        result = self.getMessage( "status", {"cid":self.cid}, timeout=self.timeout  )
         rtype = result["type"]
         if rtype == "error":    raise Exception( result["message"] )
         else:                   return result["json"]
 
-    def getStatus( self, sid ) -> Status:
-        status = self.statusMap.get( sid, Status.UNKNOWN )
-        if self.debug: self.logger.info( f"Status[{sid}]: {status}")
+    def getStatus( self, rid ) -> Status:
+        status = self.statusMap.get( rid, Status.UNKNOWN )
+        if self.debug: self.logger.info( f"Status[{rid}]: {status}")
         return status
 
-    def completed(self, sid ) -> bool :
-        status = self.getStatus(sid)
+    def completed(self, rid ) -> bool :
+        status = self.getStatus(rid)
         result =  status in [Status.COMPLETED, Status.ERROR ]
         if self.debug: self.logger.info( f"COMPLETED[{status}]: {result}")
         return result
 
-    def waitUntilReady( self, sid: str, timeout: float = None ):
+    def waitUntilReady( self, rid: str, timeout: float = None ):
         accum_time = 0.0
-        while not self.completed( sid ):
+        while not self.completed( rid ):
             time.sleep(0.2)
             if timeout is not None:
                 accum_time += 0.2
@@ -175,16 +176,16 @@ class ResponseManager(Thread):
 
 class RestTask(Task):
 
-    def __init__(self, sid: str, manager: ResponseManager, **kwargs):
-        super(RestTask, self).__init__(sid, **kwargs)
+    def __init__(self, rid: str, cid: str, manager: ResponseManager, **kwargs):
+        super(RestTask, self).__init__( rid, cid, **kwargs )
         self.logger = StratusLogger.getLogger()
         self.manager: ResponseManager = manager
 
     def getResult(self, block=True, timeout=None ) ->  Optional[TaskResult]:
-        return self.manager.getResult( self.sid, block, timeout )
+        return self.manager.getResult( self.rid, block, timeout )
 
     def status(self) ->  Status:
-        return self.manager.getStatus( self.sid )
+        return self.manager.getStatus( self.rid )
 
 
 if __name__ == "__main__":

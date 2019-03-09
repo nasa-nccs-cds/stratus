@@ -1,12 +1,10 @@
 from connexion.resolver import Resolver
 from connexion.operations import AbstractOperation
-from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
-from stratus.handlers.client import StratusClient
-import os, traceback, abc
-from flask import Flask, Response
-import connexion, json, logging
+from typing import *
+import traceback
+from flask import Response
+import connexion, json
 from functools import partial
-from stratus.util.config import Config, StratusLogger
 from flask_sqlalchemy import SQLAlchemy
 from stratus.handlers.core import StratusCore
 from stratus.handlers.app import StratusAppBase
@@ -51,5 +49,5 @@ class StratusApp(StratusAppBase):
     def render_server_error( ex: Exception ):
         print( str( ex ) )
         traceback.print_exc()
-        return Response(response=json.dumps({ 'message': getattr(ex, 'message', repr(ex)), "code": 500, "id": "", "status": "error" } ), status=500, mimetype="application/json")
+        return Response(response=json.dumps({ 'message': getattr(ex, 'message', repr(ex)), "code": 500, "rid": "", "status": "error" } ), status=500, mimetype="application/json")
 

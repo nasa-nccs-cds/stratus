@@ -16,7 +16,8 @@ class DirectClient(StratusClient):
         epclass = getattr(module, class_name)
         return epclass( **self.parms )
 
-    def request(self, requestSpec: Dict, **kwargs ) -> Task:
+    def request(self, requestDict: Dict, **kwargs ) -> Task:
+        requestSpec = self.customizeRequest( requestDict )
         return self.endpoint.request( requestSpec, **kwargs )
 
     def capabilities(self, type: str, **kwargs ) -> Dict:

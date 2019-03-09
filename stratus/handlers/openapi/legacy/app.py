@@ -58,7 +58,7 @@ class StratusApp:
     def render_server_error( ex: Exception ):
         print( str( ex ) )
         traceback.print_exc()
-        return Response(response=json.dumps({ 'message': getattr(ex, 'message', repr(ex)), "code": 500, "id": "", "status": "error" } ), status=500, mimetype="application/json")
+        return Response(response=json.dumps({ 'message': getattr(ex, 'message', repr(ex)), "code": 500, "rid": "", "status": "error" } ), status=500, mimetype="application/json")
 
     def make_celery( self, app: Flask ):
         celery = Celery( app.import_name, backend=app.config['DATABASE_URI'], broker=app.config['CELERY_BROKER_URL'] )

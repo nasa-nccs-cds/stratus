@@ -11,8 +11,8 @@ import xarray as xa
 
 class StratusResponse:
 
-    def __init__(self, sid: str, body: Dict ):
-        self._id = sid
+    def __init__(self, rid: str, body: Dict ):
+        self._id = rid
         self._body = body
 
     @property
@@ -25,8 +25,8 @@ class StratusResponse:
 
 class DataPacket(StratusResponse):
 
-    def __init__( self, sid: str, header: Dict, data: bytes = bytearray(0)  ):
-        super(DataPacket, self).__init__( sid, header )
+    def __init__( self, rid: str, header: Dict, data: bytes = bytearray(0)  ):
+        super(DataPacket, self).__init__( rid, header )
         self._data = data
 
     def hasData(self) -> bool:
@@ -64,14 +64,14 @@ class StratusZMQResponder(Thread):
     def getDataPacket(self, status: Status, task: Task ):
         if (status == Status.COMPLETED):
             taskResult = task.getResult()
-            return self.createDataPacket( task.sid, taskResult.data )
+            return self.createDataPacket( task.rid, taskResult.data )
         elif (status == Status.ERROR):
-            return self.createMessage(task.sid, {"error": task["error"]})
+            return self.createMessage(task.rid, {"error": task["error"]})
 
     def importTasks(self):
         while not self.input_tasks.empty():
             task = self.input_tasks.get()
-            self.current_tasks[task.sid] = task
+            self.current_tasks[task.rid] = task
 
     def removeCompletedTasks(self):
         for completed_task in self.completed_tasks:
@@ -105,14 +105,14 @@ class StratusZMQResponder(Thread):
             self.logger.info( "@@R: Sent data header only for " + dataPacket.id + "---> NO DATA!" )
         self.socket.send_multipart( multipart_msg )
 
-    def setExeStatus( self, sid: str, status: Status ):
-        self.status_reports[sid] = status
-        self.logger.info(f"@@R: --> Set Execution Status[{sid}]: {str(status)}")
+    def setExeStatus( self, rid: str, status: Status ):
+        self.status_reports[rid] = status
+#        self.logger.info(f"@@R: --> Set Execution Status[{rid}]: {str(status)}")
         try:
             if status == Status.EXECUTING:
-                self.executing_jobs[sid] = StratusResponse(sid, {"status": "executing"})
+                self.executing_jobs[rid] = StratusResponse(rid, {"status": "executing"})
             elif  status == Status.ERROR or status == Status.COMPLETED:
-                del self.executing_jobs[sid]
+                del self.executing_jobs[rid]
         except Exception: pass
 
     def initSocket(self) -> zmq.Socket:
@@ -136,22 +136,22 @@ class StratusZMQResponder(Thread):
             self.socket.close()
         except Exception: pass
 
-    def sendMessage(self, sid: str, message: Dict = None):
-        dataPacket = self.createMessage( sid, message )
+    def sendMessage(self, rid: str, message: Dict = None):
+        dataPacket = self.createMessage( rid, message )
         self.sendDataPacket(dataPacket)
 
-    def sendErrorMessage(self, sid: str, message: str = None):
-        self.sendMessage(sid, { "error": message }  )
+    def sendErrorMessage(self, rid: str, message: str = None):
+        self.sendMessage(rid, { "error": message }  )
 
-    def createDataPacket( self, sid: str, dataset: xa.Dataset, metadata: Dict = None ) -> DataPacket:
+    def createDataPacket( self, rid: str, dataset: xa.Dataset, metadata: Dict = None ) -> DataPacket:
         data = pickle.dumps(dataset, protocol=-1)
         header = metadata if metadata else {}
         header["type"] = "xarray"
-        return DataPacket( sid, header, data )
+        return DataPacket( rid, header, data )
 
-    def createMessage(self, sid: str, message: Dict = None ) -> DataPacket:
+    def createMessage(self, rid: str, message: Dict = None ) -> DataPacket:
         if "type" not in message: message["type"] = "message"
-        return DataPacket( sid, message )
+        return DataPacket( rid, message )
 
     def __del__(self):
         self.shutdown()

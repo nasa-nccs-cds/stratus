@@ -58,12 +58,13 @@ class ZMQClient(StratusClient):
             self.logger.error(err_msg)
             self.shutdown()
 
-    def request(self, request: Dict, **kwargs ) -> Task:
-        response = self.sendMessage( "exe", request, **kwargs )
+    def request(self, requestSpec: Dict, **kwargs ) -> Task:
+        requestDict = self.customizeRequest(requestSpec)
+        response = self.sendMessage( "exe", requestDict, **kwargs )
         self.log( str(response) )
-        response_manager = ResponseManager( self.context, response["id"], self.host_address, self.response_port,   **kwargs )
+        response_manager = ResponseManager( self.context, response["rid"], self.host_address, self.response_port,   **kwargs )
         response_manager.start()
-        return zmqTask( response_manager )
+        return zmqTask( self.cid, response_manager )
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
         return self.sendMessage( type, {}, **kwargs )
@@ -81,12 +82,11 @@ class ZMQClient(StratusClient):
             except Exception: pass
 
     def sendMessage(self, type: str, requestData: Dict, **kwargs ) -> Dict:
-        rid = requestData.get( "id", UID.randomId(6) )
-        submissionId = self.sid(rid)
+        requestId = requestData.get( "rid", UID.randomId(6) )
         msg = json.dumps( requestData )
-        self.log( "Sending {} request {} on port {}, submissionId = {}.".format( type, msg, str(self.request_port), submissionId )  )
+        self.log( "Sending {} request {} on port {}, requestId = {}.".format( type, msg, str(self.request_port), requestId )  )
         try:
-            message = "!".join( [ submissionId, type, msg ] )
+            message = "!".join( [ requestId, type, msg ] )
             self.request_socket.send_string( message )
             response = self.request_socket.recv_string()
         except zmq.error.ZMQError as err:
@@ -94,18 +94,18 @@ class ZMQClient(StratusClient):
             response = str(err)
         parts = response.split("!")
         response = json.loads(parts[1])
-        response["id"] = submissionId
+        response["rid"] = requestId
         return response
 
 class ResponseManager(Thread):
 
-    def __init__(self, context: zmq.Context, subscribeId: str, host: str, port: int, **kwargs ):
+    def __init__(self, context: zmq.Context, rid: str, host: str, port: int, **kwargs ):
         Thread.__init__(self)
         self.context = context
         self.logger = StratusLogger.getLogger()
         self.host = host
         self.port = port
-        self.subscribeId = subscribeId
+        self.requestId = rid
         self.active = True
         self.mstate = MessageState.RESULT
         self.setName('STRATUS zeromq client Response Thread')
@@ -115,6 +115,7 @@ class ResponseManager(Thread):
         self.log("Created RM, cache dir = " + self.cacheDir )
 
     def cacheResult(self, header: Dict, data: Optional[xa.Dataset] ):
+        self.logger.info( "Caching result: " + str(header) )
         self.cached_results.put( TaskResult(header,data)  )
 
     def getResult( self, block=True, timeout=None ) -> Optional[TaskResult]:
@@ -127,8 +128,8 @@ class ResponseManager(Thread):
             self.log("Run RM thread")
             response_socket: zmq.Socket = self.context.socket( zmq.SUB )
             response_port = ConnectionMode.connectSocket( response_socket, self.host, self.port )
-            response_socket.subscribe( s2b( self.subscribeId ) )
-            self.log("Connected response socket on port {} with subscription (client/request) id: '{}', active = {}".format( response_port, self.subscribeId, str(self.active) ) )
+            response_socket.subscribe( s2b( self.requestId ) )
+            self.log("Connected response socket on port {} with subscription (client/request) id: '{}', active = {}".format( response_port, self.requestId, str(self.active) ) )
             while( self.active ):
                 self.processNextResponse( response_socket )
 
@@ -165,8 +166,8 @@ class ResponseManager(Thread):
 
 class zmqTask(Task):
 
-    def __init__(self, manager: ResponseManager, **kwargs):
-        super(zmqTask,self).__init__( manager.subscribeId, **kwargs )
+    def __init__(self, cid: str, manager: ResponseManager, **kwargs):
+        super(zmqTask,self).__init__( manager.requestId, cid, **kwargs )
         self.logger = StratusLogger.getLogger()
         self.manager = manager
 
@@ -179,10 +180,4 @@ class zmqTask(Task):
     def __del__(self):
         self.manager.term()
 
-
-if __name__ == "__main__":
-    client = ZMQClient()
-    client.init( )
-    response = client.request( "exe",  operations=[ dict( id="op1", epa="A" ), dict( id="op2", epa="B" ), dict( id="op3", epa="C" ), dict( id="op4", epa="D" ), dict( id="op5", epa="E" ), dict( id="op6", epa="X" ), dict( id="op7", epa="J" ), dict( id="op8", epa="C" ) ] )
-    print ( "response = " + str( response ) )
 

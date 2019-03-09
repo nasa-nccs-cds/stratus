@@ -1,6 +1,6 @@
 import string, random, abc, os, yaml, json
 from typing import List, Dict, Any, Sequence, Callable, BinaryIO, TextIO, ValuesView, Optional
-from stratus.handlers.client import StratusClient, TestClient
+from stratus.handlers.client import StratusClient
 from stratus.handlers.app import StratusAppBase, StratusFactory
 from stratus.handlers.core import StratusCore
 
@@ -28,15 +28,4 @@ class Handler(StratusFactory):
 
     def app(self, core: StratusCore ) -> StratusAppBase:
         return self.newApplication(core)
-
-class TestHandler(Handler):
-
-    def __init__(self, **kwargs):
-        Handler.__init__(self,"test",**kwargs)
-
-    def newClient(self) -> StratusClient:
-        return TestClient(**self.parms)
-
-    def newApplication(self, core: StratusCore ) -> StratusAppBase:
-        return StratusAppBase(core)
 

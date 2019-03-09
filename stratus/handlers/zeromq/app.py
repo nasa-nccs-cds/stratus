@@ -82,7 +82,7 @@ class StratusApp(StratusAppBase):
                 elif rType == "exe":
                     if len(parts) <= 2: raise Exception( "Missing parameters to exe request")
                     request = json.loads( parts[2] )
-                    request["id"] = submissionId
+                    request["rid"] = submissionId
                     self.logger.info( "Processing Request: '{}' '{}' '{}'".format( submissionId, rType, str(request)) )
                     current_tasks = self.processWorkflow(request)
                     self.logger.info( "Current tasks: {} ".format( str( list(current_tasks.keys() ) ) ) )

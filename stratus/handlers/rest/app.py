@@ -21,16 +21,18 @@ class RestAPIBase:
         self.tasks = {}
 
     def addTask( self, task: Task ):
-        self.tasks[ task.sid ] = task
-        return task.sid
+        self.tasks[ task.rid ] = task
+        return task.rid
 
-    def removeTask( self, sid: str ):
-        if sid in self.tasks:
-            del self.tasks[ sid ]
+    def removeTask( self, rid: str ):
+        if rid in self.tasks:
+            del self.tasks[ rid ]
 
     def getStatus( self, cid: str = None ) -> Dict[str,Status]:
-        statusMap = { sid: task.status for sid, task in self.tasks.items() if ( cid is None or task.cid == cid ) }
-        return { sid: str(status) for sid, status in statusMap.items() }
+        statusMap = { rid: task.status() for rid, task in self.tasks.items() if ( cid is None or task.cid == cid ) }
+        result =  { rid: str(status) for rid, status in statusMap.items() }
+        self.logger.info( f"REST-SERVER: getStatus(cid={cid}): {str(result)}, all tasks: " + str( [str(task) for task in self.tasks.values()] ))
+        return result
 
     def getParameter(self, name: str, default = None, required = True ):
         param = request.args.get( name, default )
@@ -106,7 +108,7 @@ class StratusApp(StratusAppBase):
     def render_server_error( ex: Exception ):
         print( str( ex ) )
         traceback.print_exc()
-        return Response(response=json.dumps({ 'message': getattr(ex, 'message', repr(ex)), "code": 500, "id": "", "status": "error" } ), status=500, mimetype="application/json")
+        return Response(response=json.dumps({ 'message': getattr(ex, 'message', repr(ex)), "code": 500, "rid": "", "status": "error" } ), status=500, mimetype="application/json")
 
 if __name__ == "__main__":
     HERE = os.path.dirname(os.path.abspath(__file__))
