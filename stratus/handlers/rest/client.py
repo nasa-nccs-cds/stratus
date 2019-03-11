@@ -33,7 +33,7 @@ class RestClient(StratusClient):
         return RestTask( requestSpec['rid'], self.cid, self.response_manager )
 
     def status(self, **kwargs ) -> Status:
-        result = self.response_manager.getMessage( "status", {"cid":self.cid}, **kwargs)
+        result = self.response_manager.getMessage( "status", {}, **kwargs)
         return result[kwargs.get("rid")]
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
@@ -103,6 +103,7 @@ class ResponseManager(Thread):
             status = Status.decode( message["status"] )
             self.statusMap[ rid ] = status
             message["status"] = status
+            if self.debug: self.logger.info( f"REST_CLIENT: Update Status Map[{rid}]: " + str( status ) )
         return message
 
     def getMessage(self, type: str, requestSpec: Dict, **kwargs ) -> Dict:
@@ -137,11 +138,11 @@ class ResponseManager(Thread):
         rtype = result["type"]
         if   rtype == "error":  raise Exception( result["message"] )
         elif rtype == "json":   return TaskResult( result["json"] )
-        elif rtype == "data":   return TaskResult( result["header"], result.get("content",None) )
+        elif rtype == "data":   return result.get("content",None)
         else:                   raise Exception( f"Unrecognized result type: {rtype}")
 
     def _getStatusMap(self) -> Dict:
-        result = self.getMessage( "status", {"cid":self.cid}, timeout=self.timeout  )
+        result = self.getMessage( "status", {}, timeout=self.timeout  )
         rtype = result["type"]
         if rtype == "error":    raise Exception( result["message"] )
         else:                   return result["json"]

@@ -1,5 +1,6 @@
 from pyswagger import App
 from pyswagger.contrib.client.requests import Client
+from stratus_endpoint.handler.base import Task, Status
 from pyswagger.spec.v2_0.objects import Operation
 from typing import Dict
 from stratus.handlers.client import StratusClient, stratusrequest

@@ -22,7 +22,7 @@ class RestAPI(RestAPIBase):
 
         @bp.route('/status', methods=('GET',))
         def status():
-            cid = self.getParameter( "cid", None, True)
+            cid = self.getParameter( "cid", None, False)
             statusMap = self.getStatus(cid)
             if self.debug: self.logger.info( "Status Map: " + str(statusMap) )
             return self.jsonResponse( statusMap )
