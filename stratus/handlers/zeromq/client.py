@@ -68,8 +68,8 @@ class ZMQClient(StratusClient):
         response_manager.start()
         return zmqTask( self.cid, response_manager )
 
-    def capabilities(self, type: str, **kwargs ) -> Dict:
-        return self.sendMessage( type, {}, **kwargs )
+    def capabilities(self, ctype: str, **kwargs ) -> Dict:
+        return self.sendMessage( "capabilities", {"type":ctype}, **kwargs )
 
     def log(self, msg: str ):
         self.logger.info( "[ZP] " + msg )

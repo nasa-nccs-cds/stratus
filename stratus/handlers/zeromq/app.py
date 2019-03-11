@@ -76,8 +76,9 @@ class StratusApp(StratusAppBase):
             try:
                 timeStamp = datetime.datetime.now().strftime("MM/dd HH:mm:ss")
                 self.logger.info( "@@Portal:  ###  Processing {} request @({})".format( rType, timeStamp) )
-                if rType == "epas":
-                    response = { "epas": self.core.handlers.getEpas() }
+                if rType == "capabilities":
+                    request = json.loads(parts[2])
+                    response = self.core.getCapabilities( request["type"] )
                     self.sendResponseMessage(StratusResponse(submissionId, response))
                 elif rType == "exe":
                     if len(parts) <= 2: raise Exception( "Missing parameters to exe request")

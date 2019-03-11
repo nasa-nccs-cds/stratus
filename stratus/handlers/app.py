@@ -93,8 +93,14 @@ class StratusCoreBase:
         assert result is not None, "Missing required parameter in {}: {} ".format( self.__class__.__name__, key )
         return result
 
+    def getCapabilities(self, ctype ) -> Dict:
+        caps = {}
+        for client in self.getClients():
+            caps.update( client.capabilities(ctype) )
+        return caps
+
     @abc.abstractmethod
-    def getClients( self, epa ) -> List[StratusClient]: pass
+    def getClients( self, epa=None ) -> List[StratusClient]: pass
 
 class StratusAppBase:
     __metaclass__ = abc.ABCMeta

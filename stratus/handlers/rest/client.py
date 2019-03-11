@@ -37,7 +37,7 @@ class RestClient(StratusClient):
         return result[kwargs.get("rid")]
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
-        result = self.response_manager.getMessage( type, {}, **kwargs )
+        result = self.response_manager.getMessage( "capabilities", {"type":type}, **kwargs )
         rtype = result["type"]
         if rtype == "error":    raise Exception( result["message"] )
         else:                   return result["json"]

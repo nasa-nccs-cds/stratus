@@ -42,15 +42,10 @@ class RestAPI(RestAPIBase):
                 self.removeTask( rid )
                 return response
 
-        @bp.route('/epas', methods=('GET',))
-        def epas():
-            epaList: List[str] = self.app.core.getEpas()
-            return self.jsonResponse( dict(epas=epaList) )
-
         @bp.route('/capabilities', methods=('GET',))
         def capabilities():
-            client: StratusClient = self.app.getClient()
-            response = client.capabilities( self.getParameter("type") )
+            ctype = self.getParameter("type")
+            response: Dict = self.app.core.getCapabilities( ctype )
             return self.jsonResponse( response )
 
 
