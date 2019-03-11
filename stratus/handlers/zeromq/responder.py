@@ -147,6 +147,7 @@ class StratusZMQResponder(Thread):
         data = pickle.dumps(dataset, protocol=-1)
         header = metadata if metadata else {}
         header["type"] = "xarray"
+        header["status"] = str( Status.COMPLETED )
         return DataPacket( rid, header, data )
 
     def createMessage(self, rid: str, message: Dict = None ) -> DataPacket:

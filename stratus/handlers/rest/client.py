@@ -1,4 +1,4 @@
-from stratus.handlers.client import StratusClient
+from stratus.handlers.client import StratusClient, stratusrequest
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
 import traceback, time, logging, xml, json, requests
 from stratus.util.config import Config, StratusLogger, UID
@@ -26,11 +26,11 @@ class RestClient(StratusClient):
         self.response_manager = ResponseManager.getManger( self.cid, f"http://{self.host}:{self.port}/{self.api}" )
         self.response_manager.start()
 
+    @stratusrequest
     def request( self, requestSpec: Dict, **kwargs ) -> Task:
-        requestDict = self.customizeRequest(requestSpec)
-        response = self.response_manager.postMessage( "exe", requestDict, **kwargs )
+        response = self.response_manager.postMessage( "exe", requestSpec, **kwargs )
         self.log( "Got response: " + str(response) )
-        return RestTask( requestDict['rid'], self.cid, self.response_manager )
+        return RestTask( requestSpec['rid'], self.cid, self.response_manager )
 
     def status(self, **kwargs ) -> Status:
         result = self.response_manager.getMessage( "status", {"cid":self.cid}, **kwargs)
@@ -43,7 +43,7 @@ class RestClient(StratusClient):
         else:                   return result["json"]
 
     def log(self, msg: str ):
-        self.logger.info( "[P] " + msg )
+        self.logger.info( "[RP] " + msg )
 
     def __del__(self):
         self.shutdown()

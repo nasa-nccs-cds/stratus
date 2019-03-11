@@ -20,6 +20,13 @@ class EndpointSpec:
     def __str__(self):
         return self._epaSpec
 
+def stratusrequest( requestMethod ):
+    @functools.wraps(requestMethod)
+    def udpatedRequestMethod( self, requestSpec: Dict, **kwargs  ):
+        requestDict =  self.updateMetadata( requestSpec )
+        return requestMethod( self, requestDict, **kwargs )
+    return udpatedRequestMethod
+
 class StratusClient:
     __metaclass__ = abc.ABCMeta
     logger = StratusLogger.getLogger()
@@ -40,6 +47,7 @@ class StratusClient:
         self.active = True
 
     @abc.abstractmethod
+    @stratusrequest
     def request(self, request: Dict, **kwargs ) -> Task: pass
 
     @abc.abstractmethod
@@ -65,7 +73,7 @@ class StratusClient:
     def parm(self, key: str, default: str = None) -> Optional[str]:
         return self.parms.get( key, default  )
 
-    def customizeRequest(self, requestSpec: Dict ) -> Dict:
+    def updateMetadata(self, requestSpec: Dict ) -> Dict:
         requestDict = dict(requestSpec)
         requestDict["rid"] = requestSpec.get("rid",UID.randomId(6))
         requestDict["cid"] = self.cid

@@ -1,4 +1,4 @@
-from stratus.handlers.client import StratusClient
+from stratus.handlers.client import StratusClient, stratusrequest
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
 import importlib
 import zmq, traceback, time, logging, xml, json
@@ -58,11 +58,12 @@ class ZMQClient(StratusClient):
             self.logger.error(err_msg)
             self.shutdown()
 
+    @stratusrequest
     def request(self, requestSpec: Dict, **kwargs ) -> Task:
-        requestDict = self.customizeRequest(requestSpec)
-        response = self.sendMessage( "exe", requestDict, **kwargs )
+        response = self.sendMessage( "exe", requestSpec, **kwargs )
+        status = Status.decode( response.get('status') )
         self.log( str(response) )
-        response_manager = ResponseManager( self.context, response["rid"], self.host_address, self.response_port,   **kwargs )
+        response_manager = ResponseManager( self.context, response["rid"], self.host_address, self.response_port, status,  **kwargs )
         response_manager.start()
         return zmqTask( self.cid, response_manager )
 
@@ -70,7 +71,7 @@ class ZMQClient(StratusClient):
         return self.sendMessage( type, {}, **kwargs )
 
     def log(self, msg: str ):
-        self.logger.info( "[P] " + msg )
+        self.logger.info( "[ZP] " + msg )
 
     def __del__(self):
         self.shutdown()
@@ -99,7 +100,7 @@ class ZMQClient(StratusClient):
 
 class ResponseManager(Thread):
 
-    def __init__(self, context: zmq.Context, rid: str, host: str, port: int, **kwargs ):
+    def __init__(self, context: zmq.Context, rid: str, host: str, port: int, status: Status, **kwargs ):
         Thread.__init__(self)
         self.context = context
         self.logger = StratusLogger.getLogger()
@@ -113,6 +114,7 @@ class ResponseManager(Thread):
         self.setDaemon(True)
         self.cacheDir = kwargs.get( "cacheDir",  os.path.expanduser( "~/.edas/cache") )
         self.log("Created RM, cache dir = " + self.cacheDir )
+        self._status = status
 
     def cacheResult(self, header: Dict, data: Optional[xa.Dataset] ):
         self.logger.info( "Caching result: " + str(header) )
@@ -153,6 +155,7 @@ class ResponseManager(Thread):
             sId = b2s( response[0] )
             header = json.loads( b2s( response[1] ) )
             type = header["type"]
+            self._status =  Status.decode( header["status"] )
             self.log(f"[{sId}]: Received response: " +  str( header ) + ", size = " + str( len(response) ) )
             if type == "xarray" and len(response) > 2:
                 dataset = pickle.loads(response[2])
@@ -162,6 +165,9 @@ class ResponseManager(Thread):
 
         except Exception as err:
             self.log( "EDAS error: {0}\n{1}\n".format(err, traceback.format_exc() ), 1000 )
+
+    def getStatus(self):
+        return self._status
 
 
 class zmqTask(Task):
@@ -175,7 +181,7 @@ class zmqTask(Task):
         return self.manager.getResult(block,timeout)
 
     def status(self) ->  Status:
-        return self._status
+        return self.manager.getStatus()
 
     def __del__(self):
         self.manager.term()
