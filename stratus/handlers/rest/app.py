@@ -66,6 +66,9 @@ class RestAPIBase:
         except Exception as err:
             return dict( status="error", message=f"Error parsing/validating request: '{requestSpec}'", error=str(err) )
 
+    def xmlResponse(self, type: str, message: Dict, code: int = 200 ) -> Response:
+        return Response( response="" , status=code, mimetype="application/xml")
+
 class StratusApp(StratusAppBase):
 
     def __init__( self, core: StratusCore ):
