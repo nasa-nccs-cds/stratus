@@ -4,6 +4,13 @@
   Integrative framework presenting a unified API and workflow orchestration for varied climate data analytic services.
 
 ___
+
+Stratus is a workflow orchestration approach for incorporating varied earth data analytic services as a unified solution.  This evolving framework provides a common interface and API across existing NCCS assets. 
+
+Coordinating workflows composed of services developed by disparate teams generally requires the combination of multiple orchestration strategies, e.g. fan-out, publish-subscribe, distributed task queue, and request-reply.  In addition, multiple technologies are available for the implementation of each these strategies.   Different technologies will be optimal with different contexts.   The Stratus approach defines a common workflow and request API which is strategy and technology agnostic.  It is composed of a set of orchestration nodes (i.e. self-contained building blocks) each implementing a particular composition strategy on a particular technology and designed to interface with other Stratus nodes.   In this way an integration framework can be constructed by combining orchestration nodes like Lego blocks.  
+
+For example, a REST service might require a REST server (request-reply) located outside the firewall connected via zeroMQ (request-reply + pub-sub) through the firewall to Celery (distributed task queue) running on an analytics cluster.   In Stratus these three layers are implemented as Stratus nodes which, because of the common API,  can be easily combined as components in the overall service framework.    Moving from one context to another context, e.g. from local cluster to the cloud, simply requires the replacement of cluster node(s) with equivalent cloud node(s), e.g. replacing a Stratus node implementing a Celery-based distributed task queue with one based on Apache Lambda or Google gRPC. 
+
 ### Installation
 
 Recommended: create and activate a python3 venv:

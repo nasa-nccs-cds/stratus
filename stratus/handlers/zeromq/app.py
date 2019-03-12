@@ -73,16 +73,14 @@ class StratusApp(StratusAppBase):
             parts = request_header.split("!")
             submissionId = str(parts[0])
             rType =  str(parts[1])
+            request: Dict = json.loads(parts[2]) if len(parts) > 2 else ""
             try:
-                timeStamp = datetime.datetime.now().strftime("MM/dd HH:mm:ss")
-                self.logger.info( "@@Portal:  ###  Processing {} request @({})".format( rType, timeStamp) )
+                self.logger.info( "@@Portal:  ###  Processing {} request: {}".format( rType, request) )
                 if rType == "capabilities":
-                    request = json.loads(parts[2])
                     response = self.core.getCapabilities( request["type"] )
                     self.sendResponseMessage(StratusResponse(submissionId, response))
                 elif rType == "exe":
                     if len(parts) <= 2: raise Exception( "Missing parameters to exe request")
-                    request = json.loads( parts[2] )
                     request["rid"] = submissionId
                     self.logger.info( "Processing Request: '{}' '{}' '{}'".format( submissionId, rType, str(request)) )
                     current_tasks = self.processWorkflow(request)
