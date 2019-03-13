@@ -117,9 +117,10 @@ class WPSExecuteRequest:
         responseXML: requests.Response = requests.get(requestURL).text
         refs = {}
         root =   ET.fromstring(responseXML)
-        ref_elems = root.findall("wps:Reference",self.ns)
-        for ref_elem in ref_elems:
-            refs[ ref_elem.attrib["id"] ] = ref_elem.attrib["href"]
+        for pout_elem in root.findall("wps:ProcessOutputs",self.ns):
+            for out_elem in pout_elem.findall("wps:Output", self.ns):
+                for ref_elem in out_elem.findall("wps:Reference", self.ns):
+                    refs[ ref_elem.attrib["id"] ] = ref_elem.attrib["href"]
         return { "xml": responseXML, "refs": refs }
 
     def getCapabilities( self ) -> Dict:
