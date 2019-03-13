@@ -55,16 +55,16 @@ class Handlers:
     def getApplicationHandler(self) -> Optional[StratusFactory]:
         return self._app_handler
 
-    def findHandler(self, **kwargs ) -> Optional[StratusFactory]:
-        name = kwargs.get( "service_name", kwargs.get( "name", None ) )
-        if name is not None:
-            return self._handlers.get( name, None )
-        type = kwargs.get("service_type", kwargs.get("type", None ) )
-        if type is  None: raise Exception( "Missing handler specification, must have 'service_name' or 'service_type' parameter in [stratus] ini configuration: " + str(kwargs))
-        for handler in self._handlers.values():
-            if handler.type == type:
-                return handler
-        return None
+    # def findHandler(self, **kwargs ) -> Optional[StratusFactory]:
+    #     name = kwargs.get( "service_name", kwargs.get( "name", None ) )
+    #     if name is not None:
+    #         return self._handlers.get( name, None )
+    #     type = kwargs.get("service_type", kwargs.get("type", None ) )
+    #     if type is  None: raise Exception( "Missing handler specification, must have 'service_name' or 'service_type' parameter in [stratus] ini configuration: " + str(kwargs))
+    #     for handler in self._handlers.values():
+    #         if handler.type == type:
+    #             return handler
+    #     return None
 
     @property
     def available(self) -> Dict[str, StratusFactory]:
@@ -79,7 +79,7 @@ class Handlers:
     def _getHandlerSpecs(self) -> List[Dict[str,str]]:
         specs = []
         htypes = self.listAvailableHandlers()
-        assert self.configSpec is not None, "Error, the handlers have not yet beeb initialized"
+        assert self.configSpec is not None, "Error, the handlers have not yet been initialized"
         for name, spec in self.configSpec.items():
             if (spec.get("type") in htypes):
                 spec["name"] = name

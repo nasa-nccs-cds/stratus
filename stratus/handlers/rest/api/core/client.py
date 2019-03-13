@@ -16,14 +16,14 @@ class MessageState(Enum):
     FILE = 1
     RESULT = 2
 
-class RestClient(StratusClient):
+class CoreRestClient(StratusClient):
 
     def __init__( self, **kwargs ):
-        super(RestClient, self).__init__( "rest", **kwargs )
+        super(CoreRestClient, self).__init__( "rest", **kwargs )
         self.host = self["host"]
         self.port = self["port"]
-        self.api = self["api"]
-        self.response_manager = ResponseManager.getManger( self.cid, f"http://{self.host}:{self.port}/{self.api}" )
+        self.route = self["route"]
+        self.response_manager = ResponseManager.getManger( self.cid, f"http://{self.host}:{self.port}/{self.route}" )
         self.response_manager.start()
 
     @stratusrequest

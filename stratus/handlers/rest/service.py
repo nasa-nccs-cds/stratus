@@ -1,18 +1,11 @@
-import json, string, random, abc, os, pickle, collections
-from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
 from stratus.handlers.base import Handler
 from stratus.handlers.client import StratusClient
 from stratus.handlers.core import StratusCore
-from stratus.util.config import Config, StratusLogger
-from .client import RestClient
+from handlers.rest.api.core.client import CoreRestClient
+from handlers.rest.api.wps.client import WPSRestClient
 from .app import StratusApp
-from threading import Thread
-import zmq, traceback, time, logging, xml, socket
-from typing import List, Dict, Sequence, Set
-import random, string, os, queue, datetime
-from stratus.util.parsing import s2b, b2s, ia2s, sa2s, m2s
-import xarray as xa
-from enum import Enum
+import os
+
 MB = 1024 * 1024
 
 class ServiceHandler( Handler ):
@@ -22,7 +15,10 @@ class ServiceHandler( Handler ):
         super(ServiceHandler, self).__init__( htype, **kwargs )
 
     def newClient(self) -> StratusClient:
-        return RestClient( **self.parms )
+        API = self.parm("API","core").lower()
+        if API == "core": return CoreRestClient( **self.parms )
+        if API == "wps":  return WPSRestClient(**self.parms)
+        raise Exception( "Unrecognized API in REST ServiceHandler: " + API)
 
     def newApplication(self, core: StratusCore ) -> StratusApp:
         return StratusApp( core )
