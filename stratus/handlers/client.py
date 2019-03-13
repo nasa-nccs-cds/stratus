@@ -38,6 +38,7 @@ class StratusClient:
         self.parms = kwargs
         self.priority: float = float( self.parm( "priority", "0" ) )
         self.active = False
+        self.clients = { self.cid }
 
     def init( self ):
         endPointData = self.capabilities("epas")
@@ -75,9 +76,15 @@ class StratusClient:
 
     def updateMetadata(self, requestSpec: Dict ) -> Dict:
         requestDict = dict(requestSpec)
+        source_client = requestDict.get("cid")
         requestDict["rid"] = requestSpec.get("rid",UID.randomId(6))
+        if source_client: self.clients.add( source_client )
         requestDict["cid"] = self.cid
+        requestDict["clients"] = ",".join( self.clients )
         return requestDict
+
+    def hasClient(self, cid: str ) -> bool:
+        return cid in self.clients
 
 
 
