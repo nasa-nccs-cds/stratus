@@ -70,5 +70,5 @@ if __name__ == "__main__":
         operation=[ { "epa": "test.subset", "input": "v0"} ]
     )
     task: RestTask = client.request( request )
-    print( task.response["xml"] )
+    print( str(task.response) )
 

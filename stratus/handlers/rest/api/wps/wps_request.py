@@ -64,6 +64,7 @@ class WPSExecuteRequest:
         self._variables = []
         self._domains = []
         self._operations = []
+        self.ns = {'wps': "http://www.opengis.net/wps/1.0.0", "ows": "http://www.opengis.net/ows/1.1"}
 
     def _getBaseRequest( self, async ): return '%s?request=Execute&service=cwt&status=%s' % ( self._host_address, boolStr(async) )
     def _getCapabilities( self ): return '%s?request=getCapabilities&service=cwt' % ( self._host_address )
@@ -114,8 +115,12 @@ class WPSExecuteRequest:
         requestURL = self.getWps( requestJson )
         self.logger.info( "\nExecuting Request:\n\n%s\n\nResponse:\n" % ( requestURL ) )
         responseXML: requests.Response = requests.get(requestURL).text
+        refs = {}
         root =   ET.fromstring(responseXML)
-        return { "xml": responseXML, "root": root }
+        ref_elems = root.findall("wps:Reference",self.ns)
+        for ref_elem in ref_elems:
+            refs[ ref_elem.attrib["id"] ] = ref_elem.attrib["href"]
+        return { "xml": responseXML, "refs": refs }
 
     def getCapabilities( self ) -> Dict:
         request = self._getCapabilities()
