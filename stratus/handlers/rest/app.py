@@ -54,7 +54,7 @@ class RestAPIBase:
         self._addRoutes(bp)
         app.register_blueprint( bp )
 
-    def jsonResponse(self, response: Dict, code: int = 200 ) -> Response:
+    def jsonResponse( self, response: Dict, code: int = 200 ) -> Response:
         return Response( response=json.dumps( response ), status=code, mimetype="application/json")
 
     def jsonRequest(self, requestSpec: str, schema: Dict = None ) -> Dict:

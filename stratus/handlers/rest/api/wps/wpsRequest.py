@@ -58,7 +58,6 @@ class WPSExecuteRequest:
     def getCapabilities( self ) -> Dict:
         request = self._getCapabilities()
         root = execRequest( request )
-        print( str(root))
         epas = []
         for module_elem in root.iter("module"):
             for op_elem in module_elem.iter("kernel"):
