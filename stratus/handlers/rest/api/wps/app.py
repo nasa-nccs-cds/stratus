@@ -1,12 +1,21 @@
 from flask import request, Blueprint, make_response
 from stratus_endpoint.handler.base import Task, TaskResult
 from stratus.handlers.client import StratusClient
-import pickle, ctypes, json, requests
+import pickle, ctypes, json, requests, flask
+from jinja2 import Environment, PackageLoader, select_autoescape
+from stratus.handlers.app import StratusAppBase
 from typing import *
 from stratus.handlers.rest.app import RestAPIBase
 
 class RestAPI(RestAPIBase):
     debug = False
+
+    def __init__( self, name: str, app: StratusAppBase, **kwargs ):
+        RestAPIBase.__init__( self, name, app, **kwargs )
+        self.jenv = Environment( loader=PackageLoader('stratus', 'templates'), autoescape=select_autoescape(['html','xml']) )
+        self.templates = {}
+        self.templates['execute_response'] = self.jenv.get_template('execute_response.xml')
+        self.dapRoute = kwargs.get( "dapRoute", None )
 
     def parseDatainputs(self, datainputs: str) -> Dict:
         raw_datainputs = ctypes.create_string_buffer(datainputs.strip())
@@ -16,16 +25,33 @@ class RestAPI(RestAPIBase):
             raw_datainputs[-1] = "}"
         return json.loads(raw_datainputs)
 
-    def processRequest( self, requestDict: Dict ) -> requests.Response:
+    def processRequest( self, requestDict: Dict ) -> flask.Response:
         if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
         current_tasks = self.app.processWorkflow(requestDict)
         if self.debug: self.logger.info("Current tasks: {} ".format(str(list(current_tasks.items()))))
         for task in current_tasks.values(): self.addTask( task )
-        return self.jsonResponse( dict( status="executing", rid=requestDict['rid'] ), code=202 )
+        return self.executeResponse( requestDict )
+
+    def executeResponse(self, response: Dict ) -> flask.Response:
+        status = response["status"]
+        rid = response["rid"]
+        route = request.path
+        if status == "executing":
+            status = dict( tag="ProcessStarted", mesage=response["message"] )
+            url = dict( status=f"{route}/status?id={rid}", file=f"{route}/file?id={rid}" )
+            if self.dapRoute is not None: url['dap'] = f"{self.dapRoute}/{rid}.nc"
+            responseXml = self.templates['execute_response'].render( dict( status=status, url=url) )
+            return flask.Response( response=responseXml, status=202, mimetype="application/xml" )
+        elif status == "error":
+            status = dict( tag="ProcessFailed", mesage=response["message"] )
+            url = dict( status=f"{route}/status?id={rid}")
+            responseXml = self.templates['execute_response'].render( dict( status=status, url=url) )
+            return flask.Response( response=responseXml, status=400, mimetype="application/xml" )
+
 
     def _addRoutes(self, bp: Blueprint):
 
-        @bp.route('/wps', methods=('GET'))
+        @bp.route('/wps', methods=('GET'), endpoint='exe')
         def exe():
             requestArg = request.args.get("request", None)
             if requestArg == "Execute":
@@ -43,8 +69,8 @@ class RestAPI(RestAPIBase):
 
         @bp.route('/status', methods=('GET',))
         def status():
-            cid = self.getParameter( "cid", None, False)
-            statusMap = self.getStatus(cid)
+            rid = self.getParameter( "rid", None, False)
+            statusMap = self.getStatus(rid)
             if self.debug: self.logger.info( "Status Map: " + str(statusMap) )
             return self.jsonResponse( statusMap )
 

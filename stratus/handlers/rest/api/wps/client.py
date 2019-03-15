@@ -2,7 +2,6 @@ from stratus.handlers.client import StratusClient, stratusrequest
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
 import traceback, time, logging, xml, json, requests
 from stratus.util.config import Config, StratusLogger, UID
-from threading import Thread
 from stratus.util.parsing import s2b, b2s
 from stratus_endpoint.handler.base import Task, Status, TaskResult
 from stratus.handlers.core import StratusCore
@@ -27,7 +26,8 @@ class WPSRestClient(StratusClient):
     @stratusrequest
     def request( self, requestSpec: Dict, **kwargs ) -> Task:
         response =  self.wpsRequest.exe(requestSpec)
-        self.log( "Got response: " + str(response["refs"]) )
+        self.log( "Got response xml: " + str(response["xml"]) )
+        self.log("Got refs: " + str(response["refs"]))
         return RestTask( requestSpec['rid'], self.cid, response["refs"], self.wpsRequest )
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
@@ -44,7 +44,6 @@ class WPSRestClient(StratusClient):
         if self.active:
             self.active = False
 
-
 class RestTask(Task):
 
     def __init__(self, rid: str, cid: str, refs: Dict, wpsRequest: WPSExecuteRequest, **kwargs):
@@ -55,8 +54,13 @@ class RestTask(Task):
         self.dapUrl: str = refs.get("dap", None)
         self.wpsRequest: WPSExecuteRequest = wpsRequest
         self._statMessage = None
-        self.cacheDir: str = kwargs.get( "cache", os.path.expanduser("~/.edas/cache") )
-        os.makedirs( self.cacheDir )
+        self.cacheDir: str = self.createCache( **kwargs )
+
+    def createCache(self, **kwargs ) -> str:
+        cacheDir: str = kwargs.get( "cache", os.path.expanduser("~/.edas/cache") )
+        try: os.makedirs( cacheDir )
+        except: pass
+        return cacheDir
 
     def getResult( self, timeout=None, block=False, raiseErrors=False ) ->  Optional[TaskResult]:
         self.status()
