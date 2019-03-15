@@ -17,7 +17,6 @@ class WPSExecuteRequest:
         self._host_address = host_address
         self.ns = {'wps': "http://www.opengis.net/wps/1.0.0", "ows": "http://www.opengis.net/ows/1.1"}
 
-    def _getBaseRequest( self, async ): return '%s?request=Execute&service=cwt&status=%s' % ( self._host_address, boolStr(async) )
     def _getCapabilities( self ): return '%s?request=getCapabilities&service=cwt' % ( self._host_address )
     def _describeProcess( self, processId ): return '%s?request=describeProcess&service=cwt&identifier=%s' % ( self._host_address, processId )
     def _getStratusRequest( self ): return '%s?request=Execute&service=cwt&status=true&identifier=cwt.workflow' % ( self._host_address )

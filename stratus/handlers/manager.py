@@ -84,6 +84,8 @@ class Handlers:
             if (spec.get("type") in htypes):
                 spec["name"] = name
                 specs.append( spec )
+            elif name == "stratus":
+                raise Exception( "Must provide 'type' parameter in 'stratus' configuration")
         return specs
 
     def _addConstructor(self, type: str, handler_constructor: Callable[[], StratusFactory]):

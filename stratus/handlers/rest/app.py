@@ -53,6 +53,7 @@ class RestAPIBase:
         self.logger.info( f"Instantiating API: {bp.name}" )
         self._addRoutes(bp)
         app.register_blueprint( bp )
+        self.logger.info( "URL MAP: \n" + str( app.url_map ) )
 
     def jsonResponse( self, response: Dict, code: int = 200 ) -> Response:
         return Response( response=json.dumps( response ), status=code, mimetype="application/json")
@@ -115,7 +116,7 @@ class StratusApp(StratusAppBase):
 
 if __name__ == "__main__":
     HERE = os.path.dirname(os.path.abspath(__file__))
-    SETTINGS_FILE = os.path.join(HERE, "server_test_settings.ini")
+    SETTINGS_FILE = os.path.join(HERE, "wps_server_test_settings.ini")
     core = StratusCore( SETTINGS_FILE  )
     app = core.getApplication()
     app.run()
