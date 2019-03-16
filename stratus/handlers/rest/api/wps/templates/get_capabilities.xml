@@ -1,0 +1,56 @@
+<wps:Capabilities service="WPS" version="1.0.0" xml:lang="en-CA" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:wps="http://www.opengis.net/wps/1.0.0" xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/wps/1.0.0 ../wpsGetCapabilities_response.xsd" updateSequence="1">
+  <ows:ServiceIdentification>
+    <ows:Title>
+      {{server.title}}
+    </ows:Title>
+    <ows:Abstract>
+      {{server.abstract}}
+    </ows:Abstract>
+    <ows:Keywords>
+        {% for keyword in server.keywords -%}
+        <ows:Keyword> {{keyword}} </ows:Keyword>
+        {%- endfor %}
+    </ows:Keywords>
+    <ows:ServiceType>WPS</ows:ServiceType>
+    <ows:ServiceTypeVersion>1.0.0</ows:ServiceTypeVersion>
+    <ows:ServiceTypeVersion>0.4.0</ows:ServiceTypeVersion>
+    <ows:Fees>NONE</ows:Fees>
+    <ows:AccessConstraints>NONE</ows:AccessConstraints>
+  </ows:ServiceIdentification>
+  <ows:ServiceProvider>
+    <ows:ProviderName>
+      {{server.provider}}
+    </ows:ProviderName>
+    <ows:ProviderSite xlink:href="{{server.url}}"/>
+    <ows:ServiceContact>
+      <ows:IndividualName>
+        {{server.manager.name}}
+      </ows:IndividualName>
+      <ows:PositionName>
+        {{server.manager.position}}
+      </ows:PositionName>
+      <ows:ContactInfo>
+        <ows:Phone>
+          <ows:Voice>
+            {{server.manager.phone}}
+          </ows:Voice>
+        </ows:Phone>
+        <ows:Address>
+          <ows:ElectronicMailAddress>
+            {{server.manager.email}}
+          </ows:ElectronicMailAddress>
+        </ows:Address>
+      </ows:ContactInfo>
+    </ows:ServiceContact>
+  </ows:ServiceProvider>
+  <ows:OperationsMetadata>
+    <ows:Operation name="GetCapabilities"/>
+    <ows:Operation name="DescribeProcess"/>
+    <ows:Operation name="Execute"/>
+  </ows:OperationsMetadata>
+  <wps:ProcessOfferings>
+      {% for process in server.processes -%}
+        {{process.getCapabilities(}}
+      {%- endfor %}
+  </wps:ProcessOfferings>
+</wps:Capabilities>

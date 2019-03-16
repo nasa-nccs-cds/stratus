@@ -71,6 +71,7 @@ class RestAPI(RestAPIBase):
         self.logger.info( "Adding WPS routes" )
         @bp.route('/cwt', methods=['GET'] )
         def exe():
+            self.logger.info("EXE")
             requestArg = request.args.get("request", None)
             if requestArg == "Execute":
                 datainputs = request.args.get("datainputs", None)

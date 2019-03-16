@@ -41,16 +41,17 @@ class RestAPIBase:
 
     def _blueprint( self, app: Flask ):
         bp = Blueprint( self.name, __name__, url_prefix=f'/{self.name}' )
-        self.logger.info( f"Instantiating API: {bp.name}" )
+        self.logger.info( f"Instantiating BP: {bp.name}" )
         app.register_blueprint( bp )
         return bp
 
     @abc.abstractmethod
-    def _addRoutes(self, bp: Blueprint): pass
+    def _addRoutes(self, bp: Blueprint):
+        self.logger(" Error, no routes declated")
 
     def instantiate( self, app: Flask ):
         bp = Blueprint( self.name, __name__, url_prefix=f'/{self.name}' )
-        self.logger.info( f"Instantiating API: {bp.name}" )
+        self.logger.info( f"Instantiating API--> {bp.name}, class = { str(self.__class__ ) }" )
         self._addRoutes(bp)
         app.register_blueprint( bp )
         self.logger.info( "URL MAP: \n" + str( app.url_map ) )

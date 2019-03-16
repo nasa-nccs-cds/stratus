@@ -1,9 +1,9 @@
 from stratus.handlers.base import Handler
 from stratus.handlers.client import StratusClient
 from stratus.handlers.core import StratusCore
-from handlers.rest.api.core.client import CoreRestClient
-from handlers.rest.api.wps.client import WPSRestClient
-from .app import StratusApp
+from stratus.handlers.rest.api.core.client import CoreRestClient
+from stratus.handlers.rest.api.wps.client import WPSRestClient
+from stratus.handlers.rest.app import StratusApp
 import os
 
 MB = 1024 * 1024
