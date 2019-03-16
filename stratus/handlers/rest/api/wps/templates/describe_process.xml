@@ -1,0 +1,25 @@
+<wps:ProcessDescriptions xmlns:wps="http://www.opengis.net/wps/1.0.0" xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/wps/1.0.0 ../wpsDescribeProcess_response.xsd" service="WPS" version="1.0.0" xml:lang="en-CA">
+    {% for process in server.processes -%}
+      <wps:ProcessDescription wps:processVersion="2" storeSupported="true" statusSupported="false">
+          <ows:Identifier>
+            {process.id}
+          </ows:Identifier>
+          <ows:Title>
+            {process.title}
+          </ows:Title>,
+          <ows:Abstract>
+            {process.description}
+          </ows:Abstract>
+          <wps:ProcessOutputs>
+            <wps:Output>
+                <ows:Identifier> {process.oid} </ows:Identifier>
+                <ows:Title> Status and Result URLs </ows:Title>
+                <ComplexOutput>
+                  <Default>   <Format> <MimeType> application/xml </MimeType> </Format> </Default>
+                  <Supported> <Format> <MimeType> application/xml </MimeType> </Format> </Supported>
+                </ComplexOutput>
+            </wps:Output>
+          </wps:ProcessOutputs>
+      </wps:ProcessDescription>
+    {%- endfor %}
+</wps:ProcessDescriptions>
