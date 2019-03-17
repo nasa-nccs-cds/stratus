@@ -44,8 +44,8 @@ class RestAPI(RestAPIBase):
 
         @bp.route('/capabilities', methods=('GET',))
         def capabilities():
-            ctype = self.getParameter("type")
-            self.logger.info( "REST_APP: Processing capabilities request, type = " + ctype )
+            ctype = self.getParameter("identifier","")
+            self.logger.info( "REST_APP: Processing capabilities request, type = " + str(ctype) + ", parms = " + str(request.args))
             response: Dict = self.app.core.getCapabilities( ctype )
             return self.jsonResponse( response )
 

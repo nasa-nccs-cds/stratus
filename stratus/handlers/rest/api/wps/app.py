@@ -39,17 +39,17 @@ class RestAPI(RestAPIBase):
         status = response["status"]
         responseXml = None
         if status == "executing":
-            responseXml = self.getStatusXml( "ProcessStarted", response["message"] )
+            responseXml = self._getStatusXml("ProcessStarted", response["message"], response["rid"] )
         elif status == "completed":
-            responseXml = self.getStatusXml( "ProcessSucceeded", response["message"] )
+            responseXml = self._getStatusXml("ProcessSucceeded", response["message"], response["rid"] )
         elif status == "idle":
-            responseXml = self.getStatusXml("ProcessAccepted", response["message"])
+            responseXml = self._getStatusXml("ProcessAccepted", response["message"], response["rid"] )
         elif status == "error":
-            responseXml = self.getStatusXml("ProcessFailed", response["message"], response["rid"],  False)
+            responseXml = self._getStatusXml("ProcessFailed", response["message"], response.get("rid",""), False )
         return flask.Response( response=responseXml, status=400, mimetype="application/xml" )
 
-    def getStatusXml(self, status: str, message: str, rid: str, addDataRefs = True ) -> str :
-        status = dict( tag=status, mesage=message )
+    def _getStatusXml(self, status: str, message: str, rid: str, addDataRefs = True) -> str :
+        status = dict( tag=status, message=message )
         route = request.path
         print ( route )
         url = dict( status=f"{route}/status?id={rid}" )
@@ -59,11 +59,24 @@ class RestAPI(RestAPIBase):
                 url['dap'] = f"{self.dapRoute}/{rid}.nc"
         return self.templates['execute_response'].render( dict(status=status, url=url) )
 
-    def getCapabilities(self, id: str ) -> flask.Response:
-        responseXml = ""
+    def _getCapabilitiesXml(self, capabilitiesData: Dict )-> str:
+        manager = dict(name="Thomas Maxwell", position="EDAS Developer", email="thomas.maxwell@nasa.gov")
+        server = dict( title="EDAS", description="Earth Data Analytic Services", manager=manager)
+        processes = []
+        server["processes"] = processes
+        modules = capabilitiesData.get("modules",[])
+        for module in modules:
+            for  kernel in module.kernels:
+                processes.append( kernel )
+        print( "**SERVER = " + str(server) )
+        return self.templates['get_capabilities'].render( dict( server=server) )
+
+    def getCapabilities(self, ctype: str ) -> flask.Response:
+        response: Dict = self.app.core.getCapabilities(ctype)
+        responseXml = self._getCapabilitiesXml( response )
         return flask.Response(response=responseXml, status=400, mimetype="application/xml" )
 
-    def describeProcess(self, id: str ) -> flask.Response:
+    def describeProcess(self, ctype: str ) -> flask.Response:
         responseXml = ""
         return flask.Response(response=responseXml, status=400, mimetype="application/xml" )
 
@@ -72,16 +85,16 @@ class RestAPI(RestAPIBase):
         @bp.route('/cwt', methods=['GET'] )
         def exe():
             self.logger.info("EXE")
-            requestArg = request.args.get("request", None)
-            if requestArg == "Execute":
+            requestArg = request.args.get("request", None).lower()
+            if requestArg == "execute":
                 datainputs = request.args.get("datainputs", None)
                 inputsArg = self.parseDatainputs( datainputs )
                 return self.processRequest( inputsArg )
-            elif requestArg == "GetCapabilities":
-                id = request.args.get("id",  None )
+            elif requestArg == "getcapabilities":
+                id = request.args.get("identifier",  None )
                 return self.getCapabilities(id)
-            elif requestArg == "DescribeProcess":
-                id = request.args.get("id",  None )
+            elif requestArg == "describeprocess":
+                id = request.args.get("identifier",  None )
                 return self.describeProcess(id)
             else:
                 return self.executeResponse( dict( status='error', message ="Illegal request type: " + requestArg ) )

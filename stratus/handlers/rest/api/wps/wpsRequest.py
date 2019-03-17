@@ -8,6 +8,12 @@ def execRequest( requestURL ) -> Element:
     response: requests.Response = requests.get( requestURL )
     return ET.fromstring( response.text )
 
+def execJsonRequest( requestURL ) -> Dict:
+    response: requests.Response = requests.get( requestURL )
+    print ( response.text )
+    if response.ok: return json.loads( response.text )
+    else: raise Exception( response.text )
+
 def boolStr( bval ): return "true" if bval else "false"
 
 class WPSExecuteRequest:
@@ -17,7 +23,7 @@ class WPSExecuteRequest:
         self._host_address = host_address
         self.ns = {'wps': "http://www.opengis.net/wps/1.0.0", "ows": "http://www.opengis.net/ows/1.1"}
 
-    def _getCapabilities( self ): return '%s?request=getCapabilities&service=cwt' % ( self._host_address )
+    def _getCapabilities( self, type ): return '%s?request=getCapabilities&service=cwt&identifier=%s' % ( self._host_address, type )
     def _describeProcess( self, processId ): return '%s?request=describeProcess&service=cwt&identifier=%s' % ( self._host_address, processId )
     def _getStratusRequest( self ): return '%s?request=Execute&service=cwt&status=true&identifier=cwt.workflow' % ( self._host_address )
 
@@ -54,16 +60,21 @@ class WPSExecuteRequest:
         r = requests.get(fileUrl, allow_redirects=True)
         open(filePath, 'wb').write(r.content)
 
-    def getCapabilities( self ) -> Dict:
-        request = self._getCapabilities()
-        root = execRequest( request )
-        epas = []
-        for module_elem in root.iter("module"):
-            for op_elem in module_elem.iter("kernel"):
-                modname = module_elem.attrib["name"]
-                opName = op_elem.attrib["name"]
-                epas.append( f"{modname}.{opName}")
-        return { "xml": str(root), "epas": epas }
+    def getCapabilities( self, type="processes" ) -> Dict:
+        if type == "epas":
+            request = self._getCapabilities("epas")
+            response = execJsonRequest(request)
+            return response
+        else:
+            request = self._getCapabilities(type)
+            root = execRequest( request )
+            epas = []
+            for module_elem in root.iter("module"):
+                for op_elem in module_elem.iter("kernel"):
+                    modname = module_elem.attrib["name"]
+                    opName = op_elem.attrib["name"]
+                    epas.append( f"{modname}.{opName}")
+            return { "xml": ET.tostring(root, encoding='utf8', method='xml') }
 
     def describeProcess( self, processId ):
         request = self._describeProcess( processId )

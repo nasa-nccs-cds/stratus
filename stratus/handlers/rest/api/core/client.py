@@ -20,10 +20,14 @@ class CoreRestClient(StratusClient):
 
     def __init__( self, **kwargs ):
         super(CoreRestClient, self).__init__( "rest", **kwargs )
-        self.host = self["host"]
-        self.port = self["port"]
-        self.route = self["route"]
-        self.response_manager = ResponseManager.getManger( self.cid, f"http://{self.host}:{self.port}/{self.route}" )
+        if "host_address" in self.parms:
+            self.host_address = self["host_address"]
+        else:
+            host = self["host"]
+            port = self["port"]
+            route = self["route"]
+            self.host_address = f"http://{host}:{port}/{route}"
+        self.response_manager = ResponseManager.getManger( self.cid, self.host_address )
         self.response_manager.start()
 
     @stratusrequest

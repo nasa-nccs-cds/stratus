@@ -20,7 +20,13 @@ class WPSRestClient(StratusClient):
 
     def __init__( self, **kwargs ):
         super(WPSRestClient, self).__init__( "rest", **kwargs )
-        self.host_address = self["host_address"]
+        if "host_address" in self.parms:
+            self.host_address = self["host_address"]
+        else:
+            host = self["host"]
+            port = self["port"]
+            route = self["route"]
+            self.host_address = f"http://{host}:{port}/{route}"
         self.wpsRequest = WPSExecuteRequest(self.host_address)
 
     @stratusrequest
@@ -31,8 +37,7 @@ class WPSRestClient(StratusClient):
         return RestTask( requestSpec['rid'], self.cid, response["refs"], self.wpsRequest )
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
-        results = self.wpsRequest.getCapabilities()
-        return results
+        return self.wpsRequest.getCapabilities( type )
 
     def log(self, msg: str ):
         self.logger.info( "[RP] " + msg )
