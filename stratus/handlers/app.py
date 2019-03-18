@@ -140,10 +140,10 @@ class StratusAppBase:
         clientOpsets: Dict[str,OpSet] = dict()
         for op in ops:
             if not "id" in op: op["id"] = UID.randomId( 6 )
-            for parm in [ "epa" ]:
-                assert parm in op, "Operation must have an '{}' parameter: {}".format( parm, str(op) )
-            epa = op["epa"]
+            epa = op.get("epa", op.get("name",None ) )
+            assert epa is not None, f"Operation must have an 'epa' or a 'name' parameter: {op}"
             clients = self.core.getClients( epa )
+            assert len(clients) > 0, f"Can't find a client to process the operation': {op}"
             for client in clients:
                opSet = clientOpsets.setdefault( client.name, OpSet(client) )
                opSet.add( op )
@@ -179,7 +179,7 @@ class StratusFactory:
         assert htype1 == htype, "Sanity check of Handler type failed: {} vs {}".format(htype1,htype)
 
     @abc.abstractmethod
-    def client(self) -> StratusClient: pass
+    def client( self, gateway=False ) -> StratusClient: pass
 
     @abc.abstractmethod
     def app(self, core: StratusCoreBase ) -> StratusAppBase: pass

@@ -1,6 +1,7 @@
 import requests, json
 from xml.etree.ElementTree import Element
 import defusedxml.ElementTree as ET
+from stratus.util.config import Config, StratusLogger, UID
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
 from stratus.util.config import StratusLogger
 
@@ -31,6 +32,7 @@ class WPSExecuteRequest:
         domains = json.dumps( requestJson["domain"] )
         variables = json.dumps(requestJson["input"])
         operations = json.dumps(requestJson["operation"])
+        rid = UID.randomId(6)
         return f'&datainputs=[domain={domains},variable={variables},operation={operations}]'
 
     def getWps( self, requestSpec: Dict ) -> str:
@@ -50,6 +52,7 @@ class WPSExecuteRequest:
 
     def getStatus(self, statusUrl: str ) -> Dict:
         responseXML: str = requests.get(statusUrl).text
+        self.logger.info( "GetStatus Response XML: \n" + responseXML )
         root = ET.fromstring(responseXML)
         for eStat in root.findall("wps:Status", self.ns):
             for eStatValue in eStat.findall("*", self.ns):

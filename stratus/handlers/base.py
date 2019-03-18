@@ -15,14 +15,14 @@ class Handler(StratusFactory):
         self._app: StratusAppBase = None
 
     @abc.abstractmethod
-    def newClient(self) -> StratusClient: pass
+    def newClient(self, gateway=False) -> StratusClient: pass
 
     @abc.abstractmethod
     def newApplication(self, core: StratusCore ) -> StratusAppBase: pass
 
-    def client(self) -> StratusClient:
+    def client( self, gateway=False ) -> StratusClient:
         if self._client is None:
-            self._client = self.newClient()
+            self._client = self.newClient(gateway)
             self._client.init()
         return self._client
 

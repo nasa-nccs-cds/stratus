@@ -1,6 +1,7 @@
 from flask import request, Blueprint, make_response
-from stratus_endpoint.handler.base import Task, TaskResult
+from stratus_endpoint.handler.base import Task, TaskResult, Status
 from stratus.handlers.client import StratusClient
+from stratus.util.config import Config, StratusLogger, UID
 import pickle, ctypes, json, requests, flask, os
 from jinja2 import Environment, PackageLoader, select_autoescape
 from stratus.handlers.app import StratusAppBase
@@ -10,7 +11,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES = os.path.join(HERE, "templates")
 
 class RestAPI(RestAPIBase):
-    debug = False
+    debug = True
 
     def __init__( self, name: str, app: StratusAppBase, **kwargs ):
         RestAPIBase.__init__( self, name, app, **kwargs )
@@ -21,40 +22,43 @@ class RestAPI(RestAPIBase):
 
     def parseDatainputs(self, datainputs: str) -> Dict:
         if datainputs is None: return {}
-        raw_datainputs = ctypes.create_string_buffer(datainputs.strip())
-        if raw_datainputs[0] == "[":
-            assert raw_datainputs[-1] == "]", "Datainputs format error: missing external brackets: " + raw_datainputs
-            raw_datainputs[0] = "{"
-            raw_datainputs[-1] = "}"
-        return json.loads(raw_datainputs)
+        raw_datainputs = datainputs.strip()
+        if raw_datainputs[0] == "[": raw_datainputs = raw_datainputs[1:-1]
+        json_datainputs = "{"+raw_datainputs.replace("domain=",'"domain":').replace("variable=",'"variable":').replace("operation=",'"operation":')+"}"
+#        print( "json_datainputs = " + json_datainputs )
+        return json.loads(json_datainputs)
 
     def processRequest( self, requestDict: Dict ) -> flask.Response:
         if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
         current_tasks = self.app.processWorkflow(requestDict)
         if self.debug: self.logger.info("Current tasks: {} ".format(str(list(current_tasks.items()))))
         for task in current_tasks.values(): self.addTask( task )
-        return self.executeResponse( requestDict )
+        rid = requestDict.get("rid",UID.randomId(6))
+        return self.executeResponse( dict( status="executing", message="Executing Request", rid=rid ) )
 
     def executeResponse(self, response: Dict ) -> flask.Response:
+        if self.debug: self.logger.info( " #####>>>> response: " + str(response) )
+        rid = response.get("rid","")
+        message = response.get("message", "")
         status = response["status"]
-        responseXml = None
         if status == "executing":
-            responseXml = self._getStatusXml("ProcessStarted", response["message"], response["rid"] )
+            responseXml = self._getStatusXml("ProcessStarted", message, rid )
         elif status == "completed":
-            responseXml = self._getStatusXml("ProcessSucceeded", response["message"], response["rid"] )
+            responseXml = self._getStatusXml("ProcessSucceeded", message, rid )
         elif status == "idle":
-            responseXml = self._getStatusXml("ProcessAccepted", response["message"], response["rid"] )
+            responseXml = self._getStatusXml("ProcessAccepted", message, rid )
         elif status == "error":
-            responseXml = self._getStatusXml("ProcessFailed", response["message"], response.get("rid",""), False )
+            responseXml = self._getStatusXml("ProcessFailed", message, rid, False )
+        elif status == "unknown":
+            responseXml = self._getStatusXml("ProcessUnknown", rid , rid, False )
+        else: raise Exception( "Unknown status: " + status )
         return flask.Response( response=responseXml, status=400, mimetype="application/xml" )
 
     def _getStatusXml(self, status: str, message: str, rid: str, addDataRefs = True) -> str :
         status = dict( tag=status, message=message )
-        route = request.path
-        print ( route )
-        url = dict( status=f"{route}/status?id={rid}" )
+        url = dict( status=f"{request.url_root}wps/status?id={rid}" )
         if addDataRefs:
-            url['file'] = f"{route}/file?id={rid}"
+            url['file'] = f"{request.url_root}wps/file?id={rid}"
             if self.dapRoute is not None:
                 url['dap'] = f"{self.dapRoute}/{rid}.nc"
         return self.templates['execute_response'].render( dict(status=status, url=url) )
@@ -84,8 +88,8 @@ class RestAPI(RestAPIBase):
         self.logger.info( "Adding WPS routes" )
         @bp.route('/cwt', methods=['GET'] )
         def exe():
-            self.logger.info("EXE")
             requestArg = request.args.get("request", None).lower()
+            if self.debug: self.logger.info( "EXE: requestArg = " + requestArg)
             if requestArg == "execute":
                 datainputs = request.args.get("datainputs", None)
                 inputsArg = self.parseDatainputs( datainputs )
@@ -102,9 +106,10 @@ class RestAPI(RestAPIBase):
         @bp.route('/status', methods=['GET'])
         def status():
             rid = self.getParameter( "rid", None, False)
-            statusMap = self.getStatus(rid)
-            if self.debug: self.logger.info( "Status Map: " + str(statusMap) )
-            return self.jsonResponse( statusMap )
+            statusMap = self.getStatus()
+            status = statusMap.get( rid, Status.UNKNOWN )
+            if self.debug: self.logger.info( "Status Status Map: " + str(statusMap) )
+            return self.executeResponse( dict( status=Status.str(status), message ="" ) )
 
         @bp.route('/file', methods=['GET'])
         def result():

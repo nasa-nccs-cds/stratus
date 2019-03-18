@@ -21,8 +21,8 @@ class ServiceHandler( Handler ):
         htype = os.path.basename(os.path.dirname(__file__))
         super(ServiceHandler, self).__init__( htype, **kwargs )
 
-    def newClient(self) -> StratusClient:
-        return ZMQClient( **self.parms )
+    def newClient( self, gateway=False ) -> StratusClient:
+        return ZMQClient( gateway=gateway, **self.parms )
 
     def newApplication(self, core: StratusCore ) -> StratusApp:
         return StratusApp( core )

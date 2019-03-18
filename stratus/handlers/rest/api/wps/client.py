@@ -59,6 +59,7 @@ class RestTask(Task):
         self.dapUrl: str = refs.get("dap", None)
         self.wpsRequest: WPSExecuteRequest = wpsRequest
         self._statMessage = None
+        self._status = Status.UNKNOWN
         self.cacheDir: str = self.createCache( **kwargs )
 
     def createCache(self, **kwargs ) -> str:
@@ -91,6 +92,7 @@ class RestTask(Task):
         elif statStr == "ProcessAccepted": self._status = Status.IDLE
         elif statStr == "ProcessFailed": self._status = Status.ERROR
         elif statStr == "ProcessSucceeded": self._status = Status.COMPLETED
+        elif statStr == "ProcessUnknown": self._status = Status.UNKNOWN
         self._statMessage = stat["message"]
         return self._status
 
@@ -111,14 +113,23 @@ if __name__ == "__main__":
     client = core.getClient()
     client.init()
 
-    request = dict(
+    local_request = dict(
         domain=[{"name": "d0", "lat": {"start": 50, "end": 55, "system": "values"},
                  "lon": {"start": 40, "end": 42, "system": "values"},
                  "time": {"start": "1980-01-01", "end": "1981-12-31", "crs": "timestamps"}}],
         input=[{"uri": mgr.getAddress("merra2", "tas"), "name": "tas:v0", "domain": "d0"}],
-        operation=[ { "epa": "test.subset", "input": "v0"} ]
+        operation=[ { 'name': "xarray.ave", 'axes': "t", "input": "v0"} ]
     )
-    task: RestTask = client.request( request )
+
+    edas_server_request = dict(
+        domain=[{"name": "d0", "lat": {"start": 50, "end": 55, "system": "values"},
+                 "lon": {"start": 40, "end": 42, "system": "values"},
+                 "time": {"start": "1980-01-01", "end": "1981-12-31", "crs": "timestamps"}}],
+        input=[{"uri": "collection://cip_cfsr_mth", "name": "tas:v0", "domain": "d0"}],
+        operation=[ { 'name': "xarray.ave", 'axes': "t", "input": "v0"} ]
+    )
+
+    task: RestTask = client.request( local_request )
     print( task.status() )
     print( task.statusMessage )
 

@@ -12,8 +12,8 @@ class ServiceHandler( Handler ):
         htype = os.path.basename(os.path.dirname(__file__))
         super(ServiceHandler, self).__init__( htype, **kwargs )
 
-    def newClient(self) -> StratusClient:
-        return DirectClient( **self.parms )
+    def newClient( self, gateway=False ) -> StratusClient:
+        return DirectClient( gateway=gateway, **self.parms )
 
     def newApplication(self, core: StratusCore ) -> StratusAppBase:
         raise Exception( "Can't stand up a stratus app for an endpoint")
