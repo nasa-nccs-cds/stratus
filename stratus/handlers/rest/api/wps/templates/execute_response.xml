@@ -8,6 +8,9 @@
             {% if 'file' in url -%}
             <wps:Reference id="file"   encoding="UTF-8" mimeType="text/xml" href="{{url.file}}"/>
             {%- endif %}
+            {% if 'data' in url -%}
+            <wps:Reference id="data"   encoding="UTF-8" mimeType="text/xml" href="{{url.data}}"/>
+            {%- endif %}
             {% if 'dap' in url -%}
             <wps:Reference id="dap"    encoding="UTF-8" mimeType="text/xml" href="{{url.dap}}"/>
             {%- endif %}

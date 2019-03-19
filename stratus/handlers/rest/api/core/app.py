@@ -38,7 +38,7 @@ class RestAPI(RestAPIBase):
             else:
                 response = make_response( pickle.dumps( result ) )
                 response.headers.set('Content-Type', 'application/octet-stream')
-                response.headers.set('Content-Class', 'xarray-dataset' )
+                response.headers.set('Content-Format', 'xarray-dataset' )
                 self.removeTask( rid )
                 return response
 

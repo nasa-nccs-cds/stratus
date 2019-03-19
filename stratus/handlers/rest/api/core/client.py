@@ -136,7 +136,10 @@ class ResponseManager(Thread):
         else:                                               result = { "type": "error",  "code": response.status_code, "message": response.text }
         return result
 
-    def getResult(self, rid: str, block=True, timeout=None  ) ->  Optional[TaskResult]:
+    def getResult( self, **kwargs ) ->  Optional[TaskResult]:
+        timeout = kwargs.get("timeout")
+        block = kwargs.get("block")
+        rid = kwargs.get("rid")
         if block: self.waitUntilReady( rid, timeout )
         result = self.getMessage( "result", dict(rid=rid) )
         rtype = result["type"]
@@ -186,8 +189,8 @@ class RestTask(Task):
         self.logger = StratusLogger.getLogger()
         self.manager: ResponseManager = manager
 
-    def getResult(self, block=True, timeout=None ) ->  Optional[TaskResult]:
-        return self.manager.getResult( self.rid, block, timeout )
+    def getResult( self, **kwargs ) ->  Optional[TaskResult]:
+        return self.manager.getResult( rid=self.rid, **kwargs )
 
     def status(self) ->  Status:
         return self.manager.getStatus( self.rid )

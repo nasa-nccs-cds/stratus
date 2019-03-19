@@ -1,6 +1,6 @@
 from flask import request, Blueprint, make_response
 from stratus_endpoint.handler.base import Task, TaskResult, Status
-from stratus.handlers.client import StratusClient
+import xarray as xa
 from stratus.util.config import Config, StratusLogger, UID
 import pickle, ctypes, json, requests, flask, os
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -29,16 +29,16 @@ class RestAPI(RestAPIBase):
         return json.loads(json_datainputs)
 
     def processRequest( self, requestDict: Dict ) -> flask.Response:
+        rid = requestDict.setdefault( "rid", UID.randomId(6) )
         if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
         current_tasks = self.app.processWorkflow(requestDict)
         if self.debug: self.logger.info("Current tasks: {} ".format(str(list(current_tasks.items()))))
         for task in current_tasks.values(): self.addTask( task )
-        rid = requestDict.get("rid",UID.randomId(6))
         return self.executeResponse( dict( status="executing", message="Executing Request", rid=rid ) )
 
     def executeResponse(self, response: Dict ) -> flask.Response:
         if self.debug: self.logger.info( " #####>>>> response: " + str(response) )
-        rid = response.get("rid","")
+        rid = response.get("rid","XXXXXX")
         message = response.get("message", "")
         status = response["status"]
         if status == "executing":
@@ -56,9 +56,10 @@ class RestAPI(RestAPIBase):
 
     def _getStatusXml(self, status: str, message: str, rid: str, addDataRefs = True) -> str :
         status = dict( tag=status, message=message )
-        url = dict( status=f"{request.url_root}wps/status?id={rid}" )
+        url = dict( status=f"{request.url_root}wps/status?rid={rid}" )
         if addDataRefs:
-            url['file'] = f"{request.url_root}wps/file?id={rid}"
+            url['file'] = f"{request.url_root}wps/file?rid={rid}"
+            url['data'] = f"{request.url_root}wps/data?rid={rid}"
             if self.dapRoute is not None:
                 url['dap'] = f"{self.dapRoute}/{rid}.nc"
         return self.templates['execute_response'].render( dict(status=status, url=url) )
@@ -108,8 +109,8 @@ class RestAPI(RestAPIBase):
             rid = self.getParameter( "rid", None, False)
             statusMap = self.getStatus()
             status = statusMap.get( rid, Status.UNKNOWN )
-            if self.debug: self.logger.info( "Status Status Map: " + str(statusMap) )
-            return self.executeResponse( dict( status=Status.str(status), message ="" ) )
+            if self.debug: self.logger.info( f" ----> Status Request[{rid}]: {str(status)} ----> Status Map: " + str(statusMap) )
+            return self.executeResponse( dict( status=Status.str(status), message ="", rid=rid ) )
 
         @bp.route('/file', methods=['GET'])
         def result():
@@ -120,11 +121,30 @@ class RestAPI(RestAPIBase):
             if result is None:
                 return self.jsonResponse( dict(status="executing", id=task.rid) )
             else:
-                response = make_response( pickle.dumps( result ) )
-                response.headers.set('Content-Type', 'application/octet-stream')
-                response.headers.set('Content-Class', 'xarray-dataset' )
-                self.removeTask( rid )
+                dataset: xa.Dataset = result.popDataset()
+                path = "/tmp/" + UID.randomId(8) + ".nc"
+                dataset.to_netcdf( path, mode="w", format='NETCDF4' )
+                with open(path, mode='rb') as ncfile:
+                    response = make_response( ncfile.read() )
+                    response.headers.set('Content-Type', 'application/octet-stream')
+                    response.headers.set('Content-Format', 'netcdf-file' )
+                    self.removeTask( rid )
                 return response
 
+        @bp.route('/data', methods=['GET'])
+        def result():
+            rid = self.getParameter("rid")
+            task: Task = self.tasks.get( rid, None )
+            assert task is not None, f"Can't find task for rid {rid}, current tasks: {str(list(self.tasks.keys()))}"
+            result: Optional[TaskResult] = task.getResult()
+            if result is None:
+                return self.jsonResponse( dict(status="executing", rid=task.rid) )
+            else:
+                dataset: xa.Dataset = result.popDataset()
+                response = make_response( pickle.dumps( dataset ) )
+                response.headers.set('Content-Type', 'application/octet-stream')
+                response.headers.set('Content-Format', 'xarray-dataset' )
+                if result.empty(): self.removeTask( rid )
+                return response
 
 

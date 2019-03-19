@@ -1,6 +1,7 @@
-import requests, json
+import requests, json, pickle
 from xml.etree.ElementTree import Element
 import defusedxml.ElementTree as ET
+import xarray as xa
 from stratus.util.config import Config, StratusLogger, UID
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
 from stratus.util.config import StratusLogger
@@ -62,6 +63,10 @@ class WPSExecuteRequest:
     def downloadFile( self, filePath: str, fileUrl: str ):
         r = requests.get(fileUrl, allow_redirects=True)
         open(filePath, 'wb').write(r.content)
+
+    def downloadData( self, dataUrl: str ) -> xa.Dataset:
+        r = requests.get( dataUrl, allow_redirects=True )
+        return pickle.loads( r.content, encoding="bytes" )
 
     def getCapabilities( self, type="processes" ) -> Dict:
         if type == "epas":

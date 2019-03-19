@@ -56,6 +56,7 @@ class RestTask(Task):
         self.logger = StratusLogger.getLogger()
         self.statusUrl: str  = refs.get("status",None)
         self.fileUrl: str = refs.get("file", None)
+        self.dataUrl: str = refs.get("data", None)
         self.dapUrl: str = refs.get("dap", None)
         self.wpsRequest: WPSExecuteRequest = wpsRequest
         self._statMessage = None
@@ -68,7 +69,11 @@ class RestTask(Task):
         except: pass
         return cacheDir
 
-    def getResult( self, timeout=None, block=False, raiseErrors=False ) ->  Optional[TaskResult]:
+    def getResult( self, **kwargs ) ->  Optional[TaskResult]:
+        timeout = kwargs.get("timeout")
+        block = kwargs.get("block")
+        raiseErrors = kwargs.get("raiseErrors")
+        type = kwargs.get("type","data")
         self.status()
         self.logger.info( "*STATUS: " +  str(self._status) )
         while self._status == Status.IDLE or self._status == Status.EXECUTING:
@@ -80,9 +85,13 @@ class RestTask(Task):
             if raiseErrors: raise Exception( self._statMessage )
             return None
         elif self._status == Status.COMPLETED:
-            filePath = self.cacheDir + "/" + self.fileUrl.split('=')[-1] + ".nc"
-            self.wpsRequest.downloadFile( filePath, self.fileUrl )
-            return TaskResult( dict( file=filePath) )
+            if type == "file":
+                filePath = self.cacheDir + "/" + self.fileUrl.split('=')[-1] + ".nc"
+                self.wpsRequest.downloadFile( filePath, self.fileUrl )
+                return TaskResult( dict( file=filePath) )
+            else:
+                xarray = self.wpsRequest.downloadData(self.dataUrl)
+                return TaskResult( { **self._parms, "rid": self.rid, "cid": self.cid }, [xarray] )
 
     def status(self) ->  Status:
         stat = self.wpsRequest.getStatus(self.statusUrl)
@@ -132,4 +141,6 @@ if __name__ == "__main__":
     task: RestTask = client.request( local_request )
     print( task.status() )
     print( task.statusMessage )
+    result = task.getResult()
+    print( "Got Result: " + str(result.header) )
 

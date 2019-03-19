@@ -121,7 +121,9 @@ class ResponseManager(Thread):
         self.logger.info( "Caching result: " + str(header) )
         self.cached_results.put( TaskResult(header,data)  )
 
-    def getResult( self, block=True, timeout=None ) -> Optional[TaskResult]:
+    def getResult( self, **kwargs ) ->  Optional[TaskResult]:
+        timeout = kwargs.get("timeout")
+        block = kwargs.get("block")
         try:                 return self.cached_results.get( block, timeout )
         except queue.Empty:  return None
 
@@ -178,8 +180,8 @@ class zmqTask(Task):
         self.logger = StratusLogger.getLogger()
         self.manager = manager
 
-    def getResult(self, block=True, timeout=None ) ->  Optional[TaskResult]:
-        return self.manager.getResult(block,timeout)
+    def getResult( self, **kwargs ) ->  Optional[TaskResult]:
+        return self.manager.getResult(**kwargs)
 
     def status(self) ->  Status:
         return self.manager.getStatus()
