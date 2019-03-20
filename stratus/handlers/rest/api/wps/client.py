@@ -73,7 +73,7 @@ class RestTask(Task):
         timeout = kwargs.get("timeout")
         block = kwargs.get("block")
         raiseErrors = kwargs.get("raiseErrors")
-        type = kwargs.get("type","data")
+        type = kwargs.get("type","file")
         self.status()
         self.logger.info( "*STATUS: " +  str(self._status) )
         while self._status == Status.IDLE or self._status == Status.EXECUTING:
@@ -138,7 +138,7 @@ if __name__ == "__main__":
         operation=[ { 'name': "xarray.ave", 'axes': "t", "input": "v0"} ]
     )
 
-    task: RestTask = client.request( local_request )
+    task: RestTask = client.request( edas_server_request )
     print( task.status() )
     print( task.statusMessage )
     result = task.getResult()

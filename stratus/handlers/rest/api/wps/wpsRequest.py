@@ -6,12 +6,12 @@ from stratus.util.config import Config, StratusLogger, UID
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
 from stratus.util.config import StratusLogger
 
-def execRequest( requestURL ) -> Element:
-    response: requests.Response = requests.get( requestURL )
+def execRequest( requestURL, parms: Dict ) -> Element:
+    response: requests.Response = requests.get( requestURL, params=parms )
     return ET.fromstring( response.text )
 
-def execJsonRequest( requestURL ) -> Dict:
-    response: requests.Response = requests.get( requestURL )
+def execJsonRequest( requestURL, parms: Dict ) -> Dict:
+    response: requests.Response = requests.get( requestURL, params=parms )
     print ( response.text )
     if response.ok: return json.loads( response.text )
     else: raise Exception( response.text )
@@ -25,24 +25,36 @@ class WPSExecuteRequest:
         self._host_address = host_address
         self.ns = {'wps': "http://www.opengis.net/wps/1.0.0", "ows": "http://www.opengis.net/ows/1.1"}
 
-    def _getCapabilities( self, type ): return '%s?request=getCapabilities&service=cwt&identifier=%s' % ( self._host_address, type )
-    def _describeProcess( self, processId ): return '%s?request=describeProcess&service=cwt&identifier=%s' % ( self._host_address, processId )
-    def _getStratusRequest( self ): return '%s?request=Execute&service=cwt&status=true&identifier=cwt.workflow' % ( self._host_address )
+    def _getCapabilitiesStr( self, type ): return '%s?request=getCapabilities&service=WPS&identifier=%s' % ( self._host_address, type )
+    def _describeProcessStr( self, processId ): return '%s?request=describeProcess&service=WPS&identifier=%s' % ( self._host_address, processId )
+    def _getStratusRequestStr( self ): return '%s?request=Execute&service=WPS&status=true&version=1.0.0' % ( self._host_address )
 
-    def _toDatainputs(self, requestJson: Dict  ) -> str:
+    def _getCapabilitiesDict( self, type ): return dict( request='getCapabilities', service='WPS', identifier=type )
+    def _describeProcessDict( self, processId ): return dict( request='describeProcess', service='WPS', identifier=processId )
+    def _getStratusRequestDict( self ): return dict( request='Execute', service='WPS', status='true', version='1.0.0'  )
+
+    def _toDatainputsStr(self, requestJson: Dict  ) -> str:
         domains = json.dumps( requestJson["domain"] )
         variables = json.dumps(requestJson["input"])
         operations = json.dumps(requestJson["operation"])
-        rid = UID.randomId(6)
-        return f'&datainputs=[domain={domains},variable={variables},operation={operations}]'
+        return f"&datainputs=[domain={domains},variable={variables},operation={operations}]"
 
-    def getWps( self, requestSpec: Dict ) -> str:
-        return self._getStratusRequest() + self._toDatainputs( requestSpec )
+    def _toDatainputsDict(self, requestJson: Dict  ) -> Dict:
+        domains = json.dumps( requestJson["domain"] )
+        variables = json.dumps(requestJson["input"])
+        operations = json.dumps(requestJson["operation"])
+        return dict( datainputs=f"[domain={domains},variable={variables},operation={operations}]" )
+
+    def getWpsStr( self, requestSpec: Dict ) -> str:
+        return self._getStratusRequestStr() + self._toDatainputsStr( requestSpec )
+
+    def getWpsParms( self, requestSpec: Dict ) -> Dict:
+        return { **self._getStratusRequestDict(), **self._toDatainputsDict( requestSpec ) }
 
     def exe( self, requestJson ) -> Dict:
-        requestURL = self.getWps( requestJson )
-        self.logger.info( "\nExecuting Request:\n\n%s\n\nResponse:\n" % ( requestURL ) )
-        responseXML: requests.Response = requests.get(requestURL).text
+        requestParms = self.getWpsParms( requestJson )
+        self.logger.info( "\nExecuting Request: host = %s\n Params: %s\nResponse:\n" % ( self._host_address, str(requestParms) ) )
+        responseXML: requests.Response = requests.get( self._host_address, params=requestParms ).text
         refs = {}
         root =   ET.fromstring(responseXML)
         for eProcOut in root.findall("wps:ProcessOutputs",self.ns):
@@ -70,12 +82,12 @@ class WPSExecuteRequest:
 
     def getCapabilities( self, type="processes" ) -> Dict:
         if type == "epas":
-            request = self._getCapabilities("epas")
-            response = execJsonRequest(request)
+            requestParms = self._getCapabilitiesDict("epas")
+            response = execJsonRequest( self._host_address, requestParms )
             return response
         else:
-            request = self._getCapabilities(type)
-            root = execRequest( request )
+            requestParms = self._getCapabilitiesDict(type)
+            root = execRequest(  self._host_address, requestParms )
             epas = []
             for module_elem in root.iter("module"):
                 for op_elem in module_elem.iter("kernel"):
@@ -85,7 +97,7 @@ class WPSExecuteRequest:
             return { "xml": ET.tostring(root, encoding='utf8', method='xml') }
 
     def describeProcess( self, processId ):
-        request = self._describeProcess( processId )
-        return execRequest( request )
+        requestParms = self._describeProcessDict( processId )
+        return execRequest( self._host_address, requestParms )
 
 
