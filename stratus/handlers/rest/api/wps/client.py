@@ -70,8 +70,6 @@ class RestTask(Task):
         return cacheDir
 
     def getResult( self, **kwargs ) ->  Optional[TaskResult]:
-        timeout = kwargs.get("timeout")
-        block = kwargs.get("block")
         raiseErrors = kwargs.get("raiseErrors")
         type = kwargs.get("type","file")
         self.status()
@@ -81,13 +79,14 @@ class RestTask(Task):
             self.status()
             self.logger.info( "*STATUS: "  +  str(self._status) )
         if self._status == Status.ERROR:
-            self.logger( " *** Remote execution error: " + self._statMessage )
+            self.logger.error( " *** Remote execution error: " + self._statMessage )
             if raiseErrors: raise Exception( self._statMessage )
             return None
         elif self._status == Status.COMPLETED:
             if type == "file":
                 filePath = self.cacheDir + "/" + self.fileUrl.split('=')[-1] + ".nc"
                 self.wpsRequest.downloadFile( filePath, self.fileUrl )
+                self.logger.info( f"Downloaded result file using '{self.fileUrl}' to '{filePath}'")
                 return TaskResult( dict( file=filePath) )
             else:
                 xarray = self.wpsRequest.downloadData(self.dataUrl)

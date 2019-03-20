@@ -74,7 +74,13 @@ class WPSExecuteRequest:
 
     def downloadFile( self, filePath: str, fileUrl: str ):
         r = requests.get(fileUrl, allow_redirects=True)
-        open(filePath, 'wb').write(r.content)
+        contentType = r.headers['Content-Type']
+        if contentType == 'application/octet-stream':
+            open(filePath, 'wb').write(r.content)
+        elif contentType == 'application/json':
+            self.logger.info( "Got result for file download: " + str(r.json()) )
+        else:
+            self.logger.error("Got result with contentType: " + str(contentType))
 
     def downloadData( self, dataUrl: str ) -> xa.Dataset:
         r = requests.get( dataUrl, allow_redirects=True )

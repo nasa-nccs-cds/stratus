@@ -16,8 +16,7 @@ class RestAPI(RestAPIBase):
     def __init__( self, name: str, app: StratusAppBase, **kwargs ):
         RestAPIBase.__init__( self, name, app, **kwargs )
         self.jenv = Environment( loader=PackageLoader( 'stratus.handlers.rest.api.wps',  "templates" ), autoescape=select_autoescape(['html','xml']) )
-        self.templates = {}
-        self.templates['execute_response'] = self.jenv.get_template('execute_response.xml')
+        self.templates = { template:self.jenv.get_template(f'{template}.xml') for template in ["describe_process", "execute_response", "get_capabilities"] }
         self.dapRoute = kwargs.get( "dapRoute", None )
 
     def parseDatainputs(self, datainputs: str) -> Dict:
@@ -66,7 +65,7 @@ class RestAPI(RestAPIBase):
             url['data'] = f"{request.url_root}wps/data?rid={rid}"
             if self.dapRoute is not None:
                 url['dap'] = f"{self.dapRoute}/{rid}.nc"
-        return self.templates['execute_response'].render( dict(status=status, url=url) )
+        return self.render( 'execute_response', status=status, url=url )
 
     def _getCapabilitiesXml(self, capabilitiesData: Dict )-> str:
         manager = dict(name="Thomas Maxwell", position="EDAS Developer", email="thomas.maxwell@nasa.gov")
@@ -78,7 +77,11 @@ class RestAPI(RestAPIBase):
             for  kernel in module.kernels:
                 processes.append( kernel )
         print( "**SERVER = " + str(server) )
-        return self.templates['get_capabilities'].render( dict( server=server) )
+        return self.render('get_capabilities', server=server )
+
+    def render(self, template: str, **kwargs ):
+        assert template in self.templates, f"Unknown template {template}, existing templates: {str(self.templates.keys())}"
+        return self.templates[template].render( kwargs )
 
     def getCapabilities(self, ctype: str ) -> flask.Response:
         response: Dict = self.app.core.getCapabilities(ctype)
@@ -122,12 +125,14 @@ class RestAPI(RestAPIBase):
             task: Task = self.tasks.get( rid, None )
             assert task is not None, f"Can't find task for rid {rid}, current tasks: {str(list(self.tasks.keys()))}"
             result: Optional[TaskResult] = task.getResult()
+            self.logger.info(f"Got File Request for task rid={rid}, result = {str(result)}")
             if result is None:
                 return self.jsonResponse( dict(status="executing", id=task.rid) )
             else:
                 dataset: Optional[xa.Dataset] = result.popDataset()
                 if dataset is None: return self.getErrorResponse( "No more results available")
-                path = "/tmp/" + UID.randomId(8) + ".nc"
+                path = f"/tmp/{rid}.nc"
+                self.logger.info(f"Saving temp file to {path}")
                 dataset.to_netcdf( path, mode="w", format='NETCDF4' )
                 with open(path, mode='rb') as ncfile:
                     response = make_response( ncfile.read() )
@@ -135,6 +140,7 @@ class RestAPI(RestAPIBase):
                     response.headers.set('Content-Format', 'netcdf-file' )
                     response.headers.set('Results-Remaining', str(result.size()) )
                     if result.empty(): self.removeTask( rid )
+                self.logger.info(f"Returning file response.")
                 return response
 
         @bp.route('/data', methods=['GET'])
