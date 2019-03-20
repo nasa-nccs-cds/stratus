@@ -1,7 +1,7 @@
 from stratus.handlers.core import StratusCore
 from stratus_endpoint.handler.base import Task
 
-settings = dict( stratus = dict( type="rest", API="wps", host_address="https://edas.nccs.nasa.gov/wps/cwt" ) )
+settings = dict( stratus = dict( type="rest", API="wps", host_address="http://127.0.0.1:5000/wps/cwt" ) )
 core = StratusCore(settings)
 client = core.getClient()
 

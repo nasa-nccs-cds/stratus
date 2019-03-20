@@ -10,6 +10,7 @@ class StratusCore(StratusCoreBase):
     def __init__(self, configSpec: Union[str,Dict[str,Dict]], **kwargs ):
         StratusCoreBase.__init__(self, configSpec, **kwargs )
         self.handlers = Handlers( self.config )
+        self.service = None
 
     def getClients( self, epa: str = None ) -> List[StratusClient]:
         return self.handlers.getClients( epa )
@@ -17,7 +18,9 @@ class StratusCore(StratusCoreBase):
     def getClient(self) -> StratusClient:
         service = self.handlers.getApplicationHandler()
         assert service is not None, "Can't find [stratus] handler: missing configuration?"
-        return service.client(True)
+        client = service.client()
+        client.activate()
+        return client
 
     def getApplication( self ) -> StratusAppBase:
         service = self.handlers.getApplicationHandler()

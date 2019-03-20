@@ -179,7 +179,7 @@ class StratusFactory:
         assert htype1 == htype, "Sanity check of Handler type failed: {} vs {}".format(htype1,htype)
 
     @abc.abstractmethod
-    def client( self, gateway=False ) -> StratusClient: pass
+    def client( self ) -> StratusClient: pass
 
     @abc.abstractmethod
     def app(self, core: StratusCoreBase ) -> StratusAppBase: pass

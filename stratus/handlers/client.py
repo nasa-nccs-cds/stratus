@@ -38,17 +38,19 @@ class StratusClient:
         self.parms = kwargs
         self.priority: float = float( self.parm( "priority", "0" ) )
         self.active = False
-        self._gateway = kwargs.get( "gateway", False )
-        self._endpointSpecs: List[EndpointSpec] = []
+        self._endpointSpecs: List[EndpointSpec] = None
         self.clients = { self.cid }
 
+    def activate(self):
+        self.active = True
+
     def init( self ):
-        if not self._gateway:
+        if self._endpointSpecs is None:
             endPointData = self.capabilities("epas")
             if "error" in endPointData: raise Exception( "Error accessing endpoint data: " + endPointData["message"] )
             self.logger.info( "EndpointSpecs: " + str(endPointData))
             self._endpointSpecs = [ EndpointSpec(epaSpec) for epaSpec in endPointData["epas"] ]
-        self.active = True
+            self.activate()
 
     @abc.abstractmethod
     @stratusrequest
@@ -62,9 +64,11 @@ class StratusClient:
 
     @property
     def endpointSpecs(self) -> List[str]:
+        self.init()
         return [str(eps) for eps in self._endpointSpecs]
 
     def handles(self, epa: str, **kwargs ) -> bool:
+        self.init()
         for endpointSpec in self._endpointSpecs:
             if endpointSpec.handles( epa, **kwargs ): return True
         return False

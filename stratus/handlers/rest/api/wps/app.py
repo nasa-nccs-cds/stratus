@@ -54,6 +54,10 @@ class RestAPI(RestAPIBase):
         else: raise Exception( "Unknown status: " + status )
         return flask.Response( response=responseXml, status=400, mimetype="application/xml" )
 
+    def getErrorResponse(self, message, code=400 ) -> flask.Response:
+        json_content = json.dumps( dict(status="error", message=message) )
+        return flask.Response(response=json_content, status=code, mimetype="application/json")
+
     def _getStatusXml(self, status: str, message: str, rid: str, addDataRefs = True) -> str :
         status = dict( tag=status, message=message )
         url = dict( status=f"{request.url_root}wps/status?rid={rid}" )
@@ -121,14 +125,16 @@ class RestAPI(RestAPIBase):
             if result is None:
                 return self.jsonResponse( dict(status="executing", id=task.rid) )
             else:
-                dataset: xa.Dataset = result.popDataset()
+                dataset: Optional[xa.Dataset] = result.popDataset()
+                if dataset is None: return self.getErrorResponse( "No more results available")
                 path = "/tmp/" + UID.randomId(8) + ".nc"
                 dataset.to_netcdf( path, mode="w", format='NETCDF4' )
                 with open(path, mode='rb') as ncfile:
                     response = make_response( ncfile.read() )
                     response.headers.set('Content-Type', 'application/octet-stream')
                     response.headers.set('Content-Format', 'netcdf-file' )
-                    self.removeTask( rid )
+                    response.headers.set('Results-Remaining', str(result.size()) )
+                    if result.empty(): self.removeTask( rid )
                 return response
 
         @bp.route('/data', methods=['GET'])
@@ -140,10 +146,13 @@ class RestAPI(RestAPIBase):
             if result is None:
                 return self.jsonResponse( dict(status="executing", rid=task.rid) )
             else:
-                dataset: xa.Dataset = result.popDataset()
+                dataset: Optional[xa.Dataset] = result.popDataset()
+                if dataset is None: return self.getErrorResponse( "No more results available")
+                self.logger.info( "Downloading pickled xa.Dataset, attrs: " + str(dataset.attrs) )
                 response = make_response( pickle.dumps( dataset ) )
                 response.headers.set('Content-Type', 'application/octet-stream')
                 response.headers.set('Content-Format', 'xarray-dataset' )
+                response.headers.set('Results-Remaining', str(result.size()))
                 if result.empty(): self.removeTask( rid )
                 return response
 

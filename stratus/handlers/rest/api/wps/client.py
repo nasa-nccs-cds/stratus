@@ -120,7 +120,6 @@ if __name__ == "__main__":
 
     core = StratusCore( SETTINGS_FILE )
     client = core.getClient()
-    client.init()
 
     local_request = dict(
         domain=[{"name": "d0", "lat": {"start": 50, "end": 55, "system": "values"},
