@@ -71,7 +71,7 @@ class RestTask(Task):
 
     def getResult( self, **kwargs ) ->  Optional[TaskResult]:
         raiseErrors = kwargs.get("raiseErrors")
-        type = kwargs.get("type","data")
+        type = kwargs.get("type","file")
         self.status()
         self.logger.info( f"GetResult[{type}]-> STATUS: {self._status}, args: {kwargs}" )
         while self._status == Status.IDLE or self._status == Status.EXECUTING:

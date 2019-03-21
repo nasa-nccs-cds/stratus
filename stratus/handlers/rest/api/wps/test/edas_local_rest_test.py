@@ -15,7 +15,7 @@ local_request = dict(
 )
 
 task: Task = client.request(local_request)
-result = task.getResult()
+result = task.getResult(type="data")
 print( "Got Result: " + str(result.header) )
 for data_array in result.data:
     print( "Got Data array: " + str(data_array.values() ) )
