@@ -120,7 +120,7 @@ class RestAPI(RestAPIBase):
             return self.executeResponse( dict( status=Status.str(status), message ="", rid=rid ) )
 
         @bp.route('/file', methods=['GET'])
-        def result():
+        def file_result():
             rid = self.getParameter("rid")
             task: Task = self.tasks.get( rid, None )
             assert task is not None, f"Can't find task for rid {rid}, current tasks: {str(list(self.tasks.keys()))}"
@@ -144,7 +144,7 @@ class RestAPI(RestAPIBase):
                 return response
 
         @bp.route('/data', methods=['GET'])
-        def result():
+        def data_result():
             rid = self.getParameter("rid")
             task: Task = self.tasks.get( rid, None )
             assert task is not None, f"Can't find task for rid {rid}, current tasks: {str(list(self.tasks.keys()))}"

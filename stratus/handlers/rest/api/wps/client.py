@@ -71,9 +71,9 @@ class RestTask(Task):
 
     def getResult( self, **kwargs ) ->  Optional[TaskResult]:
         raiseErrors = kwargs.get("raiseErrors")
-        type = kwargs.get("type","file")
+        type = kwargs.get("type","data")
         self.status()
-        self.logger.info( "*STATUS: " +  str(self._status) )
+        self.logger.info( f"GetResult[{type}]-> STATUS: {self._status}, args: {kwargs}" )
         while self._status == Status.IDLE or self._status == Status.EXECUTING:
             time.sleep(1)
             self.status()
@@ -90,6 +90,7 @@ class RestTask(Task):
                 return TaskResult( dict( file=filePath) )
             else:
                 xarray = self.wpsRequest.downloadData(self.dataUrl)
+                self.logger.info(f"Downloaded result data using '{self.dataUrl}'")
                 return TaskResult( { **self._parms, "rid": self.rid, "cid": self.cid }, [xarray] )
 
     def status(self) ->  Status:

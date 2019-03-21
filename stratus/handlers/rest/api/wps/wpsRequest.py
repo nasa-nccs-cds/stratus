@@ -75,16 +75,16 @@ class WPSExecuteRequest:
     def downloadFile( self, filePath: str, fileUrl: str ):
         r = requests.get(fileUrl, allow_redirects=True)
         contentType = r.headers['Content-Type']
-        if contentType == 'application/octet-stream':
-            open(filePath, 'wb').write(r.content)
-        elif contentType == 'application/json':
-            self.logger.info( "Got result for file download: " + str(r.json()) )
-        else:
-            self.logger.error("Got result with contentType: " + str(contentType))
+        if   contentType == 'application/octet-stream': open(filePath, 'wb').write(r.content)
+        elif contentType == 'application/json':         self.logger.info( "Got result for file download: " + str(r.json()) )
+        else:                                           self.logger.error("Got result with contentType: " + str(contentType))
 
     def downloadData( self, dataUrl: str ) -> xa.Dataset:
         r = requests.get( dataUrl, allow_redirects=True )
-        return pickle.loads( r.content, encoding="bytes" )
+        contentType = r.headers['Content-Type']
+        if   contentType == 'application/octet-stream': return pickle.loads( r.content, encoding="bytes" )
+        elif contentType == 'application/json':         self.logger.info( "Got result for data download: " + str(r.json()) )
+        else:                                           self.logger.error("Got result with contentType: " + str(contentType))
 
     def getCapabilities( self, type="processes" ) -> Dict:
         if type == "epas":
