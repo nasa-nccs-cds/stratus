@@ -76,6 +76,7 @@ class WPSExecuteRequest:
         r = requests.get(fileUrl, allow_redirects=True)
         contentType = r.headers['Content-Type']
         if   contentType == 'application/octet-stream': open(filePath, 'wb').write(r.content)
+        elif contentType == 'application/x-netcdf':     open(filePath, 'wb').write(r.content)
         elif contentType == 'application/json':         self.logger.info( "Got result for file download: " + str(r.json()) )
         else:                                           self.logger.error("Got result with contentType: " + str(contentType))
 
@@ -83,6 +84,7 @@ class WPSExecuteRequest:
         r = requests.get( dataUrl, allow_redirects=True )
         contentType = r.headers['Content-Type']
         if   contentType == 'application/octet-stream': return pickle.loads( r.content, encoding="bytes" )
+        elif contentType == 'application/x-netcdf':     return pickle.loads(r.content, encoding="bytes")
         elif contentType == 'application/json':         self.logger.info( "Got result for data download: " + str(r.json()) )
         else:                                           self.logger.error("Got result with contentType: " + str(contentType))
 
