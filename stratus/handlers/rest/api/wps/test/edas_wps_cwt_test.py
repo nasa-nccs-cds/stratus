@@ -19,7 +19,7 @@ edas_server_request = dict(
              "lon": {"start": 40, "end": 42, "system": "values"},
              "time": {"start": "1980-01-01", "end": "1981-12-31", "crs": "timestamps"}}],
     input=[{"uri": f"collection://{collection}", "name": f"{variable}:v0", "domain": "d0"}],
-    operation=[{'name': "xarray.ave", 'axes': "t", "input": "v0"}]
+    operation=[{'name': "edas:xarray.ave", 'axes': "t", "input": "v0"}]
 )
 
 task: Task = client.request(edas_server_request)

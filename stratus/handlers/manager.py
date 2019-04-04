@@ -42,9 +42,17 @@ class Handlers:
         assert result is not None, "Attempt to access unknown handler in Handlers: {} ".format( key )
         return result
 
-    def getClients( self, epa: str = None, **kwargs ) -> List[StratusClient]:
+    def getClients( self, epas: List[str] = None, **kwargs ) -> List[StratusClient]:
         assert self.configSpec is not None, "Error, the handlers have not yet been initialized"
-        return [service.client() for service in self._handlers.values() if (epa is None or service.client().handles( epa, **kwargs))]
+        clients = []
+        for service in self._handlers.values():
+            if epas == None:
+                clients.append( service.client() )
+            else:
+                for epa in epas:
+                    if service.client().handles( epa, **kwargs):
+                        clients.append( service.client() )
+        return clients
 
     def getEpas(self) -> List[str]:
         epas = []

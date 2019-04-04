@@ -1,5 +1,5 @@
 import os, json, yaml, abc
-from typing import List, Union, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Set, Tuple
+from typing import List, Union, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Set, Tuple, Iterator
 from stratus.util.config import Config, StratusLogger, UID
 from stratus.handlers.client import StratusClient
 from enum import Enum
@@ -7,25 +7,44 @@ from stratus_endpoint.handler.base import Task, Status
 from multiprocessing import Process as SubProcess
 import sys
 
+class Op:
+    def __init__( self, params: Dict = None ):
+        self.params: Dict = params if params else {}
+        self.id = self.get( "id", UID.randomId( 6 ) )
+        name_toks = self.get("name").split(":")
+        self.name: str = name_toks[-1]
+        self.epas: List[str]  = name_toks[:-1]
+        input_parm = self.get("input")
+        self.inputs: List[str] = input_parm.split(",") if isinstance( input_parm, str ) else input_parm
+
+    def get(self, name: str, default = None ) -> str:
+        parm = self.params.get( name, default )
+        if parm is None: raise Exception( "Missing required parameter in operation: " + name )
+        return parm
+
+    def __getitem__( self, key: str ) -> str:
+        result =  self.params.get( key, None )
+        assert result is not None, f"Missing required parameter in operation: {key} "
+        return result
 
 class OpSet():
 
     def __init__( self, client: StratusClient ):
         self.logger = StratusLogger.getLogger()
-        self.ops: Dict[str,Dict] = {}
+        self.ops: Dict[str,Op] = {}
         self.client: StratusClient = client
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Op]:
         return self.ops.values().__iter__()
 
-    def add(self, op: Dict):
+    def add(self, op: Op):
         self.ops[ op["id"] ] = op
 
-    def new(self):
+    def new(self) -> "OpSet":
         return OpSet(self.client)
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self.client.name
 
     def remove(self, opIds: List[str]):
@@ -46,8 +65,15 @@ class OpSet():
         return "C({}):[{}]".format( self.client, ",".join( [ op for op in self.ops.keys() ] ) )
 
     def getFilteredRequest(self, request: Dict ) -> Dict:
-        filtered_request = dict( request )
-        filtered_request["operations"] = list( self.ops.values() )
+        operations = []
+        filtered_request = {}
+        for op in self.ops.values():
+            operations.append( op.params )
+            for epa in op.epas:
+                for key,value in request.items():
+                    if epa in key.split(":"):
+                        filtered_request[key] = value
+        filtered_request["operations"] = operations
         return filtered_request
 
     def submit( self, request: Dict ) -> Task:
@@ -100,7 +126,7 @@ class StratusCoreBase:
         return caps
 
     @abc.abstractmethod
-    def getClients( self, epa=None ) -> List[StratusClient]: pass
+    def getClients( self, epas: List[str] = None ) -> List[StratusClient]: pass
 
 class StratusAppBase:
     __metaclass__ = abc.ABCMeta
@@ -138,11 +164,9 @@ class StratusAppBase:
         ops = request.get("operation")
         assert ops is not None, "Missing 'operation' parameter in request: " + str( request )
         clientOpsets: Dict[str,OpSet] = dict()
-        for op in ops:
-            if not "id" in op: op["id"] = UID.randomId( 6 )
-            epa = op.get("epa", op.get("name",None ) )
-            assert epa is not None, f"Operation must have an 'epa' or a 'name' parameter: {op}"
-            clients = self.core.getClients( epa )
+        for opDict in ops:
+            op = Op( opDict )
+            clients = self.core.getClients( op.epas )
             assert len(clients) > 0, f"Can't find a client to process the operation': {op}"
             for client in clients:
                opSet = clientOpsets.setdefault( client.name, OpSet(client) )

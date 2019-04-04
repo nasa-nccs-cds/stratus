@@ -12,8 +12,8 @@ class StratusCore(StratusCoreBase):
         self.handlers = Handlers( self.config )
         self.service = None
 
-    def getClients( self, epa: str = None ) -> List[StratusClient]:
-        return self.handlers.getClients( epa )
+    def getClients( self, epas: List[str] = None ) -> List[StratusClient]:
+        return self.handlers.getClients( epas )
 
     def getClient(self) -> StratusClient:
         service = self.handlers.getApplicationHandler()
