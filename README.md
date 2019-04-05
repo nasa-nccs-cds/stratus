@@ -15,11 +15,11 @@ ___
 
 ### Installation
 
-Recommended: create and activate a python3 venv:
+##### Conda environment setup
+
 ```
-        >> python3 -m venv /path/to/ENV
-        >> source /path/to/ENV/bin/activate
-```
+ >> conda create -n stratus -c conda-forge python=3.6 libnetcdf netCDF4 pyyaml six xarray
+ ```
 
 Build Stratus installation by installing the *stratus-endpoint* and *stratus* packages:
 ```

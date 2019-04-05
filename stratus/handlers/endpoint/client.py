@@ -1,5 +1,6 @@
 from stratus.handlers.client import StratusClient, stratusrequest
 from stratus_endpoint.handler.base import Task, Status, Endpoint
+from stratus_endpoint.handler.test import TestEndpoint
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple
 import importlib, traceback
 
@@ -34,3 +35,5 @@ class DirectClient(StratusClient):
             self.logger.error(err_msg)
             if self.endpoint is not None:
                 self.endpoint.shutdown()
+
+

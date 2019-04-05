@@ -77,7 +77,7 @@ class StratusApp(StratusAppBase):
         self.apis = []
         StratusAppBase.__init__( self, core )
         self.flask_parms = self.getConfigParms('flask')
-        self.flask_parms['SQLALCHEMY_DATABASE_URI'] = self.flask_parms['DATABASE_URI']
+        self.flask_parms['SQLALCHEMY_DATABASE_URI'] = self.flask_parms.get('DATABASE_URI','sqlite:////tmp/test.db')
         self.app = self.create_app( self.flask_parms )
         self.db = SQLAlchemy( self.app )
         try:            os.makedirs(self.app.instance_path)
