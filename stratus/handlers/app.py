@@ -1,5 +1,5 @@
 import os, json, yaml, abc
-from typing import List, Union, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Set, Tuple, Iterator
+from typing import List, Union, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Set, Tuple, Iterator, Iterable
 from stratus.util.config import Config, StratusLogger, UID
 from stratus.handlers.client import StratusClient
 from enum import Enum
@@ -34,19 +34,23 @@ class Op:
 
 class OpSet():
 
-    def __init__( self, client: StratusClient ):
+    def __init__( self, ops: Iterable[Op] ):
         self.logger = StratusLogger.getLogger()
-        self.ops: Dict[str,Op] = {}
-        self.client: StratusClient = client
+        self.ops: Dict[str,Op] = { op.id: op for op in ops }
 
     def __iter__(self) -> Iterator[Op]:
         return self.ops.values().__iter__()
 
+    def __hash__(self):
+        return hash(repr(self))
+
     def add(self, op: Op):
         self.ops[op.id] = op
 
-    def new(self) -> "OpSet":
-        return OpSet(self.client)
+    def __repr__(self):
+        keys = list(self.ops.keys())
+        keys.sort()
+        return "-".join(keys)
 
     def linkDependencies(self):
         for op in self.ops.values():
@@ -54,10 +58,6 @@ class OpSet():
                 for op1 in self.ops.values():
                     if op1.result ==  vid:
                         op.addDependency( op1 )
-
-    @property
-    def name(self) -> str:
-        return self.client.name
 
     def remove(self, opIds: List[str]):
         for oid in opIds:
@@ -67,14 +67,11 @@ class OpSet():
     def __len__(self):
         return self.ops.__len__()
 
-    def __eq__(self, other: "OpSet"):
+    def __eq__(self, other: "ClientOpSet"):
         return len( self.ops ) == len( other )
 
-    def __lt__(self, other: "OpSet"):
+    def __lt__(self, other: "ClientOpSet"):
         return len( self.ops ) < len( other )
-
-    def __str__(self):
-        return "C({}):[{}]".format( self.client, ",".join( [ op for op in self.ops.keys() ] ) )
 
     def getFilteredRequest(self, request: Dict ) -> Dict:
         operations = []
@@ -88,6 +85,22 @@ class OpSet():
                         filtered_request[key] = value
         filtered_request["operations"] = operations
         return filtered_request
+
+class ClientOpSet(OpSet):
+
+    def __init__( self, client: StratusClient, **kwargs ):
+        OpSet.__init__( self, kwargs.get( "ops", [] ) )
+        self.client: StratusClient = client
+
+    def new(self) -> "ClientOpSet":
+        return ClientOpSet(self.client)
+
+    @property
+    def name(self) -> str:
+        return self.client.name
+
+    def __str__(self):
+        return "C({}):[{}]".format( self.client, ",".join( [ op for op in self.ops.keys() ] ) )
 
     def submit( self, request: Dict ) -> Task:
         filtered_request =  self.getFilteredRequest(request)
@@ -148,11 +161,11 @@ class StratusAppBase:
         self.logger = StratusLogger.getLogger()
         self.core = _core
 
-    def distributeOps(self,  clientOpsets: Dict[str, OpSet] ) -> List[OpSet]:
+    def distributeOps(self, clientOpsets: Dict[str, ClientOpSet]) -> Set[ClientOpSet]:
         # Distributes ops to clients while maximizing locality of operations
-        filtered_opsets: List[OpSet] = []
+        filtered_opsets: Set[ClientOpSet] = set()
         processed_ops: List[str] = []
-        sorted_opsets: List[OpSet] = list( sorted( clientOpsets.items(), reverse=True, key=lambda x: x[1] ) )
+        sorted_opsets: List[ClientOpSet] = list(sorted(clientOpsets.items(), reverse=True, key=lambda x: x[1]))
         while len( sorted_opsets ):
             cid, base_opset = sorted_opsets.pop(0)
             new_opset = base_opset.new()
@@ -160,29 +173,31 @@ class StratusAppBase:
                 if op.id not in processed_ops:
                     processed_ops.append( op.id )
                     new_opset.add( op )
-                if len( new_opset ) > 0: filtered_opsets.append( new_opset )
+            if len( new_opset ) > 0:
+                filtered_opsets.add( new_opset )
             for cid, opset in sorted_opsets:
                 opset.remove( processed_ops )
             sorted_opsets = list( sorted( sorted_opsets, reverse=True, key=lambda x: x[1] ) )
         return filtered_opsets
 
     def processWorkflow( self, request: Dict ) -> Dict[str,Task]:
-        clientOpsets: Dict[str, OpSet] = self.geClientOpsets(request)
+        clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
         distributed_opSets = self.distributeOps( clientOpsets )
         responses = { opset.name: opset.submit( request ) for opset in distributed_opSets }
         return responses
 
-    def geClientOpsets(self, request: Dict ) -> Dict[str,OpSet]:
+    def geClientOpsets(self, request: Dict ) -> Dict[str, ClientOpSet]:
         # Returns map of client id to list of ops in request that can be handled by that client
         ops = request.get("operation")
         assert ops is not None, "Missing 'operation' parameter in request: " + str( request )
-        clientOpsets: Dict[str,OpSet] = dict()
-        ops = [ Op( opDict ) for opDict in ops ]
+        clientOpsets: Dict[str, ClientOpSet] = dict()
+        ops = OpSet( [ Op( opDict ) for opDict in ops ] )
+        ops.linkDependencies()
         for op in ops:
             clients = self.core.getClients( op.epas )
             assert len(clients) > 0, f"Can't find a client to process the operation': {op.epas}"
             for client in clients:
-               opSet = clientOpsets.setdefault( client.name, OpSet(client) )
+               opSet = clientOpsets.setdefault(client.name, ClientOpSet(client))
                opSet.add( op )
         return clientOpsets
 
@@ -246,5 +261,5 @@ if __name__ == "__main__":
                     "operation":   [ { "name": "test:ave",  "input": "v1", "axis": "yt", "result": "v1ave" },
                                      { "name": "test:diff", "input": ["v1", "v1ave"] } ] }
 
-    clientOpsets: Dict[str, OpSet] = app.geClientOpsets(request)
+    clientOpsets: Dict[str, ClientOpSet] = app.geClientOpsets(request)
     distributed_opSets = app.distributeOps(clientOpsets)
