@@ -106,7 +106,7 @@ class ClientOpSet(OpSet):
         return [ self.filter( subgraph_iops ) for subgraph_iops in subgraphs ]
 
     def copy(self) -> "ClientOpSet":
-        return ClientOpSet( self.client, ops=self.ops.values(), graph = self.graph )
+        return ClientOpSet( self.client, ops=self.ops.values(), graph = copy.deepcopy(self.graph) )
 
     def new(self) -> "ClientOpSet":
         return ClientOpSet(self.client)
