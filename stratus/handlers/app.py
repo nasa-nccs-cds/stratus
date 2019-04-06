@@ -77,7 +77,7 @@ class StratusAppBase:
             for cid, opset in sorted_opsets:
                 opset.remove( processed_ops )
             sorted_opsets = list( sorted( sorted_opsets, reverse=True, key=lambda x: x[1] ) )
-        distributed_opsets = [ opset.connectedComponents() for opset in filtered_opsets ]
+        distributed_opsets = [opset.connectedOpsets() for opset in filtered_opsets]
         return itertools.chain.from_iterable(distributed_opsets)
 
     def processWorkflow( self, request: Dict ) -> Dict[str,Task]:

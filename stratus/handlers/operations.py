@@ -2,8 +2,14 @@ import os, json, yaml, abc, copy, sys
 from typing import List, Union, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Set, Tuple, Iterator, Iterable
 from stratus.util.config import Config, StratusLogger, UID
 from stratus.handlers.client import StratusClient
+from decorator import decorator
 from stratus_endpoint.handler.base import Task, Status
 import networkx as nx
+
+@decorator
+def graphop( func, *args, **kwargs ):
+    args[0].connect()
+    return func( *args, **kwargs)
 
 class Op:
     def __init__( self, params: Dict = None ):
@@ -57,12 +63,20 @@ class OpSet():
         keys.sort()
         return "-".join(keys)
 
-    def linkDependencies(self):
+    def connect(self):
         for op in self.ops.values():
             for vid in op.inputs:
                 for op1 in self.ops.values():
                     if op1.result ==  vid:
                         self.addDependency( op.id, op1.id )
+
+    @graphop
+    def connectedComponents(self):
+        components = nx.weakly_connected_components(self.graph)
+        return [subgraph_iops for subgraph_iops in components]
+
+    def inputs(self):
+        pass
 
     def remove(self, opIds: List[str]):
         for oid in opIds:
@@ -99,10 +113,8 @@ class ClientOpSet(OpSet):
         OpSet.__init__( self,  **kwargs )
         self.client: StratusClient = client
 
-    def connectedComponents(self) -> List["ClientOpSet"]:
-        self.linkDependencies()
-        components = nx.weakly_connected_components(self.graph)
-        subgraphs = [ subgraph_iops for subgraph_iops in components ]
+    def connectedOpsets(self) -> List["ClientOpSet"]:
+        subgraphs = self.connectedComponents()
         return [ self.filter( subgraph_iops ) for subgraph_iops in subgraphs ]
 
     def copy(self) -> "ClientOpSet":
@@ -127,3 +139,54 @@ class ClientOpSet(OpSet):
         filtered_request =  self.getFilteredRequest(request)
         self.logger.info( "Client {}: submit operations {}".format( self.client.name, str( filtered_request['operations'] ) ) )
         return self.client.request( filtered_request )
+
+class Workflow:
+
+    def __init__( self, **kwargs ):
+        self.logger = StratusLogger.getLogger()
+        self.opsets: Dict[str, OpSet] = {}
+        self.graph = kwargs.get( "graph", nx.DiGraph( ) )
+        for opset in kwargs.get( "opsets", [] ): self.add( opset )
+
+    def addDependency(self, src: str, dest: str ):
+        self.graph.add_edge( src, dest )
+        edges = self.graph.edges
+        return edges
+
+    def __iter__(self) -> Iterator[OpSet]:
+        return self.opsets.values().__iter__()
+
+    def __hash__(self):
+        return hash(repr(self))
+
+    def ids(self) -> Set[str]:
+        return set( self.opsets.keys() )
+
+    def add(self, op: OpSet ):
+        opsid = repr(op)
+        self.opsets[ opsid ] = op
+        self.graph.add_node( opsid )
+
+    def __repr__(self):
+        keys = list(self.opsets.keys())
+        keys.sort()
+        return "_".join(keys)
+
+    def linkDependencies(self):
+        for op in self.opsets.values():
+            for vid in op.inputs:
+                for op1 in self.opsets.values():
+                    if op1.result ==  vid:
+                        self.addDependency( op.id, op1.id )
+
+    def remove(self, opsIds: List[str]):
+        for opsid in opsIds:
+            try:
+                del self.opsets[ opsid ]
+                self.graph.remove_node( opsid )
+            except: pass
+
+    def __eq__(self, other: "Workflow"):
+        return repr( self ) == repr( other )
+
+
