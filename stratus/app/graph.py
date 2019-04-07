@@ -42,7 +42,7 @@ class DependencyGraph():
         self.logger = StratusLogger.getLogger()
         self.nodes: Dict[str, DGNode] = {}
         self.graph = kwargs.get( "graph", nx.DiGraph( ) )
-        for op in kwargs.get( "ops", [] ): self.add( op )
+        for node in kwargs.get( "nodes", [] ): self.add( node )
         self._connected = False
 
     def addDependency(self, srcId: str, destId: str ):
@@ -90,6 +90,14 @@ class DependencyGraph():
                 del self.nodes[ nid]
                 self.graph.remove_node( nid )
             except: pass
+
+    def copy(self):
+        return DependencyGraph( nodes=self.nodes.values(), graph = copy.deepcopy(self.graph) )
+
+    def filter(self, iops: Set[str] ) -> "DependencyGraph":
+        newDepGraph = self.copy()
+        newDepGraph.remove( list( self.ids() ^  iops ) )
+        return newDepGraph
 
     def __len__(self):
         return self.nodes.__len__()
