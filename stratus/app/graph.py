@@ -25,17 +25,20 @@ class Connection:
         return f"C[{self.id}:{self.srcNodeId}->{self.destNodeId}]"
 
 class DGNode:
-    __metaclass__ = abc.ABCMeta
 
-    def __init__( self, **kwargs ):
+    def __init__( self, inputs: List[str], outputs: List[str], **kwargs ):
         self.params: Dict[str,Any] = kwargs
         self.id = self.get( "id", UID.randomId( 6 ) )
+        self._inputs = inputs
+        self._outputs = outputs
 
     @abc.abstractmethod
-    def getInputs(self)-> List[str]: pass
+    def getInputs(self)-> List[str]:
+        return self._inputs
 
     @abc.abstractmethod
-    def getOutputs(self)-> List[str]: pass
+    def getOutputs(self)-> List[str]:
+        return self._outputs
 
     def get(self, name: str, default = None ) -> Any:
         parm = self.params.get( name, default )
@@ -46,17 +49,6 @@ class DGNode:
         result =  self.params.get( key, None )
         assert result is not None,f"Missing required parameter in DGNode {self.id}: {key}"
         return result
-
-class TestDGNode(DGNode):
-
-    def __init__( self, **kwargs ):
-        DGNode.__init__( self, **kwargs )
-
-    def getInputs(self)-> List[str]:
-        return self.get( "inputs", [] )
-
-    def getOutputs(self)-> List[str]:
-        return self.get( "outputs", [] )
 
 class DependencyGraph():
 
@@ -177,9 +169,11 @@ class DependencyGraph():
 
 if __name__ == "__main__":
     dgraph = DependencyGraph()
-    dgraph.add( TestDGNode( id="n0", inputs=[ "s0", "s1" ], outputs=[  "r1", "r2" ]) )
-    dgraph.add( TestDGNode( id="n1", inputs=[ "r1" ], outputs=["r11", "r12"]))
-    dgraph.add( TestDGNode( id="n2", inputs=[ "r2" ], outputs=["r21"]))
+    dgraph.add( DGNode( inputs=[ "s0", "s1" ], outputs=[  "r1", "r2" ], id="n0" ) )
+    dgraph.add( DGNode( inputs=[ "r1" ], outputs=["r11", "r12"], id="n1"))
+    dgraph.add( DGNode( inputs=[ "r2" ], outputs=["r21"], id="n2"))
+    dgraph.add( DGNode( inputs=["s3"], outputs=["r5"], id="n3"))
 
     print(dgraph.getInputs())
     print(dgraph.getOutputs())
+    print(dgraph.connectedComponents())
