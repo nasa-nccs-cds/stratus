@@ -1,5 +1,5 @@
 import copy, abc
-from typing import List, Dict, Set, Iterator
+from typing import List, Dict, Set, Iterator, Any
 from stratus.util.config import StratusLogger, UID
 from app.client import StratusClient
 from decorator import decorator
@@ -15,26 +15,35 @@ class DGNode:
     __metaclass__ = abc.ABCMeta
 
     def __init__( self, **kwargs ):
-        self.params: Dict = kwargs
+        self.params: Dict[str,Any] = kwargs
         self.id = self.get( "id", UID.randomId( 6 ) )
 
     @abc.abstractmethod
-    @property
     def inputs(self)-> List[str]: pass
 
     @abc.abstractmethod
-    @property
     def outputs(self)-> List[str]: pass
 
-    def get(self, name: str, default = None ) -> str:
+    def get(self, name: str, default = None ) -> Any:
         parm = self.params.get( name, default )
         if parm is None: raise Exception( f"Missing required parameter in DGNode {self.id}: {name}" )
         return parm
 
-    def __getitem__( self, key: str ) -> str:
+    def __getitem__( self, key: str ) -> Any:
         result =  self.params.get( key, None )
         assert result is not None,f"Missing required parameter in DGNode {self.id}: {key}"
         return result
+
+class TestDGNode(DGNode):
+
+    def __init__( self, **kwargs ):
+        DGNode.__init__( self, **kwargs )
+
+    def inputs(self)-> List[str]:
+        return self.get( "inputs ", [] )
+
+    def outputs(self)-> List[str]:
+        return self.get( "outputs ", [] )
 
 class DependencyGraph():
 
@@ -73,16 +82,11 @@ class DependencyGraph():
     def connect(self):
         if not self._connected:
             for dnode in self.nodes.values():
-                for iid in dnode.inputs:
+                for iid in dnode.inputs():
                     for snode in self.nodes.values():
                         if iid in snode.outputs:
                             self.addDependency( snode.id, dnode.id )
             self._connected = True
-
-    @graphop
-    def connectedComponents(self):
-        components = nx.weakly_connected_components(self.graph)
-        return [subgraph_iops for subgraph_iops in components]
 
     def remove(self, nids: List[str]):
         for nid in nids:
@@ -109,6 +113,11 @@ class DependencyGraph():
         return len(self.nodes) < len(other)
 
     @graphop
+    def connectedComponents(self):
+        components = nx.weakly_connected_components(self.graph)
+        return [subgraph_iops for subgraph_iops in components]
+
+    @graphop
     def predecessors( self, nid: str ):
         return self.graph.predecessors( nid )
 
@@ -124,3 +133,29 @@ class DependencyGraph():
     def has_successor( self, nid0: str,  nid1: str ):
         return self.graph.has_successor( nid0, nid1 )
 
+    @graphop
+    def inputs(self) -> List[str]:
+        ilist = []
+        for dnode in self.nodes.values():
+            for iid in dnode.inputs():
+                inlinks = self.predecessors( iid )
+                if len( inlinks ) == 0: ilist.append( iid )
+        return ilist
+
+    @graphop
+    def outputs(self) -> List[str]:
+        olist = []
+        for dnode in self.nodes.values():
+            for oid in dnode.outputs():
+                outlinks = self.successors( oid )
+                if len( outlinks ) == 0: olist.append( oid )
+        return olist
+
+if __name__ == "__main__":
+    dgraph = DependencyGraph()
+    dgraph.add( TestDGNode( id="n0", inputs="s0,s1", outputs=[  "r1", "r2" ]) )
+    dgraph.add( TestDGNode( id="n1", inputs=[ "r1" ], outputs=["r11", "r12"]))
+    dgraph.add( TestDGNode( id="n2", inputs=[ "r2" ], outputs=["r21"]))
+
+    print( dgraph.inputs() )
+    print( dgraph.outputs() )
