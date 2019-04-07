@@ -18,8 +18,8 @@ class Op(DGNode):
         self._inputs: List[str] = input_parm.split(",") if isinstance( input_parm, str ) else input_parm
         self._result = self.get( "result", UID.randomId( 6 ) )
 
-    def inputs(self)-> List[str]: return self._inputs
-    def outputs(self)-> List[str]: return [ self._result ]
+    def getInputs(self)-> List[str]: return self._inputs
+    def getOutputs(self)-> List[str]: return [self._result]
 
 class OpSet(DependencyGraph):
 
@@ -75,10 +75,10 @@ class WorkflowTask(DGNode):
         self._opset = opset
 
     @property
-    def inputs(self)-> List[str]: pass
+    def getInputs(self)-> List[str]: pass
 
     @property
-    def outputs(self)-> List[str]: pass
+    def getOutputs(self)-> List[str]: pass
 
 class Workflow(DependencyGraph):
 

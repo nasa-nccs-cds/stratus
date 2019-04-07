@@ -11,6 +11,19 @@ def graphop( func, *args, **kwargs ):
     args[0].connect()
     return func( *args, **kwargs)
 
+class Connection:
+    INCOMING = 0
+    OUTGOING = 1
+    ALL = 2
+
+    def __init__(self, id, srcNodeId, destNodeId ):
+        self.id = id
+        self.srcNodeId = srcNodeId
+        self.destNodeId = destNodeId
+
+    def __repr__(self):
+        return f"C[{self.id}:{self.srcNodeId}->{self.destNodeId}]"
+
 class DGNode:
     __metaclass__ = abc.ABCMeta
 
@@ -19,10 +32,10 @@ class DGNode:
         self.id = self.get( "id", UID.randomId( 6 ) )
 
     @abc.abstractmethod
-    def inputs(self)-> List[str]: pass
+    def getInputs(self)-> List[str]: pass
 
     @abc.abstractmethod
-    def outputs(self)-> List[str]: pass
+    def getOutputs(self)-> List[str]: pass
 
     def get(self, name: str, default = None ) -> Any:
         parm = self.params.get( name, default )
@@ -39,11 +52,11 @@ class TestDGNode(DGNode):
     def __init__( self, **kwargs ):
         DGNode.__init__( self, **kwargs )
 
-    def inputs(self)-> List[str]:
-        return self.get( "inputs ", [] )
+    def getInputs(self)-> List[str]:
+        return self.get( "inputs", [] )
 
-    def outputs(self)-> List[str]:
-        return self.get( "outputs ", [] )
+    def getOutputs(self)-> List[str]:
+        return self.get( "outputs", [] )
 
 class DependencyGraph():
 
@@ -54,10 +67,9 @@ class DependencyGraph():
         for node in kwargs.get( "nodes", [] ): self.add( node )
         self._connected = False
 
-    def addDependency(self, srcId: str, destId: str ):
+    def _addDependency(self, depId, srcId: str, destId: str ):
         if not self.graph.has_edge( srcId, destId ):
-            self.graph.add_edge( srcId, destId )
-            self._connected = False
+            self.graph.add_edge( srcId, destId, id=depId )
 
     def __iter__(self) -> Iterator[DGNode]:
         return self.nodes.values().__iter__()
@@ -72,7 +84,6 @@ class DependencyGraph():
         if node.id not in self.nodes.keys():
             self._connected = False
             self.nodes[node.id] = node
-            self.graph.add_node(node.id)
 
     def __repr__(self):
         keys = list(self.nodes.keys())
@@ -81,11 +92,13 @@ class DependencyGraph():
 
     def connect(self):
         if not self._connected:
+            self.graph.clear()
+            for nid in self.nodes.keys(): self.graph.add_node(nid)
             for dnode in self.nodes.values():
-                for iid in dnode.inputs():
+                for iid in dnode.getInputs():
                     for snode in self.nodes.values():
-                        if iid in snode.outputs:
-                            self.addDependency( snode.id, dnode.id )
+                        if iid in snode.getOutputs():
+                            self._addDependency( iid, snode.id, dnode.id  )
             self._connected = True
 
     def remove(self, nids: List[str]):
@@ -133,29 +146,40 @@ class DependencyGraph():
     def has_successor( self, nid0: str,  nid1: str ):
         return self.graph.has_successor( nid0, nid1 )
 
+    def getConnections( self, nid: str, ctype: int ) -> List[Connection]:
+        connections = []
+        if ctype == Connection.INCOMING: graph_edges = self.graph.in_edges(nid)
+        elif ctype == Connection.OUTGOING: graph_edges = self.graph.out_edges(nid)
+        elif ctype == Connection.ALL: graph_edges = self.graph.edges(nid)
+        else: raise Exception( "Unknown Connections type: {ctype}")
+        for edge_tup in graph_edges:
+            edata = self.graph.get_edge_data(*edge_tup)
+            connections.append( Connection( edata["id"], edge_tup[0], edge_tup[1] ) )
+        return connections
+
     @graphop
-    def inputs(self) -> List[str]:
+    def getInputs(self) -> List[Connection]:
         ilist = []
-        for dnode in self.nodes.values():
-            for iid in dnode.inputs():
-                inlinks = self.predecessors( iid )
-                if len( inlinks ) == 0: ilist.append( iid )
+        for nid,dnode  in self.nodes.items():
+            incoming_connection_ids = [ conn.id for conn in self.getConnections( nid, Connection.INCOMING ) ]
+            for iid in dnode.getInputs():
+                if iid not in incoming_connection_ids: ilist.append( Connection(iid,None,nid) )
         return ilist
 
     @graphop
-    def outputs(self) -> List[str]:
+    def getOutputs(self) -> List[Connection]:
         olist = []
-        for dnode in self.nodes.values():
-            for oid in dnode.outputs():
-                outlinks = self.successors( oid )
-                if len( outlinks ) == 0: olist.append( oid )
+        for nid,dnode  in self.nodes.items():
+            outgoing_connection_ids = [ conn.id for conn in self.getConnections( nid, Connection.OUTGOING ) ]
+            for oid in dnode.getOutputs():
+                if oid not in outgoing_connection_ids: olist.append( Connection(oid,nid,None) )
         return olist
 
 if __name__ == "__main__":
     dgraph = DependencyGraph()
-    dgraph.add( TestDGNode( id="n0", inputs="s0,s1", outputs=[  "r1", "r2" ]) )
+    dgraph.add( TestDGNode( id="n0", inputs=[ "s0", "s1" ], outputs=[  "r1", "r2" ]) )
     dgraph.add( TestDGNode( id="n1", inputs=[ "r1" ], outputs=["r11", "r12"]))
     dgraph.add( TestDGNode( id="n2", inputs=[ "r2" ], outputs=["r21"]))
 
-    print( dgraph.inputs() )
-    print( dgraph.outputs() )
+    print(dgraph.getInputs())
+    print(dgraph.getOutputs())
