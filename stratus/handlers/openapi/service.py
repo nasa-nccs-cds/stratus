@@ -1,7 +1,7 @@
 from stratus.handlers.base import Handler
-from stratus.handlers.client import StratusClient
+from app.client import StratusClient
 from .client import OpenApiClient
-import sys, inspect, os
+import os
 
 class ServiceHandler( Handler ):
 

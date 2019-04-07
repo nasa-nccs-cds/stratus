@@ -1,13 +1,12 @@
 from connexion.resolver import Resolver
 from connexion.operations import AbstractOperation
-from typing import *
 import traceback
 from flask import Response
 import connexion, json
 from functools import partial
 from flask_sqlalchemy import SQLAlchemy
-from stratus.handlers.core import StratusCore
-from stratus.handlers.app import StratusAppBase
+from app.core import StratusCore
+from app.base import StratusAppBase
 
 class StratusResolver(Resolver):
 

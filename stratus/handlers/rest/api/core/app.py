@@ -1,6 +1,5 @@
 from flask import request, Blueprint, make_response
 from stratus_endpoint.handler.base import Task, TaskResult
-from stratus.handlers.client import StratusClient
 import pickle
 from typing import *
 from stratus.handlers.rest.app import RestAPIBase

@@ -1,10 +1,10 @@
 import os, json, yaml, abc, itertools
-from typing import List, Union, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Set, Tuple, Iterator, Iterable
-from stratus.util.config import Config, StratusLogger, UID
-from stratus.handlers.client import StratusClient
-from stratus_endpoint.handler.base import Task, Status
+from typing import List, Union, Dict, Set, Iterator
+from stratus.util.config import Config, StratusLogger
+from app.client import StratusClient
+from stratus_endpoint.handler.base import Task
 from multiprocessing import Process as SubProcess
-from stratus.handlers.operations import ClientOpSet, Op, OpSet
+from app.operations import ClientOpSet, Op, OpSet
 
 class StratusCoreBase:
     HERE = os.path.dirname(__file__)
@@ -148,7 +148,7 @@ class StratusFactory:
 
 
 if __name__ == "__main__":
-    from stratus.handlers.core import StratusCore
+    from app.core import StratusCore
     from stratus_endpoint.handler.base import Task
 
     settings = dict( stratus=dict( type="zeromq"), edas=dict(type="test", work_time=2.0 ) )

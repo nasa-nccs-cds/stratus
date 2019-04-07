@@ -1,13 +1,11 @@
-from stratus.handlers.client import StratusClient, stratusrequest
-from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
-import traceback, time, logging, xml, json, requests
-from stratus.util.config import Config, StratusLogger, UID
-from stratus.util.parsing import s2b, b2s
+from app.client import StratusClient, stratusrequest
+from typing import Dict, Optional
+import time
+from stratus.util.config import StratusLogger
 from stratus_endpoint.handler.base import Task, Status, TaskResult
-from stratus.handlers.core import StratusCore
-import random, string, os, pickle, queue
+from app.core import StratusCore
+import os
 from stratus.handlers.rest.api.wps.wpsRequest import WPSExecuteRequest
-import xarray as xa
 from enum import Enum
 MB = 1024 * 1024
 

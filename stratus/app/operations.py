@@ -1,36 +1,27 @@
-import os, json, yaml, abc, copy, sys
-from typing import List, Union, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Set, Tuple, Iterator, Iterable
-from stratus.util.config import Config, StratusLogger, UID
-from stratus.handlers.client import StratusClient
+import copy
+from typing import List, Dict, Set, Iterator
+from stratus.util.config import StratusLogger, UID
+from app.client import StratusClient
 from decorator import decorator
-from stratus_endpoint.handler.base import Task, Status
+from stratus_endpoint.handler.base import Task
+from stratus.app.graph import DGNode
 import networkx as nx
 
-@decorator
-def graphop( func, *args, **kwargs ):
-    args[0].connect()
-    return func( *args, **kwargs)
 
-class Op:
-    def __init__( self, params: Dict = None ):
-        self.params: Dict = params if params else {}
-        self.id = self.get( "id", UID.randomId( 6 ) )
+
+class Op(DGNode):
+
+    def __init__( self, **kwargs ):
+        DGNode. __init__( self, **kwargs )
         name_toks = self.get("name").split(":")
         self.name: str = name_toks[-1]
         self.epas: List[str]  = name_toks[:-1]
         input_parm = self.get("input")
-        self.inputs: List[str] = input_parm.split(",") if isinstance( input_parm, str ) else input_parm
-        self.result = self.get( "result", UID.randomId( 6 ) )
+        self._inputs: List[str] = input_parm.split(",") if isinstance( input_parm, str ) else input_parm
+        self._result = self.get( "result", UID.randomId( 6 ) )
 
-    def get(self, name: str, default = None ) -> str:
-        parm = self.params.get( name, default )
-        if parm is None: raise Exception( "Missing required parameter in operation: " + name )
-        return parm
-
-    def __getitem__( self, key: str ) -> str:
-        result =  self.params.get( key, None )
-        assert result is not None, f"Missing required parameter in operation: {key} "
-        return result
+    def inputs(self)-> List[str]: return self._inputs
+    def outputs(self)-> List[str]: return [ self._result ]
 
 class OpSet():
 

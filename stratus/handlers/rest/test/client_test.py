@@ -1,8 +1,8 @@
 from stratus_endpoint.handler.base import Task, TaskResult
-from typing import Sequence, List, Dict, Mapping, Optional, Any
+from typing import List, Optional
 from stratus.util.test import TestDataManager as mgr
 import xarray as xa
-from stratus.handlers.core import StratusCore
+from app.core import StratusCore
 
 if __name__ == "__main__":
 
