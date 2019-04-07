@@ -16,13 +16,22 @@ class Connection:
     OUTGOING = 1
     ALL = 2
 
-    def __init__(self, id, srcNodeId, destNodeId ):
-        self.id = id
-        self.srcNodeId = srcNodeId
-        self.destNodeId = destNodeId
+    def __init__(self, id, src_nid, dest_nid ):
+        self._id = id
+        self._src_nid = src_nid
+        self._dest_nid = dest_nid
+
+    @property
+    def id(self): return self._id
+
+    @property
+    def src_nid(self): return self._src_nid
+
+    @property
+    def dest_nid(self): return self._dest_nid
 
     def __repr__(self):
-        return f"C[{self.id}:{self.srcNodeId}->{self.destNodeId}]"
+        return f"C[{self._id}:{self._src_nid}->{self._dest_nid}]"
 
 class DGNode:
 
