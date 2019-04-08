@@ -1,5 +1,5 @@
 from app.core import StratusCore
-from stratus_endpoint.handler.base import Task
+from stratus_endpoint.handler.base import TaskFuture
 from stratus.util.test import TestDataManager as mgr
 
 settings = dict( stratus = dict( type="rest", API="wps", host_address="http://127.0.0.1:5000/wps/cwt" ) )
@@ -14,7 +14,7 @@ local_request = dict(
     operation=[{'name': "xarray.ave", 'axes': "t", "input": "v0"}]
 )
 
-task: Task = client.request(local_request)
+task: TaskFuture = client.request(local_request)
 result = task.getResult(type="data")
 print( "Got Result: " + str(result.header) )
 for data_array in result.data:

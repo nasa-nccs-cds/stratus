@@ -4,7 +4,7 @@ from flask import Flask, Response, Blueprint, request
 import json, importlib
 from stratus.util.config import StratusLogger
 from app.core import StratusCore
-from stratus_endpoint.handler.base import Task, Status
+from stratus_endpoint.handler.base import TaskFuture, Status
 from flask_sqlalchemy import SQLAlchemy
 from app.base import StratusAppBase
 from jsonschema import validate
@@ -19,7 +19,7 @@ class RestAPIBase:
         self.app = app
         self.tasks = {}
 
-    def addTask( self, task: Task ):
+    def addTask( self, task: TaskFuture ):
         self.tasks[ task.rid ] = task
         return task.rid
 

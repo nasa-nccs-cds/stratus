@@ -1,5 +1,5 @@
 from stratus.handlers.endpoint.client import DirectClient
-from stratus_endpoint.handler.base import Task, Status
+from stratus_endpoint.handler.base import TaskFuture, Status
 
 if __name__ == "__main__":
     CreateIPServer = "https://dataserver.nccs.nasa.gov/thredds/dodsC/bypass/CREATE-IP/"
@@ -25,7 +25,7 @@ if __name__ == "__main__":
         input = [ {"uri": getAddress("merra2", "tas"), "name": "tas:v0", "domain": "d0"} ],
         operation = [ { "name": "xarray.subset", "input": "v0" } ]
     )
-    task: Task = client.request( "exe", **request )
+    task: TaskFuture = client.request( "exe", **request )
     result = task.getResult( block = True )
     print ( "Received result: " + str(result) )
 

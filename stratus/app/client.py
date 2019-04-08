@@ -1,9 +1,8 @@
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
 from stratus.util.config import Config, StratusLogger, UID
-from stratus_endpoint.handler.base import Task, Status
+from stratus_endpoint.handler.base import TaskFuture, Status, TaskResult
 import abc, re
-import functools
-import importlib
+from decorator import decorator, dispatch_on
 
 class EndpointSpec:
     def __init__(self, epaSpec: str ):
@@ -20,12 +19,10 @@ class EndpointSpec:
     def __str__(self):
         return self._epaSpec
 
-def stratusrequest( requestMethod ):
-    @functools.wraps(requestMethod)
-    def udpatedRequestMethod( self, requestSpec: Dict, **kwargs  ):
-        requestDict =  self.updateMetadata( requestSpec )
-        return requestMethod( self, requestDict, **kwargs )
-    return udpatedRequestMethod
+@decorator
+def stratusrequest( func, *args, **kwargs ):
+    args[0].updateMetadata( args[1] )
+    return func( *args, **kwargs)
 
 class StratusClient:
     __metaclass__ = abc.ABCMeta
@@ -54,7 +51,7 @@ class StratusClient:
 
     @abc.abstractmethod
     @stratusrequest
-    def request(self, request: Dict, **kwargs ) -> Task: pass
+    def request(self, request: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskFuture: pass
 
     @abc.abstractmethod
     def status(self, **kwargs ) -> Status: pass

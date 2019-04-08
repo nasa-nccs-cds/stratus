@@ -1,8 +1,8 @@
 from app.client import StratusClient, stratusrequest
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 import time
 from stratus.util.config import StratusLogger
-from stratus_endpoint.handler.base import Task, Status, TaskResult
+from stratus_endpoint.handler.base import TaskFuture, Status, TaskResult
 from app.core import StratusCore
 import os
 from stratus.handlers.rest.api.wps.wpsRequest import WPSExecuteRequest
@@ -28,7 +28,7 @@ class WPSRestClient(StratusClient):
         self.wpsRequest = WPSExecuteRequest(self.host_address)
 
     @stratusrequest
-    def request( self, requestSpec: Dict, **kwargs ) -> Task:
+    def request( self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskFuture:
         response =  self.wpsRequest.exe(requestSpec)
         self.log( "Got response xml: " + str(response["xml"]) )
         self.log("Got refs: " + str(response["refs"]))
@@ -47,7 +47,7 @@ class WPSRestClient(StratusClient):
         if self.active:
             self.active = False
 
-class RestTask(Task):
+class RestTask(TaskFuture):
 
     def __init__(self, rid: str, cid: str, refs: Dict, wpsRequest: WPSExecuteRequest, **kwargs):
         super(RestTask, self).__init__( rid, cid, **kwargs )

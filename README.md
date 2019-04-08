@@ -18,7 +18,7 @@ ___
 ##### Conda environment setup
 
 ```
- >> conda create -n stratus -c conda-forge python=3.6 libnetcdf netCDF4 pyyaml six xarray networkx
+ >> conda create -n stratus -c conda-forge python=3.6 libnetcdf netCDF4 pyyaml six xarray networkx requests decorator pyzmq
  ```
 
 Build Stratus installation by installing the *stratus-endpoint* and *stratus* packages:

@@ -1,5 +1,5 @@
 from flask import request, Blueprint, make_response
-from stratus_endpoint.handler.base import Task, TaskResult, Status
+from stratus_endpoint.handler.base import TaskFuture, TaskResult, Status
 import xarray as xa
 from stratus.util.config import UID
 import pickle, json, flask, os
@@ -122,7 +122,7 @@ class RestAPI(RestAPIBase):
         @bp.route('/file', methods=['GET'])
         def file_result():
             rid = self.getParameter("rid")
-            task: Task = self.tasks.get( rid, None )
+            task: TaskFuture = self.tasks.get( rid, None )
             assert task is not None, f"Can't find task for rid {rid}, current tasks: {str(list(self.tasks.keys()))}"
             result: Optional[TaskResult] = task.getResult()
             self.logger.info(f"Got File Request for task rid={rid}, result = {str(result)}")
@@ -146,7 +146,7 @@ class RestAPI(RestAPIBase):
         @bp.route('/data', methods=['GET'])
         def data_result():
             rid = self.getParameter("rid")
-            task: Task = self.tasks.get( rid, None )
+            task: TaskFuture = self.tasks.get( rid, None )
             assert task is not None, f"Can't find task for rid {rid}, current tasks: {str(list(self.tasks.keys()))}"
             result: Optional[TaskResult] = task.getResult()
             if result is None:

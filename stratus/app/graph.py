@@ -3,7 +3,7 @@ from typing import List, Dict, Set, Iterator, Any
 from stratus.util.config import StratusLogger, UID
 from app.client import StratusClient
 from decorator import decorator, dispatch_on
-from stratus_endpoint.handler.base import Task
+from stratus_endpoint.handler.base import TaskFuture
 import networkx as nx
 
 @decorator
@@ -26,6 +26,11 @@ class Connection:
 
     @property
     def src_nid(self): return self._src_nid
+
+    def nid( self, type: int ):
+        if type == self.INCOMING: return self._src_nid
+        elif type == self.OUTGOING: return self._dest_nid
+        else: raise Exception( f"Illegal connection type: {type}")
 
     @property
     def dest_nid(self): return self._dest_nid
@@ -151,6 +156,7 @@ class DependencyGraph():
     def has_successor( self, nid0: str,  nid1: str ):
         return self.graph.has_successor( nid0, nid1 )
 
+    @graphop
     def getConnections( self, nid: str, ctype: int ) -> List[Connection]:
         connections = []
         if ctype == Connection.INCOMING: graph_edges = self.graph.in_edges(nid)
@@ -161,6 +167,11 @@ class DependencyGraph():
             edata = self.graph.get_edge_data(*edge_tup)
             connections.append( Connection( edata["id"], edge_tup[0], edge_tup[1] ) )
         return connections
+
+    @graphop
+    def getConnectedNodes(self, nid: str, ctype: int) -> List[DGNode]:
+        nids = [ conn.nid(ctype) for conn in  self.getConnections( nid, ctype ) ]
+        return [self.nodes.get( nid ) for nid in nids if nid is not None ]
 
     @graphop
     def getInputs(self) -> List[Connection]:

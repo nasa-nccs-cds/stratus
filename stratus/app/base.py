@@ -1,10 +1,10 @@
-import os, json, yaml, abc, itertools
+import os, json, yaml, abc, itertools, asyncio
 from typing import List, Union, Dict, Set, Iterator
 from stratus.util.config import Config, StratusLogger
 from app.client import StratusClient
-from stratus_endpoint.handler.base import Task
+from stratus_endpoint.handler.base import TaskFuture
 from multiprocessing import Process as SubProcess
-from app.operations import ClientOpSet, Op, OpSet
+from app.operations import ClientOpSet, Op, OpSet, WorkflowTask, Workflow
 
 class StratusCoreBase:
     HERE = os.path.dirname(__file__)
@@ -80,23 +80,23 @@ class StratusAppBase:
         distributed_opsets = [opset.connectedOpsets() for opset in filtered_opsets]
         return itertools.chain.from_iterable(distributed_opsets)
 
-    def processWorkflow( self, request: Dict ) -> Dict[str,Task]:
+    def processWorkflow( self, request: Dict ) -> asyncio.Task:
         clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
-        distributed_opSets = self.distributeOps( clientOpsets )
-        responses = { opset.name: opset.submit( request ) for opset in distributed_opSets }
-        return responses
+        tasks: List[WorkflowTask] = [ WorkflowTask(cOpSet) for cOpSet in self.distributeOps( clientOpsets ) ]
+        workflow = Workflow( nodes=tasks )
+        return asyncio.create_task( workflow.submit() )
 
     def geClientOpsets(self, request: Dict ) -> Dict[str, ClientOpSet]:
         # Returns map of client id to list of ops in request that can be handled by that client
-        ops = request.get("operation")
+        ops: List[Dict] = request.get("operation")
         assert ops is not None, "Missing 'operation' parameter in request: " + str( request )
         clientOpsets: Dict[str, ClientOpSet] = dict()
-        ops = OpSet( ops = [ Op( opDict ) for opDict in ops ] )
+        ops: List[Op] = OpSet( nodes = [ Op( **opDict ) for opDict in ops ] )
         for op in ops:
             clients = self.core.getClients( op.epas )
             assert len(clients) > 0, f"Can't find a client to process the operation': {op.epas}"
             for client in clients:
-               opSet = clientOpsets.setdefault(client.name, ClientOpSet(client))
+               opSet = clientOpsets.setdefault(client.name, ClientOpSet(request,client))
                opSet.add( op )
         return clientOpsets
 
@@ -149,7 +149,7 @@ class StratusFactory:
 
 if __name__ == "__main__":
     from app.core import StratusCore
-    from stratus_endpoint.handler.base import Task
+    from stratus_endpoint.handler.base import TaskFuture
 
     settings = dict( stratus=dict( type="zeromq"), edas=dict(type="test", work_time=2.0 ) )
     core = StratusCore(settings)

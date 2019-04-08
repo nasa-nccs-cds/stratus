@@ -1,4 +1,4 @@
-from stratus_endpoint.handler.base import Task, TaskResult
+from stratus_endpoint.handler.base import TaskFuture, TaskResult
 from typing import List, Optional
 from stratus.util.test import TestDataManager as mgr
 import xarray as xa
@@ -24,7 +24,7 @@ if __name__ == "__main__":
         operation=[dict(name="edas.ave", axis="xy", input=f"v{i}") for i in range(numDomains)]
     )
 
-    task: Task = client.request(requestSpec)
+    task: TaskFuture = client.request(requestSpec)
     result: Optional[TaskResult] = task.getResult(block=True)
     dsets: List[xa.Dataset] = result.data
     for index, dset in enumerate(dsets):

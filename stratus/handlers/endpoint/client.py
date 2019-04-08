@@ -1,6 +1,6 @@
 from app.client import StratusClient, stratusrequest
-from stratus_endpoint.handler.base import Task, Endpoint
-from typing import Dict
+from stratus_endpoint.handler.base import TaskFuture, Endpoint, TaskResult
+from typing import Dict, List
 import importlib, traceback
 
 class DirectClient(StratusClient):
@@ -17,8 +17,8 @@ class DirectClient(StratusClient):
         return epclass( **self.parms )
 
     @stratusrequest
-    def request(self, requestDict: Dict, **kwargs ) -> Task:
-        return self.endpoint.request( requestDict, **kwargs )
+    def request(self, requestDict: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskFuture:
+        return self.endpoint.request( requestDict, inputs, **kwargs )
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
         return self.endpoint.capabilities( type, **kwargs )

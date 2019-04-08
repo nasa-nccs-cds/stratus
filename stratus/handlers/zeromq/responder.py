@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tupl
 from stratus.util.config import StratusLogger
 from threading import Thread
 import zmq, traceback, time, logging, xml, socket
-from stratus_endpoint.handler.base import Task, Status
+from stratus_endpoint.handler.base import TaskFuture, Status
 from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
 from stratus.util.parsing import s2b, b2s, ia2s, sa2s, m2s
@@ -56,12 +56,12 @@ class StratusZMQResponder(Thread):
         self.client_address = kwargs.get( "client_address", "*" )
         self.socket: zmq.Socket = self.initSocket()
         self.input_tasks = input_tasks
-        self.current_tasks: Dict[str,Task] = {}
+        self.current_tasks: Dict[str,TaskFuture] = {}
         self.completed_tasks = collections.deque()
         self.pause_duration = 0.1
         self.active = True
 
-    def getDataPacket(self, status: Status, task: Task ):
+    def getDataPacket(self, status: Status, task: TaskFuture ):
         if (status == Status.COMPLETED):
             taskResult = task.getResult()
             return self.createDataPacket( task.rid, taskResult.data )

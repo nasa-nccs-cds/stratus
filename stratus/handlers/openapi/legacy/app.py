@@ -64,12 +64,12 @@ class StratusApp:
         celery = Celery( app.import_name, backend=app.config['DATABASE_URI'], broker=app.config['CELERY_BROKER_URL'] )
         celery.conf.update(app.config)
 
-        class ContextTask(celery.Task):
+        class ContextTask(celery.TaskFuture):
             def __call__(self, *args, **kwargs):
                 with app.app_context():
                     return self.run(*args, **kwargs)
 
-        celery.Task = ContextTask
+        celery.TaskFuture = ContextTask
         return celery
 
 app = StratusApp()
