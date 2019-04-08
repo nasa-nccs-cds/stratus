@@ -5,21 +5,17 @@ from app.client import StratusClient
 from decorator import decorator
 from stratus_endpoint.handler.base import Task
 from stratus.app.graph import DGNode, DependencyGraph
-import networkx as nx
 
 class Op(DGNode):
 
     def __init__( self, **kwargs ):
-        DGNode. __init__( self, **kwargs )
-        name_toks = self.get("name").split(":")
+        name_toks = kwargs.get("name").split(":")
         self.name: str = name_toks[-1]
         self.epas: List[str]  = name_toks[:-1]
-        input_parm = self.get("input")
-        self._inputs: List[str] = input_parm.split(",") if isinstance( input_parm, str ) else input_parm
-        self._result = self.get( "result", UID.randomId( 6 ) )
-
-    def getInputs(self)-> List[str]: return self._inputs
-    def getOutputs(self)-> List[str]: return [self._result]
+        input_parm = kwargs.get("input")
+        inputs:  List[str] = input_parm.split(",") if isinstance( input_parm, str ) else input_parm
+        outputs: List[str] = [ kwargs.get( "result", UID.randomId( 6 ) ) ]
+        DGNode. __init__( self, inputs, outputs, **kwargs )
 
 class OpSet(DependencyGraph):
 
@@ -39,6 +35,10 @@ class OpSet(DependencyGraph):
                         filtered_request[key] = value
         filtered_request["operations"] = operations
         return filtered_request
+
+    @DependencyGraph.add.register(Op)
+    def add( self, obj ):
+        self._addDGNode( obj )
 
 class ClientOpSet(OpSet):
 
@@ -71,20 +71,18 @@ class ClientOpSet(OpSet):
 class WorkflowTask(DGNode):
 
     def __init__( self, opset: ClientOpSet, **kwargs ):
-        DGNode. __init__( self, **kwargs )
         self._opset = opset
-
-    @property
-    def getInputs(self)-> List[str]: pass
-
-    @property
-    def getOutputs(self)-> List[str]: pass
+        inputs = [ conn.id for conn in opset.getInputs() ]
+        outputs = [conn.id for conn in opset.getOutputs()]
+        DGNode. __init__( self, inputs, outputs, **kwargs )
 
 class Workflow(DependencyGraph):
 
     def __init__( self, **kwargs ):
         DependencyGraph.__init__( **kwargs )
 
-
+    @DependencyGraph.add.register(WorkflowTask)
+    def add( self, obj ):
+        self._addDGNode( obj )
 
 

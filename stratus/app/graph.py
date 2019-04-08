@@ -2,7 +2,7 @@ import copy, abc
 from typing import List, Dict, Set, Iterator, Any
 from stratus.util.config import StratusLogger, UID
 from app.client import StratusClient
-from decorator import decorator
+from decorator import decorator, dispatch_on
 from stratus_endpoint.handler.base import Task
 import networkx as nx
 
@@ -35,11 +35,11 @@ class Connection:
 
 class DGNode:
 
-    def __init__( self, inputs: List[str], outputs: List[str], **kwargs ):
+    def __init__( self, inputs: List[str], outputs: List[str] = None, **kwargs ):
         self.params: Dict[str,Any] = kwargs
         self.id = self.get( "id", UID.randomId( 6 ) )
         self._inputs = inputs
-        self._outputs = outputs
+        self._outputs = outputs if outputs is not None else [ UID.randomId(6) ]
 
     @abc.abstractmethod
     def getInputs(self)-> List[str]:
@@ -81,7 +81,11 @@ class DependencyGraph():
     def ids(self) -> Set[str]:
         return set(self.nodes.keys())
 
-    def add(self, node: DGNode):
+    @dispatch_on('obj')
+    def add( self, obj ):
+        raise NotImplementedError(type(obj))
+
+    def _addDGNode(self, node: DGNode):
         if node.id not in self.nodes.keys():
             self._connected = False
             self.nodes[node.id] = node
@@ -178,10 +182,10 @@ class DependencyGraph():
 
 if __name__ == "__main__":
     dgraph = DependencyGraph()
-    dgraph.add( DGNode( inputs=[ "s0", "s1" ], outputs=[  "r1", "r2" ], id="n0" ) )
-    dgraph.add( DGNode( inputs=[ "r1" ], outputs=["r11", "r12"], id="n1"))
-    dgraph.add( DGNode( inputs=[ "r2" ], outputs=["r21"], id="n2"))
-    dgraph.add( DGNode( inputs=["s3"], outputs=["r5"], id="n3"))
+    dgraph._addDGNode( DGNode( inputs=[ "s0", "s1" ], outputs=[  "r1", "r2" ], id="n0" ) )
+    dgraph._addDGNode( DGNode( inputs=[ "r1" ], outputs=["r11", "r12"], id="n1"))
+    dgraph._addDGNode( DGNode( inputs=[ "r2" ], outputs=["r21"], id="n2"))
+    dgraph._addDGNode( DGNode( inputs=["s3"], outputs=["r5"], id="n3"))
 
     print(dgraph.getInputs())
     print(dgraph.getOutputs())
