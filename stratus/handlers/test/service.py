@@ -1,7 +1,7 @@
 import os
 from stratus.handlers.base import Handler
 from app.client import StratusClient
-from app.base import StratusAppBase
+from app.base import StratusAppBase, TestStratusApp
 from app.core import StratusCore
 from .client import TestClient
 
@@ -15,7 +15,7 @@ class ServiceHandler( Handler ):
         return TestClient( gateway=gateway, **self.parms )
 
     def newApplication(self, core: StratusCore ) -> StratusAppBase:
-        raise Exception( "Can't stand up a stratus app for an test endpoint")
+        return TestStratusApp( core )
 
 
 

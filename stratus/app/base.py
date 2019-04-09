@@ -120,6 +120,10 @@ class StratusAppBase:
         proc.start()
         return proc
 
+class TestStratusApp(StratusAppBase):
+
+    def run(self): return
+
 class StratusFactory:
     __metaclass__ = abc.ABCMeta
 
