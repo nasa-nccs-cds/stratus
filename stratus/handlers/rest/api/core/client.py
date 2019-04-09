@@ -3,7 +3,7 @@ from typing import Dict, Optional, List
 import traceback, time, requests
 from stratus.util.config import StratusLogger
 from threading import Thread
-from stratus_endpoint.handler.base import TaskFuture, Status, TaskResult
+from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult
 from app.core import StratusCore
 import os, pickle
 from enum import Enum
@@ -29,7 +29,7 @@ class CoreRestClient(StratusClient):
         self.response_manager.start()
 
     @stratusrequest
-    def request( self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskFuture:
+    def request( self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
         response = self.response_manager.postMessage( "exe", requestSpec, **kwargs )
         self.log( "Got response: " + str(response) )
         return RestTask( requestSpec['rid'], self.cid, self.response_manager )
@@ -180,7 +180,7 @@ class ResponseManager(Thread):
     def term(self):
         self.active = False
 
-class RestTask(TaskFuture):
+class RestTask(TaskHandle):
 
     def __init__(self, rid: str, cid: str, manager: ResponseManager, **kwargs):
         super(RestTask, self).__init__( rid, cid, **kwargs )
@@ -209,7 +209,7 @@ if __name__ == "__main__":
         input=[{"uri": mgr.getAddress("merra2", "tas"), "name": "tas:v0", "domain": "d0"}],
         operation=[ { "epa": "test.subset", "input": "v0"} ]
     )
-    task: TaskFuture = client.request( request )
+    task: TaskHandle = client.request( request )
     time.sleep(1.5)
     status = task.status()
     print ( "status response = " + str(status))

@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
 from stratus.util.config import Config, StratusLogger, UID
-from stratus_endpoint.handler.base import TaskFuture, Status, TaskResult
+from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult
 import abc, re
 from decorator import decorator, dispatch_on
 
@@ -51,7 +51,7 @@ class StratusClient:
 
     @abc.abstractmethod
     @stratusrequest
-    def request(self, request: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskFuture: pass
+    def request(self, request: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle: pass
 
     @abc.abstractmethod
     def status(self, **kwargs ) -> Status: pass

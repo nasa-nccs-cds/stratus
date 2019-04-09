@@ -2,7 +2,7 @@ import os, json, yaml, abc, itertools
 from typing import List, Union, Dict, Set, Iterator
 from stratus.util.config import Config, StratusLogger
 from concurrent.futures import ThreadPoolExecutor, Future, Executor
-from stratus_endpoint.handler.base import TaskFuture
+from stratus_endpoint.handler.base import TaskHandle
 from multiprocessing import Process as SubProcess
 from app.operations import *
 
@@ -85,7 +85,7 @@ class StratusAppBase:
         clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
         tasks: List[WorkflowTask] = [ WorkflowTask(cOpSet) for cOpSet in self.distributeOps( clientOpsets ) ]
         workflow = Workflow( nodes=tasks )
-        return WorkflowExeFuture( request, asyncio.create_task( workflow.submit() ) )
+        return WorkflowExeFuture( request, workflow.submit(self.executor) )
 
     def geClientOpsets(self, request: Dict ) -> Dict[str, ClientOpSet]:
         # Returns map of client id to list of ops in request that can be handled by that client
@@ -150,7 +150,7 @@ class StratusFactory:
 
 if __name__ == "__main__":
     from app.core import StratusCore
-    from stratus_endpoint.handler.base import TaskFuture
+    from stratus_endpoint.handler.base import TaskHandle
 
     settings = dict( stratus=dict( type="zeromq"), edas=dict(type="test", work_time=2.0 ) )
     core = StratusCore(settings)

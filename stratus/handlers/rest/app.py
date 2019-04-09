@@ -5,7 +5,7 @@ import json, importlib
 from stratus.util.config import StratusLogger
 from app.core import StratusCore
 from stratus.app.operations import WorkflowExeFuture
-from stratus_endpoint.handler.base import TaskFuture, Status
+from stratus_endpoint.handler.base import TaskHandle, Status
 from flask_sqlalchemy import SQLAlchemy
 from app.base import StratusAppBase
 from jsonschema import validate
@@ -29,7 +29,7 @@ class RestAPIBase:
             del self.tasks[ rid ]
 
     def getStatus( self, cid: str = None ) -> Dict[str,Status]:
-        statusMap = { rid: task.status() for rid, task in self.tasks.items() if ( cid is None or task.hasClient(cid) ) }
+        statusMap = { rid: task.status() for rid, task in self.tasks.items() if ( cid is None or task.cid == cid ) }
         result =  { rid: str(status) for rid, status in statusMap.items() }
         self.logger.info( f"REST-SERVER: getStatus(cid={cid}): {str(result)}, all tasks: " + str( [str(task) for task in self.tasks.values()] ))
         return result

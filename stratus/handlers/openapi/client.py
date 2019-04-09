@@ -1,6 +1,6 @@
 from pyswagger import App
 from pyswagger.contrib.client.requests import Client
-from stratus_endpoint.handler.base import TaskFuture
+from stratus_endpoint.handler.base import TaskHandle
 from pyswagger.spec.v2_0.objects import Operation
 from typing import Dict
 from app.client import StratusClient, stratusrequest
@@ -11,7 +11,7 @@ class OpenApiClient(StratusClient):
         super(OpenApiClient, self).__init__( "openapi", **kwargs )
 
     @stratusrequest
-    def request(self, requestDict: Dict, **kwargs ) -> TaskFuture:
+    def request(self, requestDict: Dict, **kwargs ) -> TaskHandle:
         op: Operation = self.app.op[ task ]
         response = self.client.request( op(**kwargs) )
         return response.data

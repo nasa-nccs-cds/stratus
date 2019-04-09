@@ -33,7 +33,7 @@
 #         return result
 #
 #
-# class TaskFuture(app.db.Model):
+# class TaskHandle(app.db.Model):
 #     __tablename__ = 'task'
 #     id = Column(Integer, primary_key=True)
 #     celery_task_uid = Column(String(100))
@@ -41,7 +41,7 @@
 #
 #     @classmethod
 #     def _is_node_rdy(cls, task, graph):
-#         tasks = TaskFuture.query.filter(TaskFuture.id.in_(list(graph.predecessors(task.id)))).all()
+#         tasks = TaskHandle.query.filter(TaskHandle.id.in_(list(graph.predecessors(task.id)))).all()
 #         for dep_task in tasks:
 #             if not dep_task.celery_task_uid or \
 #                not AsyncResult(dep_task.celery_task_uid).state == SUCCESS:

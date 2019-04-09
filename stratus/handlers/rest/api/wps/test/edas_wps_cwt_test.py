@@ -1,5 +1,5 @@
 from app.core import StratusCore
-from stratus_endpoint.handler.base import TaskFuture
+from stratus_endpoint.handler.base import TaskHandle
 
 settings = dict( stratus = dict( type="rest", API="wps", host_address="https://edas.nccs.nasa.gov/wps/cwt" ) )
 core = StratusCore(settings)
@@ -22,7 +22,7 @@ edas_server_request = dict(
     operation=[{'name': "xarray.ave", 'axes': "t", "input": "v0"}]
 )
 
-task: TaskFuture = client.request(edas_server_request)
+task: TaskHandle = client.request(edas_server_request)
 result = task.getResult()
 if result is not None:
     print( "Got Result: " + str(result.header) )

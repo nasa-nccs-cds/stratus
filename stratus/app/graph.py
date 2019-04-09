@@ -3,7 +3,7 @@ from typing import List, Dict, Set, Iterator, Any
 from stratus.util.config import StratusLogger, UID
 from app.client import StratusClient
 from decorator import decorator, dispatch_on
-from stratus_endpoint.handler.base import TaskFuture
+from stratus_endpoint.handler.base import TaskHandle
 import networkx as nx
 
 @decorator
@@ -190,6 +190,10 @@ class DependencyGraph():
             for oid in dnode.getOutputs():
                 if oid not in outgoing_connection_ids: olist.append( Connection(oid,nid,None) )
         return olist
+
+    @graphop
+    def getOutputNodes(self) -> List[str]:
+        return [ conn.id for conn in self.getOutputs() ]
 
 if __name__ == "__main__":
     dgraph = DependencyGraph()

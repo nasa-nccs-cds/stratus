@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tupl
 from stratus.util.config import StratusLogger
 from threading import Thread
 import zmq, traceback, time, logging, xml, socket
-from stratus_endpoint.handler.base import TaskFuture, Status
+from stratus.app.operations import WorkflowExeFuture, Status
 from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
 from stratus.util.parsing import s2b, b2s, ia2s, sa2s, m2s
@@ -56,17 +56,17 @@ class StratusZMQResponder(Thread):
         self.client_address = kwargs.get( "client_address", "*" )
         self.socket: zmq.Socket = self.initSocket()
         self.input_tasks = input_tasks
-        self.current_tasks: Dict[str,TaskFuture] = {}
+        self.current_tasks: Dict[str,WorkflowExeFuture] = {}
         self.completed_tasks = collections.deque()
         self.pause_duration = 0.1
         self.active = True
 
-    def getDataPacket(self, status: Status, task: TaskFuture ):
+    def getDataPackets(self, status: Status, task: WorkflowExeFuture ) -> List[DataPacket]:
         if (status == Status.COMPLETED):
             taskResult = task.getResult()
-            return self.createDataPacket( task.rid, taskResult.data )
+            [ self.createDataPacket( task.rid, dataset ) for dataset in taskResult.data ]
         elif (status == Status.ERROR):
-            return self.createMessage(task.rid, {"error": task["error"]})
+            return [ self.createMessage(task.rid, {"error": task["error"]}) ]
 
     def importTasks(self):
         while not self.input_tasks.empty():
@@ -84,8 +84,9 @@ class StratusZMQResponder(Thread):
             status = task.status()
             self.setExeStatus( tid, status )
             if status in [Status.COMPLETED, Status.ERROR]:
-                dataPacket = self.getDataPacket( status, task )
-                self.sendDataPacket( dataPacket )
+                dataPackets = self.getDataPackets( status, task )
+                for dataPacket in dataPackets:
+                    self.sendDataPacket( dataPacket )
                 self.completed_tasks.append(tid)
         self.removeCompletedTasks()
 

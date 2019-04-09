@@ -1,9 +1,9 @@
 import copy, os, time
-from typing import List, Dict, Set, Iterator, Any
+from typing import List, Dict, Set, Iterator, Any, Optional
 from stratus.util.config import StratusLogger, UID
 from app.client import StratusClient
 from concurrent.futures import wait, as_completed, Executor, Future
-from stratus_endpoint.handler.base import TaskFuture, TaskResult
+from stratus_endpoint.handler.base import TaskHandle, TaskResult, TaskFuture, Status
 from stratus.app.graph import DGNode, DependencyGraph, graphop, Connection
 
 class Op(DGNode):
@@ -62,10 +62,26 @@ class ClientOpSet(OpSet):
     def name(self) -> str:
         return self.client.name
 
+    @property
+    def source_cid(self) -> str:
+        return self._request["cid"]
+
+    @property
+    def cid(self) -> str:
+        return self.client.cid
+
+    @property
+    def rid(self) -> str:
+        return self._request["rid"]
+
+    @property
+    def type(self) -> str:
+        return self.client.type
+
     def __str__(self):
         return "C({}):[{}]".format( self.client, ",".join( [ op for op in self.nodes.keys() ] ) )
 
-    def submit( self, inputs: List[TaskResult] ) -> TaskFuture:
+    def submit( self, inputs: List[TaskResult] ) -> TaskHandle:
         if self._future is None:
             filtered_request =  self.getFilteredRequest( self._request )
             self.logger.info( "Client {}: submit operations {}".format( self.client.name, str( filtered_request['operations'] ) ) )
@@ -82,7 +98,31 @@ class WorkflowTask(DGNode):
         self.dependencies: List["WorkflowTask"] = None
         self._future = None
 
-    def submit( self ) -> TaskFuture:
+    @property
+    def name(self) -> str:
+        return self._opset.name
+
+    @property
+    def cid(self) -> str:
+        return self._opset.cid
+
+    @property
+    def source_cid(self) -> str:
+        return self._opset.source_cid
+
+    @property
+    def rid(self) -> str:
+        return self._opset.rid
+
+    @property
+    def type(self) -> str:
+        return self._opset.type
+
+    def submit( self, executor: Executor, ** kwargs ) -> TaskFuture:
+        self._future = executor.submit( self.execute )
+        return TaskFuture( self.rid, self.cid, self._future, ** kwargs )
+
+    def execute( self ):
         results: List[TaskResult] = self.waitOnTasks()
         return self._opset.submit( results )
 
@@ -104,10 +144,42 @@ class WorkflowTask(DGNode):
 
 class WorkflowExeFuture:
 
-    def __init__( self, request: Dict, task: asyncio.Task, **kwargs ):
+    def __init__( self, request: Dict, task_futures: Dict[str,TaskFuture], **kwargs ):
         self.rid = request['rid']
-        self.task = task
-        self.request = request
+        self.futures: Dict[str,TaskFuture] = task_futures
+        self.request: Dict = request
+        self._exception: Exception = None
+
+    def cancel(self):
+        for tfuture in self.futures.values(): tfuture.cancel()
+
+    def exception(self) -> Exception:
+        return self._exception
+
+    def getResult( self, **kwargs ) -> TaskResult:
+        results = []
+        for tid,tfuture in self.futures.items():
+            result = tfuture.getResult( **kwargs )
+            if results is not None: results.append(result)
+        return TaskResult.merge(results)
+
+    def status(self) -> Status:
+        completed = True
+        for tfuture in self.futures.values():
+            status = tfuture.status()
+            if status == Status.ERROR:
+                self.cancel()
+                self._exception = tfuture.exception()
+                return Status.ERROR
+            elif status == Status.CANCELED:
+                self.cancel()
+                return Status.CANCELED
+            elif status == Status.EXECUTING:
+                completed = False
+        return Status.COMPLETED if completed else Status.EXECUTING
+
+    def cid(self):
+        return self.request["cid"]
 
     def get(self, name: str, default = None ) -> Any:
         return self.request.get( name, default )
@@ -137,8 +209,8 @@ class Workflow(DependencyGraph):
 
     @graphop
     def submit( self, executor: Executor ) -> Dict[str,TaskFuture]:
-        results = { wtask.id: wtask.submit(executor) for wtask in self.tasks }
-        return results
+        results: Dict[str,TaskFuture] = { wtask.id: wtask.submit(executor) for wtask in self.tasks }
+        return { tid:fut for tid,fut in results.items() if tid in self.getOutputNodes() }
 
 
 if __name__ == "__main__":
@@ -156,7 +228,7 @@ if __name__ == "__main__":
         input=[{"uri": mgr.getAddress("merra2", "tas"), "name": "tas:v0", "domain": "d0"}],
         operation=[ { "epa": "test.subset", "input": "v0"} ]
     )
-    task: TaskFuture = client.request( request )
+    task: TaskHandle = client.request( request )
     time.sleep(1.5)
     status = task.status()
     print ( "status response = " + str(status))

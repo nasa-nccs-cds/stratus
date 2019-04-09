@@ -6,11 +6,11 @@ from celery import Celery
 #         celery = Celery( name, backend=config['DATABASE_URI'], broker=config['CELERY_BROKER_URL'] )
 #         celery.conf.update( config )
 #
-#         class ContextTask(celery.TaskFuture):
+#         class ContextTask(celery.TaskHandle):
 #             def __call__(self, *args, **kwargs):
 #                 with app.app_context():
 #                     return self.run(*args, **kwargs)
 #
-#         celery.TaskFuture = ContextTask
+#         celery.TaskHandle = ContextTask
 #         return celery
 #

@@ -1,21 +1,21 @@
-# from services.celery.models import Workflow, TaskFuture
+# from services.celery.models import Workflow, TaskHandle
 # from services.rest.app import app
 # from celery.states import SUCCESS
 #
 #
 # @app.app.task(bind=True)
 # def run( self, workflow_id, cur_task_id=None ):
-#     print('Runnning Workflow {} and TaskFuture {}'.format(workflow_id, cur_task_id))
+#     print('Runnning Workflow {} and TaskHandle {}'.format(workflow_id, cur_task_id))
 #     workflow = Workflow.query.filter_by(id=workflow_id).one()
 #     graph = workflow.execution_graph
 #
 #     next_task_ids = []
 #     if cur_task_id:
-#         task = TaskFuture.query.get(cur_task_id)
-#         if not TaskFuture._is_node_rdy(task, graph):
+#         task = TaskHandle.query.get(cur_task_id)
+#         if not TaskHandle._is_node_rdy(task, graph):
 #             return
 #
-#         TaskFuture._process_task_node(task, self.request.id )
+#         TaskHandle._process_task_node(task, self.request.id )
 #
 #         next_task_ids = list(graph.successors(cur_task_id))
 #     else:

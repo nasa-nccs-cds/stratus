@@ -4,7 +4,7 @@ from stratus.util.config import StratusLogger, UID
 from threading import Thread
 from typing import Dict, Optional, List
 from stratus.util.parsing import s2b, b2s
-from stratus_endpoint.handler.base import TaskFuture, Status, TaskResult
+from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult
 import os, pickle, queue
 import xarray as xa
 from enum import Enum
@@ -58,7 +58,7 @@ class ZMQClient(StratusClient):
 
 
     @stratusrequest
-    def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskFuture:
+    def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
         response = self.sendMessage( "exe", requestSpec, **kwargs )
         status = Status.decode( response.get('status') )
         self.log( str(response) )
@@ -171,7 +171,7 @@ class ResponseManager(Thread):
         return self._status
 
 
-class zmqTask(TaskFuture):
+class zmqTask(TaskHandle):
 
     def __init__(self, cid: str, manager: ResponseManager, **kwargs):
         super(zmqTask,self).__init__( manager.requestId, cid, **kwargs )

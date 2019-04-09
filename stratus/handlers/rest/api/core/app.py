@@ -1,5 +1,5 @@
 from flask import request, Blueprint, make_response
-from stratus_endpoint.handler.base import TaskFuture, TaskResult
+from stratus_endpoint.handler.base import TaskHandle, TaskResult
 from stratus.app.operations import WorkflowExeFuture
 import pickle
 from typing import *
@@ -30,7 +30,7 @@ class RestAPI(RestAPIBase):
         @bp.route('/result', methods=('GET',))
         def result():
             rid = self.getParameter("rid")
-            task: TaskFuture = self.tasks.get( rid, None )
+            task: TaskHandle = self.tasks.get( rid, None )
             assert task is not None, f"Can't find task for rid {rid}, current tasks: {str(list(self.tasks.keys()))}"
             result: Optional[TaskResult] = task.getResult()
             if result is None:

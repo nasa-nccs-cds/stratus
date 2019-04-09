@@ -1,9 +1,10 @@
 from flask import request, Blueprint, make_response
-from stratus_endpoint.handler.base import TaskFuture, TaskResult, Status
+from stratus_endpoint.handler.base import TaskResult, Status
 import xarray as xa
 from stratus.util.config import UID
 import pickle, json, flask, os
 from jinja2 import Environment, PackageLoader, select_autoescape
+from stratus.app.operations import WorkflowExeFuture
 from app.base import StratusAppBase
 from typing import *
 from stratus.handlers.rest.app import RestAPIBase
@@ -48,6 +49,8 @@ class RestAPI(RestAPIBase):
             responseXml = self._getStatusXml("ProcessAccepted", message, rid )
         elif status == "error":
             responseXml = self._getStatusXml("ProcessFailed", message, rid, False )
+        elif status == "canceled":
+            responseXml = self._getStatusXml("ProcessCanceled", message, rid, False)
         elif status == "unknown":
             responseXml = self._getStatusXml("ProcessUnknown", rid , rid, False )
         else: raise Exception( "Unknown status: " + status )
@@ -92,6 +95,11 @@ class RestAPI(RestAPIBase):
         responseXml = ""
         return flask.Response(response=responseXml, status=400, mimetype="application/xml" )
 
+    def missingResult(self, task) -> flask.Response:
+        if task.status() == Status.CANCELED: return self.getErrorResponse("Task was canceled")
+        elif task.status() == Status.ERROR:  return self.getErrorResponse(f"Task threw an exception: {repr(task.exception())}")
+        else:                                return self.getErrorResponse(f"Task workflow failed to return any results")
+
     def _addRoutes(self, bp: Blueprint):
         self.logger.info( "Adding WPS routes" )
         @bp.route('/cwt', methods=['GET'] )
@@ -122,13 +130,14 @@ class RestAPI(RestAPIBase):
         @bp.route('/file', methods=['GET'])
         def file_result():
             rid = self.getParameter("rid")
-            task: TaskFuture = self.tasks.get( rid, None )
+            task: WorkflowExeFuture = self.tasks.get( rid, None )
             assert task is not None, f"Can't find task for rid {rid}, current tasks: {str(list(self.tasks.keys()))}"
             result: Optional[TaskResult] = task.getResult()
             self.logger.info(f"Got File Request for task rid={rid}, result = {str(result)}")
-            if result is None:
+            if task.status() == Status.EXECUTING:
                 return self.jsonResponse( dict(status="executing", id=task.rid) )
             else:
+                if result is None: return self.missingResult( task )
                 dataset: Optional[xa.Dataset] = result.popDataset()
                 if dataset is None: return self.getErrorResponse( "No more results available")
                 path = f"/tmp/{rid}.nc"
@@ -146,12 +155,13 @@ class RestAPI(RestAPIBase):
         @bp.route('/data', methods=['GET'])
         def data_result():
             rid = self.getParameter("rid")
-            task: TaskFuture = self.tasks.get( rid, None )
+            task: WorkflowExeFuture = self.tasks.get( rid, None )
             assert task is not None, f"Can't find task for rid {rid}, current tasks: {str(list(self.tasks.keys()))}"
             result: Optional[TaskResult] = task.getResult()
-            if result is None:
+            if task.status() == Status.EXECUTING:
                 return self.jsonResponse( dict(status="executing", rid=task.rid) )
             else:
+                if result is None: return self.missingResult( task )
                 dataset: Optional[xa.Dataset] = result.popDataset()
                 if dataset is None: return self.getErrorResponse( "No more results available")
                 self.logger.info( "Downloading pickled xa.Dataset, attrs: " + str(dataset.attrs) )
