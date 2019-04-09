@@ -15,3 +15,5 @@ if __name__ == "__main__":
     request=dict( operation=operation, rid="R0", cid="C0" )
 
     wFuture = app.processWorkflow( request )
+    result = wFuture.getResult()
+    print( result )

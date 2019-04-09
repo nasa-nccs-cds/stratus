@@ -205,7 +205,8 @@ class Workflow(DependencyGraph):
     def connect(self):
         DependencyGraph.connect(self)
         for wtask in self.tasks:
-            connections = [ Connection(self.graph.get_edge_data(*edge_tup)["id"], edge_tup[0], edge_tup[1]) for edge_tup in self.graph.in_edges(wtask.id) ]
+            in_edges = self.graph.in_edges(wtask.id)
+            connections = [ Connection(self.graph.get_edge_data(*edge_tup)["id"], edge_tup[0], edge_tup[1]) for edge_tup in in_edges ]
             nids = [conn.nid(Connection.INCOMING) for conn in connections ]
             dep_tasks: List[WorkflowTask] =  [self.nodes.get(nid) for nid in nids if nid is not None]
             wtask.setDependencies( dep_tasks )
