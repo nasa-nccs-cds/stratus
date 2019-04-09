@@ -4,6 +4,7 @@ from flask import Flask, Response, Blueprint, request
 import json, importlib
 from stratus.util.config import StratusLogger
 from app.core import StratusCore
+from stratus.app.operations import WorkflowExeFuture
 from stratus_endpoint.handler.base import TaskFuture, Status
 from flask_sqlalchemy import SQLAlchemy
 from app.base import StratusAppBase
@@ -17,9 +18,9 @@ class RestAPIBase:
         self.parms = kwargs
         self.name = name
         self.app = app
-        self.tasks = {}
+        self.tasks: Dict[str, WorkflowExeFuture] = {}
 
-    def addTask( self, task: TaskFuture ):
+    def addTask( self, task: WorkflowExeFuture ):
         self.tasks[ task.rid ] = task
         return task.rid
 

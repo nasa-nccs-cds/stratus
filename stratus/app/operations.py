@@ -1,7 +1,8 @@
 import copy, os, time
-from typing import List, Dict, Set, Iterator
+from typing import List, Dict, Set, Iterator, Any
 from stratus.util.config import StratusLogger, UID
 from app.client import StratusClient
+from concurrent.futures import wait, as_completed, Executor, Future
 from stratus_endpoint.handler.base import TaskFuture, TaskResult
 from stratus.app.graph import DGNode, DependencyGraph, graphop, Connection
 
@@ -79,22 +80,40 @@ class WorkflowTask(DGNode):
         outputs = [conn.id for conn in opset.getOutputs()]
         DGNode.__init__( self, inputs, outputs, **kwargs )
         self.dependencies: List["WorkflowTask"] = None
+        self._future = None
 
-    async def submit(self ) -> TaskFuture:
-        results: List[TaskResult] = await self.waitOnTasks()
+    def submit( self ) -> TaskFuture:
+        results: List[TaskResult] = self.waitOnTasks()
         return self._opset.submit( results )
 
-    async def waitOnTasks( self ) -> List[TaskResult]:
+    def getFuture(self) -> Future:
+        while True:
+            if self._future is not None: return self._future
+            time.sleep( 0.05 )
+
+    def waitOnTasks( self ) -> List[TaskResult]:
         assert self.dependencies is not None, "Must call setDependencies before waitOnTasks"
         results: List[TaskResult] = []
-        for wTask in self.dependencies:
-            tFuture: TaskFuture = await wTask.submit()
-            result: TaskResult = await tFuture.blockForResult()
-            results.append( result )
+        futures: List[Future] = [ dep.getFuture() for dep in self.dependencies ]
+        for future in as_completed(futures):
+            results.append( future.result() )
         return results
 
     def setDependencies( self, dependencies: List["WorkflowTask"] ):
         self.dependencies = dependencies
+
+class WorkflowExeFuture:
+
+    def __init__( self, request: Dict, task: asyncio.Task, **kwargs ):
+        self.rid = request['rid']
+        self.task = task
+        self.request = request
+
+    def get(self, name: str, default = None ) -> Any:
+        return self.request.get( name, default )
+
+    def __getitem__( self, key: str ) -> Any:
+        return  self.request.get( key, None )
 
 class Workflow(DependencyGraph):
 
@@ -105,17 +124,20 @@ class Workflow(DependencyGraph):
     def add( self, obj ):
         self._addDGNode( obj )
 
+    def connect(self):
+        DependencyGraph.connect(self)
+        for wtask in self.tasks:
+            dep_tasks: List[WorkflowTask] = self.getConnectedNodes( wtask.id, Connection.INCOMING )
+            wtask.setDependencies( dep_tasks )
+
     @property
     def tasks(self) -> List[WorkflowTask]:
         wtasks: List[WorkflowTask] = list(self.nodes.values())
         return wtasks
 
     @graphop
-    async def submit(self) -> Dict[str,TaskFuture]:
-        for wtask in self.tasks:
-            dep_tasks: List[WorkflowTask] = self.getConnectedNodes( wtask.id, Connection.INCOMING )
-            wtask.setDependencies( dep_tasks )
-        results = { wtask.id: await wtask.submit() for wtask in self.tasks }
+    def submit( self, executor: Executor ) -> Dict[str,TaskFuture]:
+        results = { wtask.id: wtask.submit(executor) for wtask in self.tasks }
         return results
 
 

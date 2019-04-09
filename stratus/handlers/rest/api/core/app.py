@@ -1,5 +1,6 @@
 from flask import request, Blueprint, make_response
 from stratus_endpoint.handler.base import TaskFuture, TaskResult
+from stratus.app.operations import WorkflowExeFuture
 import pickle
 from typing import *
 from stratus.handlers.rest.app import RestAPIBase
@@ -14,9 +15,9 @@ class RestAPI(RestAPIBase):
             if request.method == 'POST':    requestDict: Dict = request.json
             else:                           requestDict: Dict = self.jsonRequest( request.args.get("request",None) )
             if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
-            current_tasks = self.app.processWorkflow(requestDict)
-            if self.debug: self.logger.info("Current tasks: {} ".format(str(list(current_tasks.items()))))
-            for task in current_tasks.values(): self.addTask( task )
+            current_task: WorkflowExeFuture = self.app.processWorkflow(requestDict)
+            if self.debug: self.logger.info( f"Current task: {current_task} " )
+            self.addTask( current_task )
             return self.jsonResponse( dict( status="executing", rid=requestDict['rid'] ), code=202 )
 
         @bp.route('/status', methods=('GET',))

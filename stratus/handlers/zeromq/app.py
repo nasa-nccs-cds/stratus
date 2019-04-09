@@ -81,8 +81,8 @@ class StratusApp(StratusAppBase):
                     if len(parts) <= 2: raise Exception( "Missing parameters to exe request")
                     request["rid"] = submissionId
                     self.logger.info( "Processing Request: '{}' '{}' '{}'".format( submissionId, rType, str(request)) )
-                    current_tasks = self.processWorkflow(request)
-                    self.logger.info( "Current tasks: {} ".format( str( list(current_tasks.keys() ) ) ) )
+                    task: asyncio.Task = self.processWorkflow(request)
+                    self.logger.info( f"Current task: {task.} " )
                     for task in current_tasks.values(): self.tasks.put( task )                                                                                                               #   TODO: Send results when tasks complete.
                     response = { "status": "Executing", "tasks": str( list( current_tasks.keys() ) ) }
                     self.sendResponseMessage(StratusResponse(submissionId, response))

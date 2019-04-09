@@ -1,10 +1,10 @@
-import os, json, yaml, abc, itertools, asyncio
+import os, json, yaml, abc, itertools
 from typing import List, Union, Dict, Set, Iterator
 from stratus.util.config import Config, StratusLogger
-from app.client import StratusClient
+from concurrent.futures import ThreadPoolExecutor, Future, Executor
 from stratus_endpoint.handler.base import TaskFuture
 from multiprocessing import Process as SubProcess
-from app.operations import ClientOpSet, Op, OpSet, WorkflowTask, Workflow
+from app.operations import *
 
 class StratusCoreBase:
     HERE = os.path.dirname(__file__)
@@ -59,6 +59,7 @@ class StratusAppBase:
     def __init__( self, _core: StratusCoreBase ):
         self.logger = StratusLogger.getLogger()
         self.core = _core
+        self.executor = ThreadPoolExecutor()
 
     def distributeOps(self, clientOpsets: Dict[str, ClientOpSet]) -> Iterator[ClientOpSet]:
         # Distributes ops to clients while maximizing locality of operations
@@ -80,11 +81,11 @@ class StratusAppBase:
         distributed_opsets = [opset.connectedOpsets() for opset in filtered_opsets]
         return itertools.chain.from_iterable(distributed_opsets)
 
-    def processWorkflow( self, request: Dict ) -> asyncio.Task:
+    def processWorkflow( self, request: Dict ) -> WorkflowExeFuture:
         clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
         tasks: List[WorkflowTask] = [ WorkflowTask(cOpSet) for cOpSet in self.distributeOps( clientOpsets ) ]
         workflow = Workflow( nodes=tasks )
-        return asyncio.create_task( workflow.submit() )
+        return WorkflowExeFuture( request, asyncio.create_task( workflow.submit() ) )
 
     def geClientOpsets(self, request: Dict ) -> Dict[str, ClientOpSet]:
         # Returns map of client id to list of ops in request that can be handled by that client
