@@ -133,7 +133,8 @@ class WorkflowTask(DGNode):
     def submit( self, executor: Executor, **kwargs ) -> TaskFuture:
         self.logger.info( f"Submitting Task[{self.handle}:{self.rid}]")
         self._future = executor.submit( self.execute, **kwargs )
-        return TaskFuture( self.rid, self.cid, self._future, ** kwargs )
+        tparms = { "rid":self.rid, "cid":self.cid, **kwargs }
+        return TaskFuture( self._future, **tparms )
 
     def execute( self, **kwargs ):
         results: List[TaskResult] = self.waitOnTasks()

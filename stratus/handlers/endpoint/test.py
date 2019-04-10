@@ -10,8 +10,9 @@ class TestEndpoint1(Endpoint):
 
     def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> "TaskHandle":
         workTime = self.getWorktime( requestSpec["operations"] )
-        print( f"exec TestEndpoint, request = {requestSpec}")
-        return TestTask( workTime, **self.parms )
+        tparms = { **self.parms, **kwargs }
+        print( f"exec TestEndpoint, request = {requestSpec}, parms = {tparms}")
+        return TestTask( workTime, **tparms )
 
     def getWorktime(self, operations: List[Dict]) -> float :
         return sum( [ float(op.get("workTime", 0.0)) for op in operations ] )
