@@ -40,6 +40,7 @@ class OpSet(DependencyGraph):
                     if (len(parm_epas) == 0) or (epa in parm_epas):
                         filtered_request[key] = value
         filtered_request["operations"] = operations
+        self.logger.info( f"@@FR: operations = {operations}")
         return filtered_request
 
     @DependencyGraph.add.register(Op)
@@ -52,7 +53,7 @@ class ClientOpSet(OpSet):
         OpSet.__init__( self,  **kwargs )
         self.client: StratusClient = client
         self._request = request
-        self._future = None
+        self._taskHandle = None
 
     def connectedOpsets(self) -> List["ClientOpSet"]:
         subgraphs = self.connectedComponents()
@@ -89,11 +90,11 @@ class ClientOpSet(OpSet):
 
     def submit( self, inputs: List[TaskResult] ) -> TaskHandle:
         self.logger.info(f"ClientOpSet Submit TASK {self.client.handle}" )
-        if self._future is None:
+        if self._taskHandle is None:
             filtered_request =  self.getFilteredRequest( self._request )
             self.logger.info( f"Client {self.client.handle}: submit operations {filtered_request['operations']}" )
-            self._future = self.client.request( filtered_request, inputs )
-        return self._future
+            self._taskHandle = self.client.request(filtered_request, inputs)
+        return self._taskHandle
 
 class WorkflowTask(DGNode):
 
@@ -136,7 +137,6 @@ class WorkflowTask(DGNode):
 
     def execute( self ):
         results: List[TaskResult] = self.waitOnTasks()
-        self.logger.info( f"EXEC Task[{self.handle}:{self.rid}]")
         return self._opset.submit( results )
 
     def getFuture(self) -> Future:
@@ -146,15 +146,15 @@ class WorkflowTask(DGNode):
 
     def waitOnTasks( self ) -> List[TaskResult]:
         try:
-            self.logger.info(f"START WaitOnTasks[{self.handle}], dep = {[ dep.handle for dep in self.dependencies]}")
             assert self.dependencies is not None, "Must call setDependencies before waitOnTasks"
+            self.logger.info(f"START WaitOnTasks[{self.handle}], dep = {[ dep.handle for dep in self.dependencies]}")
             futures: List[Future] = [ dep.getFuture() for dep in self.dependencies ]
-            self.logger.info(f"WaitOnTasks[{self.handle}], nDep = {len(futures)}")
             wait(futures)
-            self.logger.info(f"DONE WaitOnTasks[{self.handle}]")
-            results: List[TaskResult] = [ future.result() for future in futures ]
-            self.logger.info(f"Got RESULTS[{self.handle}]")
-            return results
+            taskHandles: List[TaskHandle] = [ future.result() for future in futures ]
+            taskResults: List[TaskResult] = [ taskHandle.getResult() for taskHandle in taskHandles]
+            for taskResult in taskResults:
+                self.logger.info(f"TASK[{self.handle}]: Got Dependency RESULT-> empty: {taskResult.empty()}, header = {taskResult.header}")
+            return taskResults
         except Exception as err:
             self.logger.error( f"Error waiting on dependencies in task [{self.handle}:{self.rid}]: {repr(err)}")
             self.logger.error( traceback.format_exc() )

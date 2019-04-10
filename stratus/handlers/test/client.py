@@ -11,7 +11,8 @@ class TestClient(DirectClient):
 
 
     def instantiateEndpoint(self):
-        return TestEndpoint1( **self.parms )
+        eparms = { "handle":self.handle, **self.parms }
+        return TestEndpoint1( **eparms )
 
 
     def capabilities(self, type: str, **kwargs  ) -> Dict:

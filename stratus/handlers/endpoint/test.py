@@ -9,9 +9,10 @@ class TestEndpoint1(Endpoint):
         self._epas = [ f"test{index}" for index in range(10) ]
 
     def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> "TaskHandle":
-        workTime = float( requestSpec.get( "workTime", 0.0 ) )
+        operation = requestSpec["operations"][0]
+        workTime = float( operation.get( "workTime", 0.0 ) )
         print( f"exec TestEndpoint, request = {requestSpec}")
-        return TestTask( workTime )
+        return TestTask( workTime, **self.parms )
 
     def shutdown(self, **kwargs ): pass
 
