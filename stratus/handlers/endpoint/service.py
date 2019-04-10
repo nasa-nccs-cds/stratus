@@ -1,4 +1,5 @@
 import os
+from typing import Dict, List
 from stratus.handlers.base import Handler
 from app.client import StratusClient
 from app.base import StratusAppBase
@@ -16,6 +17,8 @@ class ServiceHandler( Handler ):
 
     def newApplication(self, core: StratusCore ) -> StratusAppBase:
         raise Exception( "Can't stand up a stratus app for an endpoint")
+
+
 
 
 

@@ -6,8 +6,6 @@ sortedcontainers
 SQLAlchemy>=0.8.0
 jsonschema<3.0.0,>=2.5.1
 PyYAML>=3.11
-xarray
-libnetcdf
-netCDF4
+
 
 

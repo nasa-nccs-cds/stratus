@@ -1,4 +1,4 @@
-from stratus_endpoint.handler.test import TestEndpoint
+from stratus.handlers.endpoint.test import TestEndpoint
 from stratus.handlers.endpoint.client import DirectClient
 from typing import Dict
 
