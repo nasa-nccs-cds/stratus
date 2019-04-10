@@ -1,17 +1,19 @@
 import os
 from typing import Dict, List
+from stratus_endpoint.util.config import StratusLogger
 from stratus_endpoint.handler.test import Endpoint, TaskHandle, TestTask, TaskResult
 
 class TestEndpoint1(Endpoint):
 
     def __init__( self, **kwargs ):
         Endpoint.__init__( self, **kwargs )
+        self.logger = StratusLogger.getLogger()
         self._epas = [ f"test{index}" for index in range(10) ]
 
     def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> "TaskHandle":
         workTime = self.getWorktime( requestSpec["operations"] )
         tparms = { **self.parms, **kwargs }
-        print( f"exec TestEndpoint, request = {requestSpec}, parms = {tparms}")
+        self.logger( f"exec TestEndpoint, request = {requestSpec}, parms = {tparms}")
         return TestTask( workTime, **tparms )
 
     def getWorktime(self, operations: List[Dict]) -> float :

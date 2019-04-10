@@ -5,7 +5,7 @@ from flask import Flask, Response
 import connexion, json, logging
 from stratus.handlers.manager import Handlers
 from functools import partial
-from stratus.util.config import Config, StratusLogger
+from stratus_endpoint.util.config import Config, StratusLogger
 from flask_sqlalchemy import SQLAlchemy
 from celery import Celery
 

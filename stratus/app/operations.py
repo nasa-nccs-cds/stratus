@@ -1,6 +1,6 @@
 import copy, os, time, traceback
 from typing import List, Dict, Set, Iterator, Any, Optional
-from stratus.util.config import StratusLogger, UID
+from stratus_endpoint.util.config import StratusLogger, UID
 from app.client import StratusClient
 from concurrent.futures import wait, as_completed, Executor, Future
 from stratus_endpoint.handler.base import TaskHandle, TaskResult, TaskFuture, Status

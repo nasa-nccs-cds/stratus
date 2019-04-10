@@ -1,6 +1,6 @@
 import json, string, random, abc, os, pickle, collections
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
-from stratus.util.config import StratusLogger
+from stratus_endpoint.util.config import StratusLogger
 from threading import Thread
 import zmq, traceback, time, logging, xml, socket
 from stratus.app.operations import WorkflowExeFuture, Status

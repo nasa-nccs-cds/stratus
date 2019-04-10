@@ -1,7 +1,7 @@
 from app.base import StratusAppBase
 from app.core import StratusCore
 import json
-from stratus.util.config import StratusLogger
+from stratus_endpoint.util.config import StratusLogger
 import zmq, traceback
 from typing import Dict
 import queue, datetime

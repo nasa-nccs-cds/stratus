@@ -1,7 +1,7 @@
 import os, json
 from typing import List, Dict, Callable, Optional
 from app.client import StratusClient
-from stratus.util.config import StratusLogger
+from stratus_endpoint.util.config import StratusLogger
 from app.base import StratusFactory
 from app.operations import Op
 import traceback

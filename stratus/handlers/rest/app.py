@@ -2,7 +2,7 @@ from typing import Dict
 import os, traceback, abc
 from flask import Flask, Response, Blueprint, request
 import json, importlib
-from stratus.util.config import StratusLogger
+from stratus_endpoint.util.config import StratusLogger
 from app.core import StratusCore
 from stratus.app.operations import WorkflowExeFuture
 from stratus_endpoint.handler.base import TaskHandle, Status

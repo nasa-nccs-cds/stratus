@@ -1,6 +1,6 @@
 import copy, abc
 from typing import List, Dict, Set, Iterator, Any
-from stratus.util.config import StratusLogger, UID
+from stratus_endpoint.util.config import StratusLogger, UID
 from app.client import StratusClient
 from decorator import decorator, dispatch_on
 from stratus_endpoint.handler.base import TaskHandle

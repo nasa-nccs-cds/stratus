@@ -1,6 +1,6 @@
 from app.client import StratusClient, stratusrequest
 import zmq, traceback, json
-from stratus.util.config import StratusLogger, UID
+from stratus_endpoint.util.config import StratusLogger, UID
 from threading import Thread
 from typing import Dict, Optional, List
 from stratus.util.parsing import s2b, b2s

@@ -1,7 +1,7 @@
 from flask import request, Blueprint, make_response
 from stratus_endpoint.handler.base import TaskResult, Status
 import xarray as xa
-from stratus.util.config import UID
+from stratus_endpoint.util.config import UID
 import pickle, json, flask, os
 from jinja2 import Environment, PackageLoader, select_autoescape
 from stratus.app.operations import WorkflowExeFuture

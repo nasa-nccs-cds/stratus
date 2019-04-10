@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
-from stratus.util.config import Config, StratusLogger, UID
+from stratus_endpoint.util.config import Config, StratusLogger, UID
 from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult
 import abc, re
 from decorator import decorator, dispatch_on

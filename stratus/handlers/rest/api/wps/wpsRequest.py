@@ -2,9 +2,9 @@ import requests, json, pickle
 from xml.etree.ElementTree import Element
 import defusedxml.ElementTree as ET
 import xarray as xa
-from stratus.util.config import Config, StratusLogger, UID
+from stratus_endpoint.util.config import Config, StratusLogger, UID
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
-from stratus.util.config import StratusLogger
+from stratus_endpoint.util.config import StratusLogger
 
 def execRequest( requestURL, parms: Dict ) -> Element:
     response: requests.Response = requests.get( requestURL, params=parms )

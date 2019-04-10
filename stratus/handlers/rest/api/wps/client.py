@@ -1,7 +1,7 @@
 from app.client import StratusClient, stratusrequest
 from typing import Dict, Optional, List
 import time
-from stratus.util.config import StratusLogger
+from stratus_endpoint.util.config import StratusLogger
 from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult
 from app.core import StratusCore
 import os

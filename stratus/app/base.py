@@ -1,6 +1,6 @@
 import os, json, yaml, abc, itertools
 from typing import List, Union, Dict, Set, Iterator
-from stratus.util.config import Config, StratusLogger
+from stratus_endpoint.util.config import Config, StratusLogger
 from concurrent.futures import ThreadPoolExecutor, Future, Executor
 from stratus_endpoint.handler.base import TaskHandle
 from multiprocessing import Process as SubProcess
