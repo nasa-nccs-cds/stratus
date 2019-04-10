@@ -130,14 +130,15 @@ class WorkflowTask(DGNode):
     def type(self) -> str:
         return self._opset.type
 
-    def submit( self, executor: Executor, ** kwargs ) -> TaskFuture:
+    def submit( self, executor: Executor, **kwargs ) -> TaskFuture:
         self.logger.info( f"Submitting Task[{self.handle}:{self.rid}]")
-        self._future = executor.submit( self.execute )
+        self._future = executor.submit( self.execute, **kwargs )
         return TaskFuture( self.rid, self.cid, self._future, ** kwargs )
 
-    def execute( self ):
+    def execute( self, **kwargs ):
         results: List[TaskResult] = self.waitOnTasks()
-        return self._opset.submit( results )
+        handle = self._opset.submit( results )
+        return handle.blockForResult( **kwargs )
 
     def getFuture(self) -> Future:
         while True:
@@ -150,8 +151,7 @@ class WorkflowTask(DGNode):
             self.logger.info(f"START WaitOnTasks[{self.handle}], dep = {[ dep.handle for dep in self.dependencies]}")
             futures: List[Future] = [ dep.getFuture() for dep in self.dependencies ]
             wait(futures)
-            taskHandles: List[TaskHandle] = [ future.result() for future in futures ]
-            taskResults: List[TaskResult] = [ taskHandle.getResult() for taskHandle in taskHandles]
+            taskResults: List[TaskResult] = [ future.result() for future in futures ]
             for taskResult in taskResults:
                 self.logger.info(f"TASK[{self.handle}]: Got Dependency RESULT-> empty: {taskResult.empty()}, header = {taskResult.header}")
             return taskResults
