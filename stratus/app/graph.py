@@ -41,6 +41,7 @@ class Connection:
 class DGNode:
 
     def __init__( self, inputs: List[str], outputs: List[str] = None, **kwargs ):
+        self.logger =  StratusLogger.getLogger()
         self.params: Dict[str,Any] = kwargs
         self.id = self.get( "id", UID.randomId( 6 ) )
         self._inputs = inputs

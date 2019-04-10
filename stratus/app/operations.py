@@ -1,4 +1,4 @@
-import copy, os, time
+import copy, os, time, traceback
 from typing import List, Dict, Set, Iterator, Any, Optional
 from stratus.util.config import StratusLogger, UID
 from app.client import StratusClient
@@ -88,9 +88,10 @@ class ClientOpSet(OpSet):
         return "C({}):[{}]".format( self.client, ",".join( [ op for op in self.nodes.keys() ] ) )
 
     def submit( self, inputs: List[TaskResult] ) -> TaskHandle:
+        self.logger.info(f"ClientOpSet Submit TASK {self.client.handle}" )
         if self._future is None:
             filtered_request =  self.getFilteredRequest( self._request )
-            self.logger.info( "Client {}: submit operations {}".format( self.client.name, str( filtered_request['operations'] ) ) )
+            self.logger.info( f"Client {self.client.handle}: submit operations {filtered_request['operations']}" )
             self._future = self.client.request( filtered_request, inputs )
         return self._future
 
@@ -121,15 +122,21 @@ class WorkflowTask(DGNode):
         return self._opset.rid
 
     @property
+    def handle(self) -> str:
+        return self._opset.client.handle
+
+    @property
     def type(self) -> str:
         return self._opset.type
 
     def submit( self, executor: Executor, ** kwargs ) -> TaskFuture:
+        self.logger.info( f"Submitting Task[{self.handle}:{self.rid}]")
         self._future = executor.submit( self.execute )
         return TaskFuture( self.rid, self.cid, self._future, ** kwargs )
 
     def execute( self ):
         results: List[TaskResult] = self.waitOnTasks()
+        self.logger.info( f"EXEC Task[{self.handle}:{self.rid}]")
         return self._opset.submit( results )
 
     def getFuture(self) -> Future:
@@ -138,12 +145,20 @@ class WorkflowTask(DGNode):
             time.sleep( 0.05 )
 
     def waitOnTasks( self ) -> List[TaskResult]:
-        assert self.dependencies is not None, "Must call setDependencies before waitOnTasks"
-        results: List[TaskResult] = []
-        futures: List[Future] = [ dep.getFuture() for dep in self.dependencies ]
-        for future in as_completed(futures):
-            results.append( future.result() )
-        return results
+        try:
+            self.logger.info(f"START WaitOnTasks[{self.handle}], dep = {[ dep.handle for dep in self.dependencies]}")
+            assert self.dependencies is not None, "Must call setDependencies before waitOnTasks"
+            futures: List[Future] = [ dep.getFuture() for dep in self.dependencies ]
+            self.logger.info(f"WaitOnTasks[{self.handle}], nDep = {len(futures)}")
+            wait(futures)
+            self.logger.info(f"DONE WaitOnTasks[{self.handle}]")
+            results: List[TaskResult] = [ future.result() for future in futures ]
+            self.logger.info(f"Got RESULTS[{self.handle}]")
+            return results
+        except Exception as err:
+            self.logger.error( f"Error waiting on dependencies in task [{self.handle}:{self.rid}]: {repr(err)}")
+            self.logger.error( traceback.format_exc() )
+            return []
 
     def setDependencies( self, dependencies: List["WorkflowTask"] ):
         self.dependencies = dependencies

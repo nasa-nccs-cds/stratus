@@ -2,6 +2,7 @@ from typing import List, Dict, Union
 from app.client import StratusClient
 from stratus.handlers.manager import Handlers
 from app.base import StratusAppBase, StratusCoreBase
+from app.operations import Op
 
 class StratusCore(StratusCoreBase):
 
@@ -10,8 +11,8 @@ class StratusCore(StratusCoreBase):
         self.handlers = Handlers( self.config )
         self.service = None
 
-    def getClients( self, epas: List[str] = None ) -> List[StratusClient]:
-        return self.handlers.getClients( epas )
+    def getClients( self, op: Op = None, **kwargs ) -> List[StratusClient]:
+        return self.handlers.getClients( op )
 
     def getClient(self) -> StratusClient:
         service = self.handlers.getApplicationHandler()

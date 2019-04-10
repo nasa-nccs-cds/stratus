@@ -29,7 +29,7 @@ class StratusClient:
     logger = StratusLogger.getLogger()
 
     def __init__( self, type: str, **kwargs ):
-        self.cid = UID.randomId(6)
+        self.cid = kwargs.get( "cid", UID.randomId(6) )
         self.type: str = type
         self.name: str = kwargs.get("name")
         self.cache_dir: str = kwargs.get( "cache_dir", "~/.edas/cache" )
@@ -39,8 +39,13 @@ class StratusClient:
         self._endpointSpecs: List[EndpointSpec] = None
         self.clients = { self.cid }
 
+    @property
+    def handle(self):
+        return f"{self.name}:{self.cid}"
+
     def activate(self):
         self.active = True
+        self.init()
 
     def init( self ):
         if self._endpointSpecs is None:
@@ -62,11 +67,9 @@ class StratusClient:
 
     @property
     def endpointSpecs(self) -> List[str]:
-        self.init()
         return [str(eps) for eps in self._endpointSpecs]
 
     def handles(self, epa: str, **kwargs ) -> bool:
-        self.init()
         for endpointSpec in self._endpointSpecs:
             if endpointSpec.handles( epa, **kwargs ): return True
         return False

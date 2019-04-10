@@ -1,14 +1,14 @@
 import os
 from typing import Dict, List
-from stratus_endpoint.handler.test import Endpoint, TaskHandle, TestTask
+from stratus_endpoint.handler.test import Endpoint, TaskHandle, TestTask, TaskResult
 
-class TestEndpoint(Endpoint):
+class TestEndpoint1(Endpoint):
 
     def __init__( self, **kwargs ):
         Endpoint.__init__( self, **kwargs )
         self._epas = [ f"test{index}" for index in range(10) ]
 
-    def request(self, requestSpec: Dict, **kwargs ) -> "TaskHandle":
+    def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> "TaskHandle":
         workTime = float( requestSpec.get( "workTime", 0.0 ) )
         print( f"exec TestEndpoint, request = {requestSpec}")
         return TestTask( workTime )

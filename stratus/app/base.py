@@ -51,7 +51,7 @@ class StratusCoreBase:
         return caps
 
     @abc.abstractmethod
-    def getClients( self, epas: List[str] = None ) -> List[StratusClient]: pass
+    def getClients( self, op: Op = None, **kwargs ) -> List[StratusClient]: pass
 
 class StratusAppBase:
     __metaclass__ = abc.ABCMeta
@@ -94,10 +94,10 @@ class StratusAppBase:
         clientOpsets: Dict[str, ClientOpSet] = dict()
         ops: List[Op] = OpSet( nodes = [ Op( **opDict ) for opDict in ops ] )
         for op in ops:
-            clients = self.core.getClients( op.epas )
+            clients = self.core.getClients( op )
             assert len(clients) > 0, f"Can't find a client to process the operation': {op.epas}"
             for client in clients:
-               opSet = clientOpsets.setdefault(client.name, ClientOpSet(request,client))
+               opSet = clientOpsets.setdefault(client.handle, ClientOpSet(request,client))
                opSet.add( op )
         return clientOpsets
 
@@ -135,7 +135,7 @@ class StratusFactory:
         assert htype1 == htype, "Sanity check of Handler type failed: {} vs {}".format(htype1,htype)
 
     @abc.abstractmethod
-    def client( self ) -> StratusClient: pass
+    def client( self, cid = None ) -> StratusClient: pass
 
     @abc.abstractmethod
     def app(self, core: StratusCoreBase ) -> StratusAppBase: pass

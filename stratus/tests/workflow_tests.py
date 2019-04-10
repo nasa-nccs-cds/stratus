@@ -1,7 +1,7 @@
 from app.core import StratusCore
 import os
 
-testEndpoint = dict( type="endpoint", module="stratus_endpoint.handler.test", object="TestEndpoint" )
+testEndpoint = dict( type="endpoint", module="stratus.handlers.endpoint.test", object="TestEndpoint1" )
 
 if __name__ == "__main__":
 
@@ -9,9 +9,9 @@ if __name__ == "__main__":
     stratus = StratusCore( settings )
     app = stratus.getApplication()
 
-    operation= [ dict( name='test1:op', result="r1", workTime="3.0" ),
-                 dict( name='test2:op', result="r2", workTime="6.0" ),
-                 dict( name='test3:op', input=["r1","r2"], result="r3", workTime="1.0" )   ]
+    operation= [ dict( name='test1:op', result="r1", cid = "C0", workTime="3.0" ),
+                 dict( name='test2:op', result="r2", cid = "C1", workTime="6.0" ),
+                 dict( name='test3:op', input=["r1","r2"], result="r3", cid = "C2", workTime="1.0" )   ]
     request=dict( operation=operation, rid="R0", cid="C0" )
 
     wFuture = app.processWorkflow( request )

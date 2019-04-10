@@ -3,6 +3,7 @@ from typing import List, Dict, Callable, Optional
 from app.client import StratusClient
 from stratus.util.config import StratusLogger
 from app.base import StratusFactory
+from app.operations import Op
 import traceback
 import importlib
 
@@ -42,16 +43,17 @@ class Handlers:
         assert result is not None, "Attempt to access unknown handler in Handlers: {} ".format( key )
         return result
 
-    def getClients( self, epas: List[str] = None, **kwargs ) -> List[StratusClient]:
+    def getClients( self, op: Op = None, **kwargs ) -> List[StratusClient]:
         assert self.configSpec is not None, "Error, the handlers have not yet been initialized"
         clients = []
         for service in self._handlers.values():
-            if epas == None:
+            if op == None:
                 clients.append( service.client() )
             else:
-                for epa in epas:
+                cid = op.get("cid",None)
+                for epa in op.epas:
                     if service.client().handles( epa, **kwargs):
-                        clients.append( service.client() )
+                        clients.append( service.client(cid) )
         return clients
 
     def getEpas(self) -> List[str]:

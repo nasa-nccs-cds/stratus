@@ -23,7 +23,7 @@ class DirectClient(StratusClient):
     def capabilities(self, type: str, **kwargs ) -> Dict:
         return self.endpoint.capabilities( type, **kwargs )
 
-    def init(self, **kwargs):
+    def init(self):
         try:
             self.endpoint: Endpoint = self.instantiateEndpoint()
             self.endpoint.init()

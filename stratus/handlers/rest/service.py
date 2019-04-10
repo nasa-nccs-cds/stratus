@@ -14,10 +14,11 @@ class ServiceHandler( Handler ):
         htype = os.path.basename(os.path.dirname(__file__))
         super(ServiceHandler, self).__init__( htype, **kwargs )
 
-    def newClient( self, gateway=False ) -> StratusClient:
+    def newClient( self, cid = None, gateway=False ) -> StratusClient:
         API = self.parm("API","core").lower()
-        if API == "core": return CoreRestClient( gateway=gateway, **self.parms  )
-        if API == "wps":  return WPSRestClient( gateway=gateway, **self.parms )
+        cparms = {"cid": cid, **self.parms}
+        if API == "core": return CoreRestClient( gateway=gateway, **cparms  )
+        if API == "wps":  return WPSRestClient( gateway=gateway, **cparms )
         raise Exception( "Unrecognized API in REST ServiceHandler: " + API)
 
     def newApplication(self, core: StratusCore ) -> StratusApp:

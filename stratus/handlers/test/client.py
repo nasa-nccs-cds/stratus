@@ -1,4 +1,4 @@
-from stratus.handlers.endpoint.test import TestEndpoint
+from stratus.handlers.endpoint.test import TestEndpoint1
 from stratus.handlers.endpoint.client import DirectClient
 from typing import Dict
 
@@ -11,7 +11,7 @@ class TestClient(DirectClient):
 
 
     def instantiateEndpoint(self):
-        return TestEndpoint( **self.parms )
+        return TestEndpoint1( **self.parms )
 
 
     def capabilities(self, type: str, **kwargs  ) -> Dict:
