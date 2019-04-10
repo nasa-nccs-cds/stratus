@@ -62,7 +62,7 @@ class ZMQClient(StratusClient):
         response = self.sendMessage( "exe", requestSpec, **kwargs )
         status = Status.decode( response.get('status') )
         self.log( str(response) )
-        response_manager = ResponseManager( self.context, response["rid"], self.host_address, self.response_port, status,  **kwargs )
+        response_manager = ResponseManager( self.context, response["rid"], self.host_address, self.response_port, status, self.cache_dir, **kwargs )
         response_manager.start()
         return zmqTask( self.cid, response_manager )
 
@@ -99,7 +99,7 @@ class ZMQClient(StratusClient):
 
 class ResponseManager(Thread):
 
-    def __init__(self, context: zmq.Context, rid: str, host: str, port: int, status: Status, **kwargs ):
+    def __init__(self, context: zmq.Context, rid: str, host: str, port: int, status: Status, cache_dir: str, **kwargs ):
         Thread.__init__(self)
         self.context = context
         self.logger = StratusLogger.getLogger()
@@ -111,7 +111,7 @@ class ResponseManager(Thread):
         self.setName('STRATUS zeromq client Response Thread')
         self.cached_results: queue.Queue[TaskResult] = queue.Queue()
         self.setDaemon(True)
-        self.cacheDir = kwargs.get( "cacheDir",  os.path.expanduser( "~/.edas/cache") )
+        self.cacheDir = os.path.expanduser( cache_dir )
         self.log("Created RM, cache dir = " + self.cacheDir )
         self._status = status
 

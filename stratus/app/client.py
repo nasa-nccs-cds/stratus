@@ -32,6 +32,7 @@ class StratusClient:
         self.cid = UID.randomId(6)
         self.type: str = type
         self.name: str = kwargs.get("name")
+        self.cache_dir: str = kwargs.get( "cache_dir", "~/.edas/cache" )
         self.parms = kwargs
         self.priority: float = float( self.parm( "priority", "0" ) )
         self.active = False

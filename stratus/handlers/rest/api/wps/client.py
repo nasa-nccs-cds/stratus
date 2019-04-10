@@ -32,7 +32,7 @@ class WPSRestClient(StratusClient):
         response =  self.wpsRequest.exe(requestSpec)
         self.log( "Got response xml: " + str(response["xml"]) )
         self.log("Got refs: " + str(response["refs"]))
-        return RestTask( requestSpec['rid'], self.cid, response["refs"], self.wpsRequest )
+        return RestTask( requestSpec['rid'], self.cid, response["refs"], self.wpsRequest, cache=self.cache_dir )
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
         return self.wpsRequest.getCapabilities( type )
@@ -62,7 +62,7 @@ class RestTask(TaskHandle):
         self.cacheDir: str = self.createCache( **kwargs )
 
     def createCache(self, **kwargs ) -> str:
-        cacheDir: str = kwargs.get( "cache", os.path.expanduser("~/.edas/cache") )
+        cacheDir: str = os.path.expanduser( kwargs.get( "cache", "~/.edas/cache" ) )
         try: os.makedirs( cacheDir )
         except: pass
         return cacheDir

@@ -38,11 +38,10 @@ The following are the currently available stratus service handlers:
 * zeromq
 * openapi
 * rest
+* rest_client
 * celery
 * lambda
-
-
-     
+    
 ### Configuration
 The stratus configuration file is located by ~/.stratus/settings.ini.  A sample can be found at stratus/settings.ini
 
