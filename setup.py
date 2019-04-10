@@ -1,9 +1,8 @@
 import sys, os
 from setuptools import setup, find_packages
-os.environ["AIRFLOW_GPL_UNIDECODE"] = "true"
 
 def get_requirements():
-    handlers = [ "celery", "endpoint", "zeromq", "openapi", "lambda", "rest" ]
+    handlers = [ "celery", "endpoint", "zeromq", "openapi", "lambda", "rest", "rest_client" ]
     requirement_files = []
     for handler in handlers:
         if handler in sys.argv:
