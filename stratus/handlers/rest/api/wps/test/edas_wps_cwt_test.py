@@ -1,4 +1,4 @@
-from app.core import StratusCore
+from stratus.app.core import StratusCore
 from stratus_endpoint.handler.base import TaskHandle
 
 settings = dict( stratus = dict( type="rest", API="wps", host_address="https://edas.nccs.nasa.gov/wps/cwt" ) )

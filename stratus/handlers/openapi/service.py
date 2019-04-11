@@ -1,5 +1,5 @@
 from stratus.handlers.base import Handler
-from app.client import StratusClient
+from stratus.app.client import StratusClient
 from .client import OpenApiClient
 import os
 

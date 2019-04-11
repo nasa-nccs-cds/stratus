@@ -2,7 +2,7 @@ from stratus_endpoint.handler.base import TaskHandle, TaskResult
 from typing import List, Optional
 from stratus.util.test import TestDataManager as mgr
 import xarray as xa
-from app.core import StratusCore
+from stratus.app.core import StratusCore
 
 if __name__ == "__main__":
 

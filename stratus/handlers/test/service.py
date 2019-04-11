@@ -1,8 +1,8 @@
 import os
 from stratus.handlers.base import Handler
-from app.client import StratusClient
-from app.base import StratusAppBase, TestStratusApp
-from app.core import StratusCore
+from stratus.app.client import StratusClient
+from stratus.app.base import StratusAppBase, TestStratusApp
+from stratus.app.core import StratusCore
 from .client import TestClient
 
 class ServiceHandler( Handler ):

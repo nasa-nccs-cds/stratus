@@ -1,4 +1,4 @@
-from app.client import StratusClient, stratusrequest
+from stratus.app.client import StratusClient, stratusrequest
 import zmq, traceback, json
 from stratus_endpoint.util.config import StratusLogger, UID
 from threading import Thread

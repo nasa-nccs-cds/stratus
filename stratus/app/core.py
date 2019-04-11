@@ -1,8 +1,8 @@
 from typing import List, Dict, Union
-from app.client import StratusClient
+from stratus.app.client import StratusClient
 from stratus.handlers.manager import Handlers
-from app.base import StratusAppBase, StratusCoreBase
-from app.operations import Op
+from stratus.app.base import StratusAppBase, StratusCoreBase
+from stratus.app.operations import Op
 
 class StratusCore(StratusCoreBase):
 

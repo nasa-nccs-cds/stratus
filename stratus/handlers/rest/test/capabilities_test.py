@@ -1,4 +1,4 @@
-from app.core import StratusCore
+from stratus.app.core import StratusCore
 
 if __name__ == "__main__":
 

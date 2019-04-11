@@ -1,4 +1,4 @@
-from app.client import StratusClient, stratusrequest
+from stratus.app.client import StratusClient, stratusrequest
 from stratus_endpoint.handler.base import TaskHandle, Endpoint, TaskResult
 from typing import Dict, List
 import importlib, traceback

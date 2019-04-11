@@ -1,4 +1,4 @@
-from app.core import StratusCore
+from stratus.app.core import StratusCore
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
 from stratus_endpoint.handler.base import TaskHandle
 import os

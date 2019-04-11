@@ -3,11 +3,11 @@ import os, traceback, abc
 from flask import Flask, Response, Blueprint, request
 import json, importlib
 from stratus_endpoint.util.config import StratusLogger
-from app.core import StratusCore
+from stratus.app.core import StratusCore
 from stratus.app.operations import WorkflowExeFuture
 from stratus_endpoint.handler.base import TaskHandle, Status
 from flask_sqlalchemy import SQLAlchemy
-from app.base import StratusAppBase
+from stratus.app.base import StratusAppBase
 from jsonschema import validate
 
 class RestAPIBase:

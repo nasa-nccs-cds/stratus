@@ -1,9 +1,9 @@
 import os
 from typing import Dict, List
 from stratus.handlers.base import Handler
-from app.client import StratusClient
-from app.base import StratusAppBase
-from app.core import StratusCore
+from stratus.app.client import StratusClient
+from stratus.app.base import StratusAppBase
+from stratus.app.core import StratusCore
 from .client import DirectClient
 
 class ServiceHandler( Handler ):

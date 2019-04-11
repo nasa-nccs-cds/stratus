@@ -1,5 +1,5 @@
-from app.base import StratusAppBase
-from app.core import StratusCore
+from stratus.app.base import StratusAppBase
+from stratus.app.core import StratusCore
 import json
 from stratus_endpoint.util.config import StratusLogger
 import zmq, traceback

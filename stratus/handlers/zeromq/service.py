@@ -1,7 +1,7 @@
 from stratus.handlers.base import Handler
-from app.client import StratusClient
+from stratus.app.client import StratusClient
 from .client import ZMQClient
-from app.core import StratusCore
+from stratus.app.core import StratusCore
 from .app import StratusApp
 import os
 

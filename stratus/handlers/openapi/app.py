@@ -5,8 +5,8 @@ from flask import Response
 import connexion, json
 from functools import partial
 from flask_sqlalchemy import SQLAlchemy
-from app.core import StratusCore
-from app.base import StratusAppBase
+from stratus.app.core import StratusCore
+from stratus.app.base import StratusAppBase
 
 class StratusResolver(Resolver):
 

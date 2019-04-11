@@ -1,10 +1,10 @@
-from app.client import StratusClient, stratusrequest
+from stratus.app.client import StratusClient, stratusrequest
 from typing import Dict, Optional, List
 import traceback, time, requests
 from stratus_endpoint.util.config import StratusLogger
 from threading import Thread
 from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult
-from app.core import StratusCore
+from stratus.app.core import StratusCore
 import os, pickle
 from enum import Enum
 MB = 1024 * 1024
@@ -23,7 +23,7 @@ class CoreRestClient(StratusClient):
         else:
             host = self["host"]
             port = self["port"]
-            route = self["route"]
+            route = self.parm("route","")
             self.host_address = f"http://{host}:{port}/{route}"
         self.response_manager = ResponseManager.getManger( self.cid, self.host_address )
         self.response_manager.start()

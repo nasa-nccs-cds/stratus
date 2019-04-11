@@ -5,7 +5,7 @@ from stratus_endpoint.util.config import UID
 import pickle, json, flask, os
 from jinja2 import Environment, PackageLoader, select_autoescape
 from stratus.app.operations import WorkflowExeFuture
-from app.base import StratusAppBase
+from stratus.app.base import StratusAppBase
 from typing import *
 from stratus.handlers.rest.app import RestAPIBase
 HERE = os.path.dirname(os.path.abspath(__file__))

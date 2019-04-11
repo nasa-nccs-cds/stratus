@@ -1,6 +1,6 @@
-from app.client import StratusClient
-from app.base import StratusAppBase, StratusFactory
-from app.core import StratusCore
+from stratus.app.client import StratusClient
+from stratus.app.base import StratusAppBase, StratusFactory
+from stratus.app.core import StratusCore
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
 import abc
 

@@ -1,4 +1,4 @@
-from app.core import StratusCore
+from stratus.app.core import StratusCore
 from stratus_endpoint.handler.base import TaskHandle
 from stratus.util.test import TestDataManager as mgr
 

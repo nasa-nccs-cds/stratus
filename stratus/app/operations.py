@@ -1,7 +1,7 @@
 import copy, os, time, traceback
 from typing import List, Dict, Set, Iterator, Any, Optional
 from stratus_endpoint.util.config import StratusLogger, UID
-from app.client import StratusClient
+from stratus.app.client import StratusClient
 from concurrent.futures import wait, as_completed, Executor, Future
 from stratus_endpoint.handler.base import TaskHandle, TaskResult, TaskFuture, Status
 from stratus.app.graph import DGNode, DependencyGraph, graphop, Connection
@@ -304,7 +304,7 @@ class Workflow(DependencyGraph):
         return results
 
 if __name__ == "__main__":
-    from app.core import StratusCore
+    from stratus.app.core import StratusCore
     from stratus.util.test import TestDataManager as mgr
     settings = dict( stratus=dict( type="endpoint" ) )
 

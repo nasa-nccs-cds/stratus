@@ -1,4 +1,4 @@
-from app.core import StratusCore
+from stratus.app.core import StratusCore
 import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 SETTINGS_FILE = os.path.join( HERE, "test_settings.ini" )

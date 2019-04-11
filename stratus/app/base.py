@@ -4,7 +4,7 @@ from stratus_endpoint.util.config import Config, StratusLogger
 from concurrent.futures import ThreadPoolExecutor, Future, Executor
 from stratus_endpoint.handler.base import TaskHandle
 from multiprocessing import Process as SubProcess
-from app.operations import *
+from stratus.app.operations import *
 
 class StratusCoreBase:
     HERE = os.path.dirname(__file__)
@@ -164,7 +164,7 @@ class StratusFactory:
 
 
 if __name__ == "__main__":
-    from app.core import StratusCore
+    from stratus.app.core import StratusCore
     from stratus_endpoint.handler.base import TaskHandle
 
     settings = dict( stratus=dict( type="zeromq"), edas=dict(type="test", work_time=2.0 ) )

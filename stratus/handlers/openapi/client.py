@@ -3,7 +3,7 @@ from pyswagger.contrib.client.requests import Client
 from stratus_endpoint.handler.base import TaskHandle, TaskResult
 from pyswagger.spec.v2_0.objects import Operation
 from typing import Dict, List
-from app.client import StratusClient, stratusrequest
+from stratus.app.client import StratusClient, stratusrequest
 
 class OpenApiClient(StratusClient):
 
