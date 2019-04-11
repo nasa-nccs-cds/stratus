@@ -8,6 +8,7 @@ import queue, datetime
 from .responder import StratusZMQResponder, StratusResponse
 from stratus.app.operations import WorkflowExeFuture
 from stratus_endpoint.handler.base import Status, TaskFuture
+from stratus_endpoint.handler.base import TaskHandle, Endpoint, TaskResult
 MB = 1024 * 1024
 
 class StratusApp(StratusAppBase):
@@ -82,10 +83,9 @@ class StratusApp(StratusAppBase):
                     if len(parts) <= 2: raise Exception( "Missing parameters to exe request")
                     request["rid"] = submissionId
                     self.logger.info( "Processing Request: '{}' '{}' '{}'".format( submissionId, rType, str(request)) )
-                    task: WorkflowExeFuture = self.processWorkflow(request)
-                    self.logger.info( f"Current task: {task.rid} " )
-                    self.tasks.put( task )                                                                                                               #   TODO: Send results when tasks complete.
-                    response = { "status": "Executing", "task": task.rid }
+                    tasks: Dict[str,TaskHandle] = self.processWorkflow(request)
+                    for task in tasks: self.tasks.put( task )                                                                                                               #   TODO: Send results when tasks complete.
+                    response = { "status": "Executing" }
                     self.sendResponseMessage(StratusResponse(submissionId, response))
                 elif rType == "quit" or rType == "shutdown":
                     response = {"status": "Terminating" }

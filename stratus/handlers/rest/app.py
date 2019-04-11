@@ -18,9 +18,9 @@ class RestAPIBase:
         self.parms = kwargs
         self.name = name
         self.app = app
-        self.tasks: Dict[str, WorkflowExeFuture] = {}
+        self.tasks: Dict[str, TaskHandle] = {}
 
-    def addTask( self, task: WorkflowExeFuture ):
+    def addTask( self, task: TaskHandle ):
         self.tasks[ task.rid ] = task
         return task.rid
 

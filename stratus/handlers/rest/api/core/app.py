@@ -15,9 +15,8 @@ class RestAPI(RestAPIBase):
             if request.method == 'POST':    requestDict: Dict = request.json
             else:                           requestDict: Dict = self.jsonRequest( request.args.get("request",None) )
             if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
-            current_task: WorkflowExeFuture = self.app.processWorkflow(requestDict)
-            if self.debug: self.logger.info( f"Current task: {current_task} " )
-            self.addTask( current_task )
+            current_tasks: Dict[str,TaskHandle] = self.app.processWorkflow(requestDict)
+            for task in current_tasks.values(): self.addTask( task )
             return self.jsonResponse( dict( status="executing", rid=requestDict['rid'] ), code=202 )
 
         @bp.route('/status', methods=('GET',))

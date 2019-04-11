@@ -280,23 +280,27 @@ class Workflow(DependencyGraph):
     def submit( self ) -> Dict[str,TaskHandle]:
         results = {}
         output_ids = self.getOutputNodes()
+        completed_tasks = []
         while True:
             completed = True
             for wtask in self.tasks:
-                stat = wtask.status()
-                if stat == Status.ERROR:
-                    raise Exception( "Workflow Errored out")
-                elif stat == Status.CANCELED:
-                    raise Exception("Workflow Canceled")
-                elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
-                    taskHandle = wtask.async_execute()
-                    if wtask.id in output_ids:
-                        results[ wtask.id ] =  taskHandle
-                    completed = False
-                elif ( stat == Status.EXECUTING ):
-                    completed = False
+                if wtask.id not in completed_tasks:
+                    stat = wtask.status()
+                    if stat == Status.ERROR:
+                        raise Exception( "Workflow Errored out")
+                    elif stat == Status.CANCELED:
+                        raise Exception("Workflow Canceled")
+                    elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
+                        taskHandle = wtask.async_execute()
+                        if wtask.id in output_ids:
+                            results[ wtask.id ] =  taskHandle
+                        completed = False
+                    elif ( stat == Status.EXECUTING ):
+                        completed = False
+                    elif ( stat == Status.COMPLETED ):
+                        completed_tasks.append( wtask.id )
             if completed: break
-            time.sleep(0.1)
+            time.sleep(0.02)
         return results
 
 if __name__ == "__main__":
