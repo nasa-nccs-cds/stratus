@@ -59,7 +59,12 @@ class StratusAppBase:
     def __init__( self, _core: StratusCoreBase ):
         self.logger = StratusLogger.getLogger()
         self.core = _core
-        self.executor = ThreadPoolExecutor()
+        self._executor = ThreadPoolExecutor()
+
+    def getExecutor(self):
+        if self._executor is None:
+            self._executor = ThreadPoolExecutor()
+        return self._executor
 
     def distributeOps(self, clientOpsets: Dict[str, ClientOpSet]) -> Iterator[ClientOpSet]:
         # Distributes ops to clients while maximizing locality of operations
@@ -81,11 +86,17 @@ class StratusAppBase:
         distributed_opsets = [opset.connectedOpsets() for opset in filtered_opsets]
         return itertools.chain.from_iterable(distributed_opsets)
 
-    def processWorkflow( self, request: Dict ) -> WorkflowExeFuture:
+    def processWorkflowExec( self, request: Dict ) -> WorkflowExeFuture:
         clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
         tasks: List[WorkflowTask] = [ WorkflowTask(cOpSet) for cOpSet in self.distributeOps( clientOpsets ) ]
         workflow = Workflow( nodes=tasks )
-        return WorkflowExeFuture( request, workflow.submit(self.executor) )
+        return WorkflowExeFuture( request, workflow.submitExec(self.getExecutor()) )
+
+    def processWorkflow( self, request: Dict ) -> Dict[str,TaskHandle]:
+        clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
+        tasks: List[WorkflowTask] = [ WorkflowTask(cOpSet) for cOpSet in self.distributeOps( clientOpsets ) ]
+        workflow = Workflow( nodes=tasks )
+        return workflow.submit()
 
     def geClientOpsets(self, request: Dict ) -> Dict[str, ClientOpSet]:
         # Returns map of client id to list of ops in request that can be handled by that client

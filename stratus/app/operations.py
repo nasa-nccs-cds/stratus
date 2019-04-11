@@ -53,7 +53,7 @@ class ClientOpSet(OpSet):
         OpSet.__init__( self,  **kwargs )
         self.client: StratusClient = client
         self._request = request
-        self._taskHandle = None
+        self._taskHandle: TaskHandle = None
 
     def connectedOpsets(self) -> List["ClientOpSet"]:
         subgraphs = self.connectedComponents()
@@ -68,6 +68,10 @@ class ClientOpSet(OpSet):
     @property
     def name(self) -> str:
         return self.client.name
+
+    @property
+    def taskHandle(self) -> TaskHandle:
+        return self._taskHandle
 
     @property
     def source_cid(self) -> str:
@@ -96,6 +100,10 @@ class ClientOpSet(OpSet):
             self._taskHandle = self.client.request(filtered_request, inputs)
         return self._taskHandle
 
+    def status(self) -> Status:
+        if self._taskHandle is None: return Status.IDLE
+        return self._taskHandle.status()
+
 class WorkflowTask(DGNode):
 
     def __init__( self, opset: ClientOpSet, **kwargs ):
@@ -104,7 +112,7 @@ class WorkflowTask(DGNode):
         outputs = [conn.id for conn in opset.getOutputs()]
         DGNode.__init__( self, inputs, outputs, **kwargs )
         self.dependencies: List["WorkflowTask"] = None
-        self._future = None
+        self._future: Future = None
 
     @property
     def name(self) -> str:
@@ -130,21 +138,52 @@ class WorkflowTask(DGNode):
     def type(self) -> str:
         return self._opset.type
 
+    @property
+    def taskHandle(self) -> TaskHandle:
+        return self._opset.taskHandle
+
+    def status(self) -> Status:
+        return self._opset.status()
+
     def submit( self, executor: Executor, **kwargs ) -> TaskFuture:
         self.logger.info( f"Submitting Task[{self.handle}:{self.rid}]")
         self._future = executor.submit( self.execute, **kwargs )
         tparms = { "rid":self.rid, "cid":self.cid, **kwargs }
         return TaskFuture( self._future, **tparms )
 
-    def execute( self, **kwargs ):
+    def execute( self, **kwargs ) -> TaskResult:
         results: List[TaskResult] = self.waitOnTasks()
         handle = self._opset.submit( results )
         return handle.blockForResult( **kwargs )
+
+    def getDependentInputs(self) -> List[TaskResult]:
+        results = []
+        for dep in self.dependencies:
+            taskHandle = dep.taskHandle
+            assert taskHandle is not None, f"[{self.handle}] Workflow execution error: dependency not executed: {dep.name}"
+            result = taskHandle.getResult()
+            assert result is not None, f"[{self.handle}] Workflow execution error: dependency not completed: {dep.name}"
+            results.append( result )
+        return results
+
+    def async_execute( self, **kwargs ) -> TaskHandle:
+        if self.taskHandle is None:
+            results = self.getDependentInputs()
+            self._opset.submit( results )
+        return self.taskHandle
 
     def getFuture(self) -> Future:
         while True:
             if self._future is not None: return self._future
             time.sleep( 0.05 )
+
+    def dependentStatus(self) -> Status:
+        dstat_list = [ dep.status() for dep in self.dependencies ]
+        for dstat in dstat_list:
+            if dstat in [ Status.ERROR, Status.CANCELED ]: return dstat
+        for dstat in dstat_list:
+            if dstat in [ Status.EXECUTING, Status.IDLE ]: return dstat
+        return Status.COMPLETED
 
     def waitOnTasks( self ) -> List[TaskResult]:
         try:
@@ -233,10 +272,32 @@ class Workflow(DependencyGraph):
         return wtasks
 
     @graphop
-    def submit( self, executor: Executor ) -> Dict[str,TaskFuture]:
+    def submitExec( self, executor: Executor ) -> Dict[str,TaskFuture]:
         results: Dict[str,TaskFuture] = { wtask.id: wtask.submit(executor) for wtask in self.tasks }
         return { tid:fut for tid,fut in results.items() if tid in self.getOutputNodes() }
 
+    @graphop
+    def submit( self ) -> Dict[str,TaskHandle]:
+        results = {}
+        output_ids = self.getOutputNodes()
+        while True:
+            completed = True
+            for wtask in self.tasks:
+                stat = wtask.status()
+                if stat == Status.ERROR:
+                    raise Exception( "Workflow Errored out")
+                elif stat == Status.CANCELED:
+                    raise Exception("Workflow Canceled")
+                elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
+                    taskHandle = wtask.async_execute()
+                    if wtask.id in output_ids:
+                        results[ wtask.id ] =  taskHandle
+                    completed = False
+                elif ( stat == Status.EXECUTING ):
+                    completed = False
+            if completed: break
+            time.sleep(0.1)
+        return results
 
 if __name__ == "__main__":
     from app.core import StratusCore
