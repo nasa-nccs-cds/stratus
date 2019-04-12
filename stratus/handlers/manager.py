@@ -46,11 +46,12 @@ class Handlers:
     def getClients( self, op: Op = None, **kwargs ) -> List[StratusClient]:
         assert self.configSpec is not None, "Error, the handlers have not yet been initialized"
         clients = []
+        self.logger.info( f"GET CLIENTS, handlers: {[str(h) for h in self._handlers.values()]}")
         for service in self._handlers.values():
             if op == None:
                 clients.append( service.client() )
             else:
-                cid = op.get("cid",None)
+                cid = op.get( "cid",  None )
                 for epa in op.epas:
                     if service.client().handles( epa, **kwargs):
                         clients.append( service.client(cid) )

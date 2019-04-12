@@ -21,10 +21,12 @@ class RestAPIBase:
         self.tasks: Dict[str, TaskHandle] = {}
 
     def addTask( self, task: TaskHandle ):
+        self.logger.info(f"REST-SERVER: Add Task {task.rid}" )
         self.tasks[ task.rid ] = task
         return task.rid
 
     def removeTask( self, rid: str ):
+        self.logger.info(f"REST-SERVER: Delete Task {rid}")
         if rid in self.tasks:
             del self.tasks[ rid ]
 
@@ -97,7 +99,7 @@ class StratusApp(StratusAppBase):
         return app
 
     def addApis(self, app ):
-        apiList = self.parm("API","core").split(",")
+        apiList = self.parm("API","core,wps").split(",")
         for apiName in apiList:
             try:
                 package_name = f"stratus.handlers.rest.api.{apiName}.app"

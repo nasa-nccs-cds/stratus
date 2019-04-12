@@ -55,10 +55,8 @@ class DGNode:
     def getOutputs(self)-> List[str]:
         return self._outputs
 
-    def get(self, name: str, default = None ) -> Any:
-        parm = self.params.get( name, default )
-        if parm is None: raise Exception( f"Missing required parameter in DGNode {self.id}: {name}" )
-        return parm
+    def get(self, name: str, default ) -> Any:
+        return self.params.get( name, default )
 
     def __getitem__( self, key: str ) -> Any:
         result =  self.params.get( key, None )
@@ -84,6 +82,7 @@ class DependencyGraph():
     def __hash__(self):
         return hash(repr(self))
 
+    @property
     def ids(self) -> Set[str]:
         return set(self.nodes.keys())
 
@@ -124,7 +123,7 @@ class DependencyGraph():
 
     def filter(self, iops: Set[str] ) -> "DependencyGraph":
         newDepGraph = self.copy()
-        newDepGraph.remove( list( self.ids() ^  iops ) )
+        newDepGraph.remove( list( self.ids ^  iops ) )
         return newDepGraph
 
     def __len__(self):
@@ -194,7 +193,7 @@ class DependencyGraph():
 
     @graphop
     def getOutputNodes(self) -> List[str]:
-        return [ conn.id for conn in self.getOutputs() ]
+        return [ conn.src_nid for conn in self.getOutputs() ]
 
 if __name__ == "__main__":
     dgraph = DependencyGraph()

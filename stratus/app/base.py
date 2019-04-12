@@ -106,7 +106,7 @@ class StratusAppBase:
         ops: List[Op] = OpSet( nodes = [ Op( **opDict ) for opDict in ops ] )
         for op in ops:
             clients = self.core.getClients( op )
-            assert len(clients) > 0, f"Can't find a client to process the operation': {op.epas}"
+            assert len(clients) > 0, f"Can't find a client to process the operation': {op.epas}, clients = { [str(client.endpointSpecs) for client in self.core.getClients( op )] }"
             for client in clients:
                opSet = clientOpsets.setdefault(client.handle, ClientOpSet(request,client))
                opSet.add( op )
@@ -161,6 +161,9 @@ class StratusFactory:
 
     def __repr__(self):
         return json.dumps(self.parms)
+
+    def __str__(self):
+        return f"SF[{self.name}:{self.type}]"
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ from typing import *
 from stratus.handlers.rest.app import RestAPIBase
 
 class RestAPI(RestAPIBase):
-    debug = False
+    debug = True
 
     def _addRoutes(self, bp: Blueprint):
 
@@ -43,7 +43,7 @@ class RestAPI(RestAPIBase):
 
         @bp.route('/capabilities', methods=('GET',))
         def capabilities():
-            ctype = self.getParameter("identifier","")
+            ctype = self.getParameter("type",self.getParameter("identifier","epas"))
             self.logger.info( "REST_APP: Processing capabilities request, type = " + str(ctype) + ", parms = " + str(request.args))
             response: Dict = self.app.core.getCapabilities( ctype )
             return self.jsonResponse( response )

@@ -16,7 +16,7 @@ class ServiceHandler( Handler ):
 
     def newClient( self, cid = None, gateway=False ) -> StratusClient:
         API = self.parm("API","core").lower()
-        cparms = {"cid": cid, **self.parms}
+        cparms = {"cid": cid, **self.parms} if cid else self.parms
         if API == "core": return CoreRestClient( gateway=gateway, **cparms  )
         if API == "wps":  return WPSRestClient( gateway=gateway, **cparms )
         raise Exception( "Unrecognized API in REST ServiceHandler: " + API)

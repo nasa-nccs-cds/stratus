@@ -23,7 +23,7 @@ class WPSRestClient(StratusClient):
         else:
             host = self["host"]
             port = self["port"]
-            route = self["route"]
+            route = self.parm("route","wps")
             self.host_address = f"http://{host}:{port}/{route}"
         self.wpsRequest = WPSExecuteRequest(self.host_address)
 
@@ -85,7 +85,7 @@ class RestTask(TaskHandle):
                 filePath = self.cacheDir + "/" + self.fileUrl.split('=')[-1] + ".nc"
                 self.wpsRequest.downloadFile( filePath, self.fileUrl )
                 self.logger.info( f"Downloaded result file using '{self.fileUrl}' to '{filePath}'")
-                return TaskResult( dict( file=filePath) )
+                return TaskResult( dict( file=filePath, rid=self.rid, cid=self.cid ) )
             else:
                 xarray = self.wpsRequest.downloadData(self.dataUrl)
                 self.logger.info(f"Downloaded result data using '{self.dataUrl}'")

@@ -9,13 +9,12 @@ from stratus.app.graph import DGNode, DependencyGraph, graphop, Connection
 class Op(DGNode):
 
     def __init__( self, **kwargs ):
-        name_toks = kwargs.get("name").split(":")
-        self.name: str = name_toks[-1]
-        self.epas: List[str]  = name_toks[:-1]
-        input_parm = kwargs.get("input")
-        inputs:  List[str] = self.parse( input_parm )
+        inputs:  List[str] = self.parse( kwargs.get("input") )
         outputs: List[str] = [ kwargs.get( "result", UID.randomId( 6 ) ) ]
         DGNode. __init__( self, inputs, outputs, **kwargs )
+        name_toks = self["name"].split(":")
+        self.name: str = name_toks[-1]
+        self.epas: List[str]  = name_toks[:-1]
 
     def parse(self, parm_value ) -> List[str]:
         if parm_value is None: return []
@@ -292,6 +291,7 @@ class Workflow(DependencyGraph):
                         raise Exception("Workflow Canceled")
                     elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
                         taskHandle = wtask.async_execute()
+                        self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}")
                         if wtask.id in output_ids:
                             results[ wtask.id ] =  taskHandle
                         completed = False

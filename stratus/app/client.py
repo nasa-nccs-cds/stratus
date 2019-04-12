@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
 from stratus_endpoint.util.config import Config, StratusLogger, UID
 from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult
-import abc, re
+import abc, fnmatch
 from decorator import decorator, dispatch_on
 
 class EndpointSpec:
@@ -11,7 +11,8 @@ class EndpointSpec:
 
     def handles( self, epa: str, **kwargs ) -> bool:
         try:
-            return ( re.match( self._epaSpec, epa ) is not None )
+            self.logger.error(f"EndpointSpec: comparing '{epa}' against epaSpec '{self._epaSpec}'")
+            return fnmatch.fnmatch( epa, self._epaSpec )
         except Exception as err:
             self.logger.error( f"Error Checking EPA '{epa}' against epaSpec '{self._epaSpec}': {str(err)}")
             return False
@@ -29,7 +30,8 @@ class StratusClient:
     logger = StratusLogger.getLogger()
 
     def __init__( self, type: str, **kwargs ):
-        self.cid = kwargs.get( "cid", UID.randomId(6) )
+        cid = kwargs.get( "cid" )
+        self.cid = cid if cid else UID.randomId(6)
         self.type: str = type
         self.name: str = kwargs.get("name")
         self.cache_dir: str = kwargs.get( "cache_dir", "~/.edas/cache" )

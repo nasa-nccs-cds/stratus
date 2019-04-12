@@ -1,7 +1,7 @@
 from stratus.app.client import StratusClient, stratusrequest
 from typing import Dict, Optional, List
 import traceback, time, requests
-from stratus_endpoint.util.config import StratusLogger
+from stratus_endpoint.util.config import StratusLogger, UID
 from threading import Thread
 from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult
 from stratus.app.core import StratusCore
@@ -23,13 +23,14 @@ class CoreRestClient(StratusClient):
         else:
             host = self["host"]
             port = self["port"]
-            route = self.parm("route","")
+            route = self.parm("route","core")
             self.host_address = f"http://{host}:{port}/{route}"
         self.response_manager = ResponseManager.getManger( self.cid, self.host_address )
         self.response_manager.start()
 
     @stratusrequest
     def request( self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
+        if "rid" not in requestSpec: requestSpec["rid"] = UID.randomId(6)
         response = self.response_manager.postMessage( "exe", requestSpec, **kwargs )
         self.log( "Got response: " + str(response) )
         return RestTask( requestSpec['rid'], self.cid, self.response_manager )
@@ -142,7 +143,7 @@ class ResponseManager(Thread):
         result = self.getMessage( "result", dict(rid=rid) )
         rtype = result["type"]
         if   rtype == "error":  raise Exception( result["message"] )
-        elif rtype == "json":   return TaskResult( result["json"] )
+        elif rtype == "json":   return TaskResult( { "rid":rid, "cid":self.cid, **result["json"] } )
         elif rtype == "data":   return result.get("content",None)
         else:                   raise Exception( f"Unrecognized result type: {rtype}")
 
@@ -183,7 +184,7 @@ class ResponseManager(Thread):
 class RestTask(TaskHandle):
 
     def __init__(self, rid: str, cid: str, manager: ResponseManager, **kwargs):
-        super(RestTask, self).__init__( rid, cid, **kwargs )
+        super(RestTask, self).__init__( rid=rid, cid=cid, **kwargs )   # **{ "rid":rid, "cid":cid, **kwargs }
         self.logger = StratusLogger.getLogger()
         self.manager: ResponseManager = manager
 
