@@ -174,7 +174,7 @@ class ResponseManager(Thread):
 class zmqTask(TaskHandle):
 
     def __init__(self, cid: str, manager: ResponseManager, **kwargs):
-        super(zmqTask,self).__init__( manager.requestId, cid, **kwargs )
+        super(zmqTask,self).__init__( rid=manager.requestId, cid=cid, **kwargs )
         self.logger = StratusLogger.getLogger()
         self.manager = manager
 

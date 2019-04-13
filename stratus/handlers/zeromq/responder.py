@@ -64,9 +64,11 @@ class StratusZMQResponder(Thread):
     def getDataPackets(self, status: Status, task: WorkflowExeFuture ) -> List[DataPacket]:
         if (status == Status.COMPLETED):
             taskResult = task.getResult()
-            [ self.createDataPacket( task.rid, dataset ) for dataset in taskResult.data ]
+            return [ self.createDataPacket( task.rid, dataset ) for dataset in taskResult.data ]
         elif (status == Status.ERROR):
             return [ self.createMessage(task.rid, {"error": task["error"]}) ]
+        else:
+            raise Exception( f"Unexpected Status in getDataPackets: {Status.str(status)}")
 
     def importTasks(self):
         while not self.input_tasks.empty():
@@ -83,7 +85,7 @@ class StratusZMQResponder(Thread):
         for tid, task in self.current_tasks.items():
             status = task.status()
             self.setExeStatus( tid, status )
-            if status in [Status.COMPLETED, Status.ERROR]:
+            if status in [Status.COMPLETED, Status.ERROR, Status.CANCELED]:
                 dataPackets = self.getDataPackets( status, task )
                 for dataPacket in dataPackets:
                     self.sendDataPacket( dataPacket )

@@ -84,7 +84,7 @@ class StratusApp(StratusAppBase):
                     request["rid"] = submissionId
                     self.logger.info( "Processing Request: '{}' '{}' '{}'".format( submissionId, rType, str(request)) )
                     tasks: Dict[str,TaskHandle] = self.processWorkflow(request)
-                    for task in tasks: self.tasks.put( task )                                                                                                               #   TODO: Send results when tasks complete.
+                    for task in tasks.values(): self.tasks.put( task )                                                                                                               #   TODO: Send results when tasks complete.
                     response = { "status": "Executing" }
                     self.sendResponseMessage(StratusResponse(submissionId, response))
                 elif rType == "quit" or rType == "shutdown":
