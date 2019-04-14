@@ -67,15 +67,15 @@ class RestTask(TaskHandle):
         except: pass
         return cacheDir
 
+
     def getResult( self, **kwargs ) ->  Optional[TaskResult]:
         raiseErrors = kwargs.get("raiseErrors")
         type = kwargs.get("type","file")
+        timeout = kwargs.get("timeout")
+        block = kwargs.get("block")
+        if block: self.waitUntilReady()
         self.status()
         self.logger.info( f"GetResult[{type}]-> STATUS: {self._status}, args: {kwargs}" )
-        while self._status == Status.IDLE or self._status == Status.EXECUTING:
-            time.sleep(1)
-            self.status()
-            self.logger.info( "*STATUS: "  +  str(self._status) )
         if self._status == Status.ERROR:
             self.logger.error( " *** Remote execution error: " + self._statMessage )
             if raiseErrors: raise Exception( self._statMessage )
@@ -138,6 +138,6 @@ if __name__ == "__main__":
     task: RestTask = client.request( edas_server_request )
     print( task.status() )
     print( task.statusMessage )
-    result = task.getResult()
+    result = task.getResult( block=True )
     print( "Got Result: " + str(result.header) )
 
