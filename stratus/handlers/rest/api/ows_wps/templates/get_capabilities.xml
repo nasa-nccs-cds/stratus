@@ -1,0 +1,48 @@
+<wps:Capabilities service="WPS" version="1.0.0" xml:lang="en-CA" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:wps="http://www.opengis.net/wps/1.0.0" xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/wps/1.0.0 ../wpsGetCapabilities_response.xsd" updateSequence="1">
+  <ows:ServiceIdentification>
+    <ows:Title>
+      {{server.title}}
+    </ows:Title>
+    <ows:Abstract>
+      {{server.description}}
+    </ows:Abstract>
+    <ows:ServiceType>WPS</ows:ServiceType>
+    <ows:ServiceTypeVersion>1.0.0</ows:ServiceTypeVersion>
+    <ows:ServiceTypeVersion>0.4.0</ows:ServiceTypeVersion>
+    <ows:Fees>NONE</ows:Fees>
+    <ows:AccessConstraints>NONE</ows:AccessConstraints>
+  </ows:ServiceIdentification>
+  <ows:ServiceProvider>
+    <ows:ProviderName>
+      {{server.provider}}
+    </ows:ProviderName>
+    <ows:ProviderSite xlink:href="{{server.url}}"/>
+    <ows:ServiceContact>
+      <ows:IndividualName>
+        {{server.manager.name}}
+      </ows:IndividualName>
+      <ows:PositionName>
+        {{server.manager.position}}
+      </ows:PositionName>
+      <ows:ContactInfo>
+        <ows:Address>
+          <ows:ElectronicMailAddress>
+            {{server.manager.email}}
+          </ows:ElectronicMailAddress>
+        </ows:Address>
+      </ows:ContactInfo>
+    </ows:ServiceContact>
+  </ows:ServiceProvider>
+  <ows:OperationsMetadata>
+    <ows:Operation name="GetCapabilities"/>
+    <ows:Operation name="DescribeProcess"/>
+    <ows:Operation name="Execute"/>
+  </ows:OperationsMetadata>
+  <wps:ProcessOfferings>
+      {% for process in server.processes -%}
+        <wps:ProcessDescription wps:processVersion="2" storeSupported="true" statusSupported="false">
+          <ows:Identifier> {process.id} </ows:Identifier>
+        </wps:ProcessDescription>
+      {%- endfor %}
+  </wps:ProcessOfferings>
+</wps:Capabilities>

@@ -1,11 +1,10 @@
 from stratus.app.client import StratusClient, stratusrequest
 from typing import Dict, Optional, List
-import time
+import time, os
 from stratus_endpoint.util.config import StratusLogger
 from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult
 from stratus.app.core import StratusCore
-import os
-from stratus.handlers.rest.api.wps.wpsRequest import WPSExecuteRequest
+from owslib.wps import WebProcessingService, WPSExecution
 from enum import Enum
 MB = 1024 * 1024
 
@@ -14,10 +13,10 @@ class MessageState(Enum):
     FILE = 1
     RESULT = 2
 
-class WPSRestClient(StratusClient):
+class OwsWpsClient(StratusClient):
 
     def __init__( self, **kwargs ):
-        super(WPSRestClient, self).__init__( "rest", **kwargs )
+        super(OwsWpsClient, self).__init__( "rest", **kwargs )
         if "host_address" in self.parms:
             self.host_address = self["host_address"]
         else:
@@ -25,17 +24,18 @@ class WPSRestClient(StratusClient):
             port = self["port"]
             route = self.parm("route","wps")
             self.host_address = f"http://{host}:{port}/{route}"
-        self.wpsRequest = WPSExecuteRequest(self.host_address)
+        self.wpsRequest = WebProcessingService( self.host_address, verbose=False, skip_caps=True )
+        self.wpsRequest.getcapabilities()
 
     @stratusrequest
     def request( self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
-        response =  self.wpsRequest.exe(requestSpec)
+        response: WPSExecution =  self.wpsRequest.execute( "WORKFLOW", requestSpec.items(), output = "OUTPUT" )
         self.log( "Got response xml: " + str(response["xml"]) )
         self.log("Got refs: " + str(response["refs"]))
-        return RestTask( requestSpec['rid'], self.cid, response["refs"], self.wpsRequest, cache=self.cache_dir )
+        return OwsWpsTask( requestSpec['rid'], self.cid, response, cache=self.cache_dir )
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
-        return self.wpsRequest.getCapabilities( type )
+        return { op.name:str(op) for op in self.wpsRequest.operations }
 
     def log(self, msg: str ):
         self.logger.info( "[RP] " + msg )
@@ -47,16 +47,16 @@ class WPSRestClient(StratusClient):
         if self.active:
             self.active = False
 
-class RestTask(TaskHandle):
+class OwsWpsTask(TaskHandle):
 
-    def __init__(self, rid: str, cid: str, refs: Dict, wpsRequest: WPSExecuteRequest, **kwargs):
-        super(RestTask, self).__init__( rid=rid, cid=cid, **kwargs )
+    def __init__(self, rid: str, cid: str, wpsRequest: WPSExecution, **kwargs):
+        super(OwsWpsTask, self).__init__( rid=rid, cid=cid, **kwargs )
         self.logger = StratusLogger.getLogger()
         self.statusUrl: str  = refs.get("status",None)
         self.fileUrl: str = refs.get("file", None)
         self.dataUrl: str = refs.get("data", None)
         self.dapUrl: str = refs.get("dap", None)
-        self.wpsRequest: WPSExecuteRequest = wpsRequest
+        self.wpsRequest: WPSExecution = wpsRequest
         self._statMessage = None
         self._status = Status.UNKNOWN
         self.cacheDir: str = self.createCache( **kwargs )
