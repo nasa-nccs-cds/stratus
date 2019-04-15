@@ -6,16 +6,6 @@ from stratus_endpoint.util.config import Config, StratusLogger, UID
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
 from stratus_endpoint.util.config import StratusLogger
 
-def execRequest( requestURL, parms: Dict ) -> Element:
-    response: requests.Response = requests.get( requestURL, params=parms )
-    return ET.fromstring( response.text )
-
-def execJsonRequest( requestURL, parms: Dict ) -> Dict:
-    response: requests.Response = requests.get( requestURL, params=parms )
-    print ( response.text )
-    if response.ok: return json.loads( response.text )
-    else: raise Exception( response.text )
-
 def boolStr( bval ): return "true" if bval else "false"
 
 class WPSExecuteRequest:
@@ -88,24 +78,32 @@ class WPSExecuteRequest:
         elif contentType == 'application/json':         self.logger.info( "Got result for data download: " + str(r.json()) )
         else:                                           self.logger.error("Got result with contentType: " + str(contentType))
 
-    def getCapabilities( self, type="processes" ) -> Dict:
-        if type == "epas":
-            requestParms = self._getCapabilitiesDict("epas")
-            response = execJsonRequest( self._host_address, requestParms )
-            return response
+    def execJsonRequest( self, requestURL, parms: Dict) -> Dict:
+        response: requests.Response = requests.get(requestURL, params=parms)
+        self.logger.info( f"SUBMIT JSON Request {requestURL} with parms: {parms}\n  Response: \n {response.text}" )
+        if response.ok:
+            return json.loads(response.text)
         else:
-            requestParms = self._getCapabilitiesDict(type)
-            root = execRequest(  self._host_address, requestParms )
-            epas = []
-            for module_elem in root.iter("module"):
-                for op_elem in module_elem.iter("kernel"):
-                    modname = module_elem.attrib["name"]
-                    opName = op_elem.attrib["name"]
-                    epas.append( f"{modname}.{opName}")
-            return { "xml": ET.tostring(root, encoding='utf8', method='xml') }
+            raise Exception(response.text)
+
+    def execRequest(self, requestURL, parms: Dict) -> Element:
+        response: requests.Response = requests.get(requestURL, params=parms)
+        return ET.fromstring(response.text)
+
+    def getCapabilities( self, type="processes" ) -> Dict:
+#        requestParms = self._getCapabilitiesDict(type)
+        requestParms = {'request': 'getCapabilities', 'service': 'WPS'}
+        root = self.execRequest(  self._host_address, requestParms )
+        epas = []
+        for module_elem in root.iter("module"):
+            for op_elem in module_elem.iter("kernel"):
+                modname = module_elem.attrib["name"]
+                opName = op_elem.attrib["name"]
+                epas.append( f"{modname}.{opName}")
+        return { "epas": ET.tostring(root, encoding='utf8', method='xml') }
 
     def describeProcess( self, processId ):
         requestParms = self._describeProcessDict( processId )
-        return execRequest( self._host_address, requestParms )
+        return self.execRequest( self._host_address, requestParms )
 
 

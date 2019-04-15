@@ -29,6 +29,7 @@ class WPSRestClient(StratusClient):
 
     @stratusrequest
     def request( self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
+        self.log("WPSRestClient: Submit request: " + str(requestSpec))
         response =  self.wpsRequest.exe(requestSpec)
         self.log( "Got response xml: " + str(response["xml"]) )
         self.log("Got refs: " + str(response["refs"]))

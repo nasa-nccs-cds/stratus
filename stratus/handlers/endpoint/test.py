@@ -1,6 +1,5 @@
 import os
 from typing import Dict, List
-from stratus_endpoint.util.config import StratusLogger
 from stratus_endpoint.handler.test import Endpoint, TaskHandle, TestTask, TaskResult
 
 class TestEndpoint1(Endpoint):

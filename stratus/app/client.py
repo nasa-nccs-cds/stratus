@@ -22,8 +22,9 @@ class EndpointSpec:
 
 @decorator
 def stratusrequest( func, *args, **kwargs ):
-    args[0].updateMetadata( args[1] )
-    return func( *args, **kwargs)
+    new_args = list(args)
+    new_args[1] = args[0].updateMetadata( args[1] )
+    return func( *new_args, **kwargs)
 
 class StratusClient:
     __metaclass__ = abc.ABCMeta

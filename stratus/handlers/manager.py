@@ -96,7 +96,7 @@ class Handlers:
                 spec["name"] = name
                 specs.append( spec )
             elif name == "stratus":
-                raise Exception( f"Must provide 'type' parameter in 'stratus' configuration: {spec}")
+                raise Exception( f"Must provide 'type' (in {htypes}) parm in 'stratus' configuration: {spec}")
         return specs
 
     def _addConstructor(self, type: str, handler_constructor: Callable[[], StratusFactory]):
@@ -124,12 +124,13 @@ class Handlers:
         packageList = self._listPackages()
         for package_name in packageList:
             try:
-                module = importlib.import_module(package_name + ".service")
+                module_name = package_name + ".service"
+                module = importlib.import_module(module_name)
                 constructor = getattr(module, "ServiceHandler")
                 type = package_name.split(".")[-1]
                 self._addConstructor(type, constructor)
             except ModuleNotFoundError as err:
-                self.logger.warn( "No handler found for path: " + package_name )
+                self.logger.warn( "No handler found for path: " + module_name + ": " + repr(err))
             except Exception as err:
                 msg = "Unable to register constructor for {}: {} ({})".format( package_name, str(err), err.__class__.__name__ )
                 self.logger.error( msg )
