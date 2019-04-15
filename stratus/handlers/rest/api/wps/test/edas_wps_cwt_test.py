@@ -23,7 +23,7 @@ edas_server_request = dict(
 )
 
 task: TaskHandle = client.request(edas_server_request)
-result = task.getResult()
+result = task.getResult(block=True)
 if result is not None:
     print( "Got Result: " + str(result.header) )
 
