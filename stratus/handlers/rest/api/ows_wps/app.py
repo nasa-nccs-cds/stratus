@@ -54,7 +54,7 @@ class RestAPI(RestAPIBase):
         elif status == "unknown":
             responseXml = self._getStatusXml("ProcessUnknown", rid , rid, False )
         else: raise Exception( "Unknown status: " + status )
-        return flask.Response( response=responseXml, status=400, mimetype="application/xml" )
+        return flask.Response( response=responseXml, status=200, mimetype="application/xml" )
 
     def getErrorResponse(self, message, code=400 ) -> flask.Response:
         json_content = json.dumps( dict(status="error", message=message) )
@@ -89,11 +89,11 @@ class RestAPI(RestAPIBase):
     def getCapabilities(self, ctype: str ) -> flask.Response:
         response: Dict = self.app.core.getCapabilities(ctype)
         responseXml = self._getCapabilitiesXml( response )
-        return flask.Response(response=responseXml, status=400, mimetype="application/xml" )
+        return flask.Response(response=responseXml, status=200, mimetype="application/xml" )
 
     def describeProcess(self, ctype: str ) -> flask.Response:
         responseXml = ""
-        return flask.Response(response=responseXml, status=400, mimetype="application/xml" )
+        return flask.Response(response=responseXml, status=200, mimetype="application/xml" )
 
     def missingResult(self, task) -> flask.Response:
         if task.status() == Status.CANCELED: return self.getErrorResponse("Task was canceled")
