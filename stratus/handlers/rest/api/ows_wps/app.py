@@ -88,8 +88,13 @@ class RestAPI(RestAPIBase):
 
     def getCapabilities(self, ctype: str ) -> flask.Response:
         response: Dict = self.app.core.getCapabilities(ctype)
-        responseXml = self._getCapabilitiesXml( response )
-        return flask.Response(response=responseXml, status=200, mimetype="application/xml" )
+        self.logger.info( f"getCapabilities[{ctype}]: response: {response}")
+        if ctype == "epas":
+            responseJson = json.dumps( response )
+            return flask.Response(response=responseJson, status=200, mimetype="application/json" )
+        else:
+            responseXml = self._getCapabilitiesXml( response )
+            return flask.Response(response=responseXml, status=200, mimetype="application/xml" )
 
     def describeProcess(self, ctype: str ) -> flask.Response:
         responseXml = ""
@@ -105,17 +110,16 @@ class RestAPI(RestAPIBase):
         @bp.route('/cwt', methods=['GET'] )
         def exe():
             requestArg = request.args.get("request", None).lower()
-            if self.debug: self.logger.info( "EXE: requestArg = " + requestArg)
+            identifier = request.args.get("identifier", None)
+            if self.debug: self.logger.info( "EXE: requestArg = " + requestArg + ", identifier = " + str(identifier))
             if requestArg == "execute":
                 datainputs = request.args.get("datainputs", None)
                 inputsArg = self.parseDatainputs( datainputs )
                 return self.processRequest( inputsArg )
             elif requestArg == "getcapabilities":
-                id = request.args.get("identifier",  None )
-                return self.getCapabilities(id)
+                return self.getCapabilities(identifier)
             elif requestArg == "describeprocess":
-                id = request.args.get("identifier",  None )
-                return self.describeProcess(id)
+                return self.describeProcess(identifier)
             else:
                 return self.executeResponse( dict( status='error', message ="Illegal request type: " + requestArg ) )
 

@@ -2,7 +2,7 @@ from stratus.app.core import StratusCore
 from stratus_endpoint.handler.base import TaskHandle
 from stratus.util.test import TestDataManager as mgr
 
-settings = dict( stratus = dict( type="rest", API="ows_wps", host_address="http://127.0.0.1:5000/wps/cwt" ) )
+settings = dict( stratus = dict( type="rest", API="ows_wps", host="127.0.0.1", port="5000", route="ows_wps/cwt" ) )
 core = StratusCore(settings)
 client = core.getClient()
 

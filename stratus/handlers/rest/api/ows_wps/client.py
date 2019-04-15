@@ -88,7 +88,7 @@ class OwsWpsClient(StratusClient):
         else:
             host = self["host"]
             port = self["port"]
-            route = self.parm("route","wps")
+            route = self.parm("route","ows_wps")
             self.host_address = f"http://{host}:{port}/{route}"
         self.wpsRequest = WebProcessingService( self.host_address, verbose=False, skip_caps=True )
         self.wpsRequest.getcapabilities()
