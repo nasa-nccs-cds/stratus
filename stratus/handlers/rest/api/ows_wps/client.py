@@ -90,14 +90,15 @@ class OwsWpsClient(StratusClient):
             port = self["port"]
             route = self.parm("route","ows_wps")
             self.host_address = f"http://{host}:{port}/{route}"
-        self.wpsRequest = WebProcessingService( self.host_address, verbose=False, skip_caps=True )
+        self.wpsRequest: WebProcessingService = WebProcessingService( self.host_address, verbose=False, skip_caps=True )
         self.wpsRequest.getcapabilities()
 
     def getCapabilitiesStr( self, type ): return '%s?request=getCapabilities&service=WPS&identifier=%s' % ( self.host_address, type )
 
     @stratusrequest
     def request( self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
-        response: WPSExecution =  self.wpsRequest.execute( "WORKFLOW", requestSpec.items(), output = "OUTPUT" )
+        inputs = [ ( key, json.dumps(value) ) for key,value in requestSpec.items() ]
+        response: WPSExecution =  self.wpsRequest.execute( "WORKFLOW", inputs )
         self.logger.info( "Got response xml: " + str(response["xml"]) )
         self.logger.info("Got refs: " + str(response["refs"]))
         return OwsWpsTask( requestSpec['rid'], self.cid, response, cache=self.cache_dir )

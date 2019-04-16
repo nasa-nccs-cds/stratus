@@ -107,13 +107,15 @@ class RestAPI(RestAPIBase):
 
     def _addRoutes(self, bp: Blueprint):
         self.logger.info( "Adding WPS routes" )
-        @bp.route('/cwt', methods=['GET'] )
+        @bp.route('/cwt', methods=['GET','POST'] )
         def exe():
-            requestArg = request.args.get("request", None).lower()
-            identifier = request.args.get("identifier", None)
+            requestData = request.args if request.method == "GET" else request.form
+            self.logger.info( f"REQUEST DATA: { {k:v for k,v in requestData.items()} }" )
+            requestArg = requestData.get("request", None).lower()
+            identifier = requestData.get("identifier", None)
             if self.debug: self.logger.info( "EXE: requestArg = " + requestArg + ", identifier = " + str(identifier))
             if requestArg == "execute":
-                datainputs = request.args.get("datainputs", None)
+                datainputs = requestData.get("datainputs", None)
                 inputsArg = self.parseDatainputs( datainputs )
                 return self.processRequest( inputsArg )
             elif requestArg == "getcapabilities":
