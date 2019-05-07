@@ -60,6 +60,7 @@ class ZMQClient(StratusClient):
     @stratusrequest
     def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
         response = self.sendMessage( "exe", requestSpec, **kwargs )
+        self.log( f"Got exe response: {response}" )
         status = Status.decode( response.get('status') )
         self.log( str(response) )
         response_manager = ResponseManager( self.context, response["rid"], self.host_address, self.response_port, status, self.cache_dir, **kwargs )
