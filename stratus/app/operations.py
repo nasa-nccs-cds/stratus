@@ -15,6 +15,7 @@ class Op(DGNode):
         name_toks = self["name"].split(":")
         self.name: str = name_toks[-1]
         self.epas: List[str]  = name_toks[:-1]
+        self.logger.info( f"Creating OP Node, name: {self.name}, epas: {self.epas}")
 
     def parse(self, parm_value ) -> List[str]:
         if parm_value is None: return []
