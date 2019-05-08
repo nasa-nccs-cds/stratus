@@ -24,7 +24,7 @@ class RestAPI(RestAPIBase):
         if datainputs is None: return {}
         raw_datainputs = datainputs.strip()
         if raw_datainputs[0] == "[": raw_datainputs = raw_datainputs[1:-1]
-        json_datainputs = "{"+raw_datainputs.replace("domain=",'"domain":').replace("variable=",'"variable":').replace("operation=",'"operation":')+"}"
+        json_datainputs = "{"+raw_datainputs.replace("domain=",'"domain":').replace("variable=",'"variable":').replace("operation=",'"operation":').replace(";",',')+"}"
         self.logger.info( "json datainputs = " + json_datainputs )
         return json.loads(json_datainputs)
 
