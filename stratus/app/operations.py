@@ -12,7 +12,8 @@ class Op(DGNode):
         inputs:  List[str] = self.parse( kwargs.get("input") )
         outputs: List[str] = [ kwargs.get( "result", UID.randomId( 6 ) ) ]
         DGNode. __init__( self, inputs, outputs, **kwargs )
-        name_toks = self["name"].split(":")
+        raw_name = self["name"]
+        name_toks = raw_name.split(":") if ":" in raw_name else raw_name.split(".")
         self.name: str = name_toks[-1]
         self.epas: List[str]  = name_toks[:-1]
         self.logger.info( f"Creating OP Node, name: {self.name}, epas: {self.epas}")
