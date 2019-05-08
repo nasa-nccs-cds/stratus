@@ -124,7 +124,7 @@ class StratusApp(StratusAppBase):
 
 if __name__ == "__main__":
     HERE = os.path.dirname(os.path.abspath(__file__))
-    SETTINGS_FILE = os.path.join(HERE, "wps_server_test_settings.ini")
+    SETTINGS_FILE = os.path.join(HERE, "wps_server_edas_settings.ini")
     core = StratusCore( SETTINGS_FILE  )
     app = core.getApplication()
     app.run()
