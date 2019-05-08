@@ -25,7 +25,7 @@ class RestAPI(RestAPIBase):
         raw_datainputs = datainputs.strip()
         if raw_datainputs[0] == "[": raw_datainputs = raw_datainputs[1:-1]
         json_datainputs = "{"+raw_datainputs.replace("domain=",'"domain":').replace("variable=",'"variable":').replace("operation=",'"operation":')+"}"
-#        print( "json_datainputs = " + json_datainputs )
+        self.logger.info( "json datainputs = " + json_datainputs )
         return json.loads(json_datainputs)
 
     def processRequest( self, requestDict: Dict ) -> flask.Response:
