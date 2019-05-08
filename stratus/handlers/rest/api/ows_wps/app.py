@@ -109,7 +109,7 @@ class RestAPI(RestAPIBase):
         self.logger.info( "Adding WPS routes" )
         @bp.route('/cwt', methods=['GET','POST'] )
         def exe():
-            raw_request_data = request.args if request.method == "GET" else request.form
+            raw_request_data = request.args if request.method.lower() == "get" else request.form
             requestData = { key.lower(): value for key,value in raw_request_data.items() }
             self.logger.info( f" ** REQUEST DATA: { {k:v for k,v in requestData.items()} }" )
             requestArg = requestData.get("request", None).lower()
