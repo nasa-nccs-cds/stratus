@@ -111,7 +111,7 @@ class RestAPI(RestAPIBase):
         def exe():
             raw_request_data = request.args if request.method == "GET" else request.form
             requestData = { key.lower(): value for key,value in raw_request_data.items() }
-            self.logger.info( f"REQUEST DATA: { {k:v for k,v in requestData.items()} }" )
+            self.logger.info( f" ** REQUEST DATA: { {k:v for k,v in requestData.items()} }" )
             requestArg = requestData.get("request", None).lower()
             identifier = requestData.get("identifier", None)
             if self.debug: self.logger.info( "EXE: requestArg = " + requestArg + ", identifier = " + str(identifier))
