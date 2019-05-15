@@ -15,9 +15,10 @@ class CeleryClient(StratusClient):
 
     def __init__( self, **kwargs ):
         super(CeleryClient, self).__init__( "celery", **kwargs )
+        self.app = None
 
     def init(self, **kwargs):
-        pass
+        pass   # get applicatoin object.
 
     @stratusrequest
     def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
