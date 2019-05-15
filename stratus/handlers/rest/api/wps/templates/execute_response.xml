@@ -2,6 +2,12 @@
    <wps:Status>
         <wps:{{status.tag}}> {{status.message}} </wps:{{status.tag}}>
    </wps:Status>
+   <wps:Process wps:processVersion="1">
+        <ows:Identifier>{{process.identifier}}</ows:Identifier>
+        <ows:Title>{{process.title}}</ows:Title>
+        <ows:Abstract>{{process.abstract}}</ows:Abstract>
+        <wps:Profile>{{process.profile}}</wps:Profile>
+   </wps:Process>
    <wps:ProcessOutputs>
         <wps:Output>
             <wps:Reference id="status" encoding="UTF-8" mimeType="text/xml" href="{{url.status}}"/>
