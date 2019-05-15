@@ -63,12 +63,13 @@ class RestAPI(RestAPIBase):
     def _getStatusXml(self, status: str, message: str, rid: str, addDataRefs = True) -> str :
         status = dict( tag=status, message=message )
         url = dict( status=f"{request.url_root}wps/status?rid={rid}" )
+        process = dict( identifier="workflow", title="", abstract="", profile="" )
         if addDataRefs:
             url['file'] = f"{request.url_root}wps/file?rid={rid}"
             url['data'] = f"{request.url_root}wps/data?rid={rid}"
             if self.dapRoute is not None:
                 url['dap'] = f"{self.dapRoute}/{rid}.nc"
-        return self.render( 'execute_response', status=status, url=url )
+        return self.render( 'execute_response', status=status, url=url, process=process )
 
     def _getCapabilitiesXml(self, capabilitiesData: Dict )-> str:
         manager = dict(name="Thomas Maxwell", position="EDAS Developer", email="thomas.maxwell@nasa.gov")
