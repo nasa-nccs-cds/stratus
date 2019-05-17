@@ -13,7 +13,7 @@ TEMPLATES = os.path.join(HERE, "templates")
 
 class RestAPI(RestAPIBase):
     debug = True
-    API = "wps" # "ows_wps"
+    API = "ows_wps"
 
     def __init__( self, name: str, app: StratusAppBase, **kwargs ):
         RestAPIBase.__init__( self, name, app, **kwargs )
