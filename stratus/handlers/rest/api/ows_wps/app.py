@@ -16,7 +16,7 @@ class RestAPI(RestAPIBase):
 
     def __init__( self, name: str, app: StratusAppBase, **kwargs ):
         RestAPIBase.__init__( self, name, app, **kwargs )
-        self.jenv = Environment( loader=PackageLoader( 'stratus.handlers.rest.api.wps',  "templates" ), autoescape=select_autoescape(['html','xml']) )
+        self.jenv = Environment( loader=PackageLoader( 'stratus.handlers.rest.api.ows_wps',  "templates" ), autoescape=select_autoescape(['html','xml']) )
         self.templates = { template:self.jenv.get_template(f'{template}.xml') for template in ["describe_process", "execute_response", "get_capabilities"] }
         self.dapRoute = kwargs.get( "dapRoute", None )
 
@@ -62,11 +62,11 @@ class RestAPI(RestAPIBase):
 
     def _getStatusXml(self, status: str, message: str, rid: str, addDataRefs = True) -> str :
         status = dict( tag=status, message=message )
-        url = dict( status=f"{request.url_root}wps/status?rid={rid}" )
+        url = dict( status=f"{request.url_root}ows_wps/status?rid={rid}" )
         process = dict( identifier="workflow", title="", abstract="", profile="" )
         if addDataRefs:
-            url['file'] = f"{request.url_root}wps/file?rid={rid}"
-            url['data'] = f"{request.url_root}wps/data?rid={rid}"
+            url['file'] = f"{request.url_root}ows_wps/file?rid={rid}"
+            url['data'] = f"{request.url_root}ows_wps/data?rid={rid}"
             if self.dapRoute is not None:
                 url['dap'] = f"{self.dapRoute}/{rid}.nc"
         return self.render( 'execute_response', status=status, url=url, process=process )
