@@ -114,7 +114,7 @@ class StratusApp(StratusAppBase):
                     rest_api.instantiate( app )
                     self.apis.append( rest_api )
                 except Exception as err:
-                    self.logger.error( f"Error instantiating api {apiName}: {str(err)}")
+                    self.logger.error( f"Error instantiating api {apiName}: {str(err)}\n" + traceback.format_exc( ))
 
     @staticmethod
     def render_server_error( ex: Exception ):
