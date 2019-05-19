@@ -1,6 +1,6 @@
 from stratus.app.client import StratusClient, stratusrequest
 from typing import Dict, Optional, List
-import time
+import xarray as xa
 from stratus_endpoint.util.config import StratusLogger
 from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult
 from stratus.app.core import StratusCore
@@ -88,7 +88,7 @@ class RestTask(TaskHandle):
                 self.logger.info( f"Downloaded result file using '{self.fileUrl}' to '{filePath}'")
                 return TaskResult( dict( file=filePath, rid=self.rid, cid=self.cid ) )
             else:
-                xarray = self.wpsRequest.downloadData(self.dataUrl)
+                xarray: xa.Dataset = self.wpsRequest.downloadData(self.dataUrl)
                 self.logger.info(f"Downloaded result data using '{self.dataUrl}'")
                 return TaskResult( { **self._parms, "rid": self.rid, "cid": self.cid }, [xarray] )
 

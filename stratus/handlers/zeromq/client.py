@@ -119,7 +119,8 @@ class ResponseManager(Thread):
 
     def cacheResult(self, header: Dict, data: Optional[xa.Dataset] ):
         self.logger.info( "Caching result: " + str(header) )
-        self.cached_results.put( TaskResult(header,data)  )
+        dataList = [] if data is None else [data]
+        self.cached_results.put( TaskResult( header, dataList )  )
 
     def getResult( self, **kwargs ) ->  Optional[TaskResult]:
         timeout = kwargs.get("timeout")
