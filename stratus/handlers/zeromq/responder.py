@@ -82,13 +82,13 @@ class StratusZMQResponder(Thread):
 
     def processResults(self):
         self.importTasks()
-        self.logger.info(f"@@R: processResults, Num tasks= {len(self.current_tasks.items())}")
         for tid, task in self.current_tasks.items():
             status = task.status()
+            self.logger.info(f"@@R: process Task {tid}, status= {status}")
             self.setExeStatus( tid, status )
             if status in [Status.COMPLETED, Status.ERROR, Status.CANCELED]:
                 dataPackets = self.getDataPackets( status, task )
-                self.logger.info(f"@@R: Sending Completed Results, status = {status}, Num dataPackets= {len(dataPackets)}" )
+                self.logger.info(f"@@R: Sending Completed Results, Num dataPackets= {len(dataPackets)}" )
                 for dataPacket in dataPackets:
                     self.sendDataPacket( dataPacket )
                 self.completed_tasks.append(tid)
