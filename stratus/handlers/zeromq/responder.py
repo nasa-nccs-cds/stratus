@@ -87,6 +87,7 @@ class StratusZMQResponder(Thread):
             self.setExeStatus( tid, status )
             if status in [Status.COMPLETED, Status.ERROR, Status.CANCELED]:
                 dataPackets = self.getDataPackets( status, task )
+                self.logger.info(f"@@R: processResults, status = {status}, Num dataPackets= {len(dataPackets)}" )
                 for dataPacket in dataPackets:
                     self.sendDataPacket( dataPacket )
                 self.completed_tasks.append(tid)
