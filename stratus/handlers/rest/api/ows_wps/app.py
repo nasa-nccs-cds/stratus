@@ -150,7 +150,12 @@ class RestAPI(RestAPIBase):
                 dataset: Optional[xa.Dataset] = result.popDataset()
                 if dataset is None:
                     if result.getResultClass() == "METADATA":
-                        return flask.Response( response=json.dumps(result.header), status=200, mimetype="application/json" )
+                        metadata = json.dumps(result.header)
+                        self.logger.info(f"Sending metadata response: " + metadata )
+                        response =  flask.Response( response=metadata, status=200, mimetype="application/json" )
+                        response.headers.set('Content-Format', 'metrics' )
+                        response.headers.set('Results-Remaining', '0')
+                        return response
                     else:
                         return self.getErrorResponse( "No more results available")
                 path = f"/tmp/{rid}.nc"
