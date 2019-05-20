@@ -139,7 +139,13 @@ class RestAPI(RestAPIBase):
             else:
                 if result is None: return self.missingResult( task )
                 dataset: Optional[xa.Dataset] = result.popDataset()
-                if dataset is None: return self.getErrorResponse( "No more results available")
+                if dataset is None:
+                    if result.getResultClass() == "METADATA":
+                        response = make_response( json.dumps(result.header) )
+                        response.headers.set('Content-Type', 'application/json')
+                        response.headers.set('Content-Format', 'metrics')
+                    else:
+                        return self.getErrorResponse( "No more results available")
                 path = f"/tmp/{rid}.nc"
                 self.logger.info(f"Saving temp file to {path}")
                 dataset.to_netcdf( path, mode="w", format='NETCDF4' )
