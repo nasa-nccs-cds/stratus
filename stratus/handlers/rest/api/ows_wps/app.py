@@ -153,6 +153,7 @@ class RestAPI(RestAPIBase):
                         response = make_response( json.dumps(result.header) )
                         response.headers.set('Content-Type', 'application/json')
                         response.headers.set('Content-Format', 'metrics')
+                        return response
                     else:
                         return self.getErrorResponse( "No more results available")
                 path = f"/tmp/{rid}.nc"
@@ -184,6 +185,7 @@ class RestAPI(RestAPIBase):
                         response = make_response( json.dumps(result.header) )
                         response.headers.set('Content-Type', 'application/json')
                         response.headers.set('Content-Format', 'metrics')
+                        return response
                     else:
                         return self.getErrorResponse( "No more results available")
                 self.logger.info( "Downloading pickled xa.Dataset, attrs: " + str(dataset.attrs) )
