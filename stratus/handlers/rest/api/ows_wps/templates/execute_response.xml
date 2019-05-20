@@ -11,13 +11,13 @@
    <wps:ProcessOutputs>
         <wps:Output>
             {% if 'file' in url -%}
-            <wps:Reference id="file"   encoding="UTF-8" mimeType="text/xml" href="{{url.file}}"/>
+            <wps:Reference id="file"   encoding="UTF-8" mimeType="application/x-netcdf" href="{{url.file}}"/>
             {%- endif %}
             {% if 'data' in url -%}
-            <wps:Reference id="data"   encoding="UTF-8" mimeType="text/xml" href="{{url.data}}"/>
+            <wps:Reference id="data"   encoding="UTF-8" mimeType="application/json" href="{{url.data}}"/>
             {%- endif %}
             {% if 'dap' in url -%}
-            <wps:Reference id="dap"    encoding="UTF-8" mimeType="text/xml" href="{{url.dap}}"/>
+            <wps:Reference id="dap"    encoding="UTF-8" mimeType="application/x-netcdf" href="{{url.dap}}"/>
             {%- endif %}
         </wps:Output>
    </wps:ProcessOutputs>
