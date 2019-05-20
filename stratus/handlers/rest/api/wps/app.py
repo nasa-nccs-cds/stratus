@@ -169,7 +169,13 @@ class RestAPI(RestAPIBase):
             else:
                 if result is None: return self.missingResult( task )
                 dataset: Optional[xa.Dataset] = result.popDataset()
-                if dataset is None: return self.getErrorResponse( "No more results available")
+                if dataset is None:
+                    if result.getResultClass() == "METADATA":
+                        response = make_response( json.dumps(result.header) )
+                        response.headers.set('Content-Type', 'application/json')
+                        response.headers.set('Content-Format', 'metrics')
+                    else:
+                        return self.getErrorResponse( "No more results available")
                 self.logger.info( "Downloading pickled xa.Dataset, attrs: " + str(dataset.attrs) )
                 response = make_response( pickle.dumps( dataset ) )
                 response.headers.set('Content-Type', 'application/octet-stream')
