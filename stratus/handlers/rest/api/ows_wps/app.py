@@ -150,10 +150,7 @@ class RestAPI(RestAPIBase):
                 dataset: Optional[xa.Dataset] = result.popDataset()
                 if dataset is None:
                     if result.getResultClass() == "METADATA":
-                        response = make_response( json.dumps(result.header) )
-                        response.headers.set('Content-Type', 'application/json')
-                        response.headers.set('Content-Format', 'metrics')
-                        return response
+                        return flask.Response( response=json.dumps(result.header), status=200, mimetype="application/json" )
                     else:
                         return self.getErrorResponse( "No more results available")
                 path = f"/tmp/{rid}.nc"
@@ -182,10 +179,7 @@ class RestAPI(RestAPIBase):
                 dataset: Optional[xa.Dataset] = result.popDataset()
                 if dataset is None:
                     if result.getResultClass() == "METADATA":
-                        response = make_response( json.dumps(result.header) )
-                        response.headers.set('Content-Type', 'application/json')
-                        response.headers.set('Content-Format', 'metrics')
-                        return response
+                        return flask.Response(response=json.dumps(result.header), status=200, mimetype="application/json")
                     else:
                         return self.getErrorResponse( "No more results available")
                 self.logger.info( "Downloading pickled xa.Dataset, attrs: " + str(dataset.attrs) )
