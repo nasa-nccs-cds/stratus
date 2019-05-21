@@ -105,6 +105,10 @@ class ClientOpSet(OpSet):
         if self._taskHandle is None: return Status.IDLE
         return self._taskHandle.status()
 
+    def exception(self) -> Exception:
+        if self._taskHandle is None: return None
+        return self._taskHandle.exception()
+
 class WorkflowTask(DGNode):
 
     def __init__( self, opset: ClientOpSet, **kwargs ):
@@ -144,7 +148,7 @@ class WorkflowTask(DGNode):
         return self._opset.taskHandle
 
     def exception(self) -> Exception:
-        return self._opset.taskHandle.exception()
+        return self._opset.exception()
 
     def status(self) -> Status:
         return self._opset.status()
