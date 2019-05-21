@@ -143,7 +143,6 @@ class WorkflowTask(DGNode):
     def taskHandle(self) -> TaskHandle:
         return self._opset.taskHandle
 
-    @property
     def exception(self) -> Exception:
         return self._opset.taskHandle.exception()
 
@@ -293,7 +292,7 @@ class Workflow(DependencyGraph):
                     stat = wtask.status()
                     if stat == Status.ERROR:
                         exc = wtask.exception()
-                        raise Exception( "Workflow Errored out: " + getattr(exc, 'message', repr(exc))  )
+                        raise Exception( "Workflow Errored out: " + ( getattr(exc, 'message', repr(exc)) if exc is not None else "" )  )
                     elif stat == Status.CANCELED:
                         raise Exception("Workflow Canceled")
                     elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
