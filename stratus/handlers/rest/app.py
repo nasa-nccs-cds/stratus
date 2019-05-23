@@ -9,6 +9,8 @@ from stratus_endpoint.handler.base import TaskHandle, Status
 from flask_sqlalchemy import SQLAlchemy
 from stratus.app.base import StratusAppBase
 from jsonschema import validate
+HERE = os.path.dirname(os.path.abspath(__file__))
+API_DIR = os.path.join( HERE, "api" )
 
 class RestAPIBase:
     __metaclass__ = abc.ABCMeta
@@ -77,6 +79,7 @@ class StratusApp(StratusAppBase):
 
     def __init__( self, core: StratusCore ):
         self.apis = []
+        self.available_apis =  [f.name for f in os.scandir(API_DIR) if f.is_dir() ]
         StratusAppBase.__init__( self, core )
         self.flask_parms = self.getConfigParms('flask')
         self.flask_parms['SQLALCHEMY_DATABASE_URI'] = self.flask_parms.get('DATABASE_URI','sqlite:////tmp/test.db')
@@ -98,18 +101,20 @@ class StratusApp(StratusAppBase):
         self.addApis( app )
         return app
 
-    def addApis(self, app ):
-        apiList = self.parm("API","core,wps").split(",")
-        for apiName in apiList:
-            try:
-                package_name = f"stratus.handlers.rest.api.{apiName}.app"
-                module = importlib.import_module( package_name )
-                constructor = getattr( module, "RestAPI" )
-                rest_api: RestAPIBase = constructor( apiName, self )
-                rest_api.instantiate( app )
-                self.apis.append( rest_api )
-            except Exception as err:
-                self.logger.error( f"Error instantiating api {apiName}: {str(err)}")
+    def addApis( self, app ):
+        apiListParm = self.core.parms.get("API",None)
+        apiList = self.available_apis if apiListParm is None else apiListParm.split(",")
+        for apiName in self.available_apis:
+            if apiName in apiList:
+                try:
+                    package_name = f"stratus.handlers.rest.api.{apiName}.app"
+                    module = importlib.import_module( package_name )
+                    constructor = getattr( module, "RestAPI" )
+                    rest_api: RestAPIBase = constructor( apiName, self )
+                    rest_api.instantiate( app )
+                    self.apis.append( rest_api )
+                except Exception as err:
+                    self.logger.error( f"Error instantiating api {apiName}: {str(err)}\n" + traceback.format_exc( ))
 
     @staticmethod
     def render_server_error( ex: Exception ):
@@ -119,7 +124,7 @@ class StratusApp(StratusAppBase):
 
 if __name__ == "__main__":
     HERE = os.path.dirname(os.path.abspath(__file__))
-    SETTINGS_FILE = os.path.join(HERE, "wps_server_test_settings.ini")
+    SETTINGS_FILE = os.path.join(HERE, "wps_server_edas_settings.ini")
     core = StratusCore( SETTINGS_FILE  )
     app = core.getApplication()
     app.run()

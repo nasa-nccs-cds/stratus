@@ -62,9 +62,19 @@ class StratusZMQResponder(Thread):
         self.active = True
 
     def getDataPackets(self, status: Status, task: WorkflowExeFuture ) -> List[DataPacket]:
+        from stratus_endpoint.handler.base import TaskResult
         if (status == Status.COMPLETED):
-            taskResult = task.getResult()
-            return [ self.createDataPacket( task.rid, dataset ) for dataset in taskResult.data ]
+            taskResult: TaskResult = task.getResult()
+            if taskResult.getResultClass() == "METADATA":
+                self.logger.info(f"@@R: process Metadata Task, header = {taskResult.header}")
+                metadata = taskResult.header
+                metadata["type"] = taskResult.getResultType()
+                metadata["status"] = str(Status.COMPLETED)
+                return [ self.createMessage(task.rid, metadata ) ]
+            else:
+                datasets = taskResult.data
+                self.logger.info(f"@@R: process Task, Num datasets= {len(datasets)}, header = {taskResult.header}")
+                return [ self.createDataPacket( task.rid, dataset ) for dataset in datasets ]
         elif (status == Status.ERROR):
             return [ self.createMessage(task.rid, {"error": task["error"]}) ]
         else:
@@ -84,9 +94,11 @@ class StratusZMQResponder(Thread):
         self.importTasks()
         for tid, task in self.current_tasks.items():
             status = task.status()
+            self.logger.info(f"@@R: process Task {tid}, status= {status}")
             self.setExeStatus( tid, status )
             if status in [Status.COMPLETED, Status.ERROR, Status.CANCELED]:
                 dataPackets = self.getDataPackets( status, task )
+                self.logger.info(f"@@R: Sending Completed Results, Num dataPackets= {len(dataPackets)}" )
                 for dataPacket in dataPackets:
                     self.sendDataPacket( dataPacket )
                 self.completed_tasks.append(tid)

@@ -12,9 +12,11 @@ class Op(DGNode):
         inputs:  List[str] = self.parse( kwargs.get("input") )
         outputs: List[str] = [ kwargs.get( "result", UID.randomId( 6 ) ) ]
         DGNode. __init__( self, inputs, outputs, **kwargs )
-        name_toks = self["name"].split(":")
+        raw_name = self["name"]
+        name_toks = raw_name.split(":") if ":" in raw_name else raw_name.split(".")
         self.name: str = name_toks[-1]
         self.epas: List[str]  = name_toks[:-1]
+        self.logger.info( f"Creating OP Node, name: {self.name}, epas: {self.epas}")
 
     def parse(self, parm_value ) -> List[str]:
         if parm_value is None: return []
@@ -103,6 +105,10 @@ class ClientOpSet(OpSet):
         if self._taskHandle is None: return Status.IDLE
         return self._taskHandle.status()
 
+    def exception(self) -> Exception:
+        if self._taskHandle is None: return None
+        return self._taskHandle.exception()
+
 class WorkflowTask(DGNode):
 
     def __init__( self, opset: ClientOpSet, **kwargs ):
@@ -140,6 +146,9 @@ class WorkflowTask(DGNode):
     @property
     def taskHandle(self) -> TaskHandle:
         return self._opset.taskHandle
+
+    def exception(self) -> Exception:
+        return self._opset.exception()
 
     def status(self) -> Status:
         return self._opset.status()
@@ -286,7 +295,8 @@ class Workflow(DependencyGraph):
                 if wtask.id not in completed_tasks:
                     stat = wtask.status()
                     if stat == Status.ERROR:
-                        raise Exception( "Workflow Errored out")
+                        exc = wtask.exception()
+                        raise Exception( "Workflow Errored out: " + ( getattr(exc, 'message', repr(exc)) if exc is not None else "" )  )
                     elif stat == Status.CANCELED:
                         raise Exception("Workflow Canceled")
                     elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):

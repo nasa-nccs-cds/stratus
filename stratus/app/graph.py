@@ -60,7 +60,7 @@ class DGNode:
 
     def __getitem__( self, key: str ) -> Any:
         result =  self.params.get( key, None )
-        assert result is not None,f"Missing required parameter in DGNode {self.id}: {key}"
+        assert result is not None,f"Missing required parameter in DGNode {self.id}: {key}, parms = {self.params}"
         return result
 
 class DependencyGraph():

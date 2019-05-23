@@ -54,7 +54,7 @@ class RestAPI(RestAPIBase):
         elif status == "unknown":
             responseXml = self._getStatusXml("ProcessUnknown", rid , rid, False )
         else: raise Exception( "Unknown status: " + status )
-        return flask.Response( response=responseXml, status=400, mimetype="application/xml" )
+        return flask.Response( response=responseXml, status=200, mimetype="application/xml" )
 
     def getErrorResponse(self, message, code=400 ) -> flask.Response:
         json_content = json.dumps( dict(status="error", message=message) )
@@ -89,11 +89,11 @@ class RestAPI(RestAPIBase):
     def getCapabilities(self, ctype: str ) -> flask.Response:
         response: Dict = self.app.core.getCapabilities(ctype)
         responseXml = self._getCapabilitiesXml( response )
-        return flask.Response(response=responseXml, status=400, mimetype="application/xml" )
+        return flask.Response(response=responseXml, status=200, mimetype="application/xml" )
 
     def describeProcess(self, ctype: str ) -> flask.Response:
         responseXml = ""
-        return flask.Response(response=responseXml, status=400, mimetype="application/xml" )
+        return flask.Response(response=responseXml, status=200, mimetype="application/xml" )
 
     def missingResult(self, task) -> flask.Response:
         if task.status() == Status.CANCELED: return self.getErrorResponse("Task was canceled")
@@ -139,7 +139,11 @@ class RestAPI(RestAPIBase):
             else:
                 if result is None: return self.missingResult( task )
                 dataset: Optional[xa.Dataset] = result.popDataset()
-                if dataset is None: return self.getErrorResponse( "No more results available")
+                if dataset is None:
+                    if result.getResultClass() == "METADATA":
+                        return flask.Response(response=json.dumps(result.header), status=200, mimetype="application/json")
+                    else:
+                        return self.getErrorResponse( "No more results available")
                 path = f"/tmp/{rid}.nc"
                 self.logger.info(f"Saving temp file to {path}")
                 dataset.to_netcdf( path, mode="w", format='NETCDF4' )
@@ -163,7 +167,11 @@ class RestAPI(RestAPIBase):
             else:
                 if result is None: return self.missingResult( task )
                 dataset: Optional[xa.Dataset] = result.popDataset()
-                if dataset is None: return self.getErrorResponse( "No more results available")
+                if dataset is None:
+                    if result.getResultClass() == "METADATA":
+                        return flask.Response(response=json.dumps(result.header), status=200, mimetype="application/json")
+                    else:
+                        return self.getErrorResponse( "No more results available")
                 self.logger.info( "Downloading pickled xa.Dataset, attrs: " + str(dataset.attrs) )
                 response = make_response( pickle.dumps( dataset ) )
                 response.headers.set('Content-Type', 'application/octet-stream')

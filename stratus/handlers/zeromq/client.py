@@ -60,6 +60,8 @@ class ZMQClient(StratusClient):
     @stratusrequest
     def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
         response = self.sendMessage( "exe", requestSpec, **kwargs )
+        self.log( f"Got exe response: {response}" )
+        if "error" in response: raise Exception( f"Server Error: {response['error']}" )
         status = Status.decode( response.get('status') )
         self.log( str(response) )
         response_manager = ResponseManager( self.context, response["rid"], self.host_address, self.response_port, status, self.cache_dir, **kwargs )
@@ -117,7 +119,8 @@ class ResponseManager(Thread):
 
     def cacheResult(self, header: Dict, data: Optional[xa.Dataset] ):
         self.logger.info( "Caching result: " + str(header) )
-        self.cached_results.put( TaskResult(header,data)  )
+        dataList = [] if data is None else [data]
+        self.cached_results.put( TaskResult( header, dataList )  )
 
     def getResult( self, **kwargs ) ->  Optional[TaskResult]:
         timeout = kwargs.get("timeout")

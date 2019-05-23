@@ -13,10 +13,11 @@ TEMPLATES = os.path.join(HERE, "templates")
 
 class RestAPI(RestAPIBase):
     debug = True
+    API = "ows_wps"
 
     def __init__( self, name: str, app: StratusAppBase, **kwargs ):
         RestAPIBase.__init__( self, name, app, **kwargs )
-        self.jenv = Environment( loader=PackageLoader( 'stratus.handlers.rest.api.wps',  "templates" ), autoescape=select_autoescape(['html','xml']) )
+        self.jenv = Environment( loader=PackageLoader( f'stratus.handlers.rest.api.{self.API}',  "templates" ), autoescape=select_autoescape(['html','xml']) )
         self.templates = { template:self.jenv.get_template(f'{template}.xml') for template in ["describe_process", "execute_response", "get_capabilities"] }
         self.dapRoute = kwargs.get( "dapRoute", None )
 
@@ -24,8 +25,8 @@ class RestAPI(RestAPIBase):
         if datainputs is None: return {}
         raw_datainputs = datainputs.strip()
         if raw_datainputs[0] == "[": raw_datainputs = raw_datainputs[1:-1]
-        json_datainputs = "{"+raw_datainputs.replace("domain=",'"domain":').replace("variable=",'"variable":').replace("operation=",'"operation":')+"}"
-#        print( "json_datainputs = " + json_datainputs )
+        json_datainputs = "{"+raw_datainputs.replace("domain=",'"domain":').replace("variable=",'"variable":').replace("operation=",'"operation":').replace(";",',')+"}"
+        self.logger.info( "json datainputs = " + json_datainputs )
         return json.loads(json_datainputs)
 
     def processRequest( self, requestDict: Dict ) -> flask.Response:
@@ -54,7 +55,7 @@ class RestAPI(RestAPIBase):
         elif status == "unknown":
             responseXml = self._getStatusXml("ProcessUnknown", rid , rid, False )
         else: raise Exception( "Unknown status: " + status )
-        return flask.Response( response=responseXml, status=400, mimetype="application/xml" )
+        return flask.Response( response=responseXml, status=200, mimetype="application/xml" )
 
     def getErrorResponse(self, message, code=400 ) -> flask.Response:
         json_content = json.dumps( dict(status="error", message=message) )
@@ -62,13 +63,14 @@ class RestAPI(RestAPIBase):
 
     def _getStatusXml(self, status: str, message: str, rid: str, addDataRefs = True) -> str :
         status = dict( tag=status, message=message )
-        url = dict( status=f"{request.url_root}wps/status?rid={rid}" )
+        url = dict( status=f"{request.url_root}{self.API}/status?rid={rid}" )
+        process = dict( identifier="workflow", title="", abstract="", profile="" )
         if addDataRefs:
-            url['file'] = f"{request.url_root}wps/file?rid={rid}"
-            url['data'] = f"{request.url_root}wps/data?rid={rid}"
+            url['file'] = f"{request.url_root}{self.API}/file?rid={rid}"
+            url['data'] = f"{request.url_root}{self.API}/data?rid={rid}"
             if self.dapRoute is not None:
                 url['dap'] = f"{self.dapRoute}/{rid}.nc"
-        return self.render( 'execute_response', status=status, url=url )
+        return self.render( 'execute_response', status=status, url=url, process=process )
 
     def _getCapabilitiesXml(self, capabilitiesData: Dict )-> str:
         manager = dict(name="Thomas Maxwell", position="EDAS Developer", email="thomas.maxwell@nasa.gov")
@@ -88,12 +90,17 @@ class RestAPI(RestAPIBase):
 
     def getCapabilities(self, ctype: str ) -> flask.Response:
         response: Dict = self.app.core.getCapabilities(ctype)
-        responseXml = self._getCapabilitiesXml( response )
-        return flask.Response(response=responseXml, status=400, mimetype="application/xml" )
+        self.logger.info( f"getCapabilities[{ctype}]: response: {response}")
+        if ctype == "epas":
+            responseJson = json.dumps( response )
+            return flask.Response(response=responseJson, status=200, mimetype="application/json" )
+        else:
+            responseXml = self._getCapabilitiesXml( response )
+            return flask.Response(response=responseXml, status=200, mimetype="application/xml" )
 
     def describeProcess(self, ctype: str ) -> flask.Response:
         responseXml = ""
-        return flask.Response(response=responseXml, status=400, mimetype="application/xml" )
+        return flask.Response(response=responseXml, status=200, mimetype="application/xml" )
 
     def missingResult(self, task) -> flask.Response:
         if task.status() == Status.CANCELED: return self.getErrorResponse("Task was canceled")
@@ -104,18 +111,20 @@ class RestAPI(RestAPIBase):
         self.logger.info( "Adding WPS routes" )
         @bp.route('/cwt', methods=['GET'] )
         def exe():
-            requestArg = request.args.get("request", None).lower()
-            if self.debug: self.logger.info( "EXE: requestArg = " + requestArg)
+            raw_request_data = request.args
+            requestData = { key.lower(): value for key,value in raw_request_data.items() }
+            self.logger.info( f" *** REQUEST DATA: { {k:v for k,v in requestData.items()} }" )
+            requestArg = requestData.get("request", None).lower()
+            identifier = requestData.get("identifier", None)
+            if self.debug: self.logger.info( "EXE: requestArg = " + requestArg + ", identifier = " + str(identifier))
             if requestArg == "execute":
-                datainputs = request.args.get("datainputs", None)
+                datainputs = requestData.get("datainputs", None)
                 inputsArg = self.parseDatainputs( datainputs )
                 return self.processRequest( inputsArg )
             elif requestArg == "getcapabilities":
-                id = request.args.get("identifier",  None )
-                return self.getCapabilities(id)
+                return self.getCapabilities(identifier)
             elif requestArg == "describeprocess":
-                id = request.args.get("identifier",  None )
-                return self.describeProcess(id)
+                return self.describeProcess(identifier)
             else:
                 return self.executeResponse( dict( status='error', message ="Illegal request type: " + requestArg ) )
 
@@ -139,7 +148,16 @@ class RestAPI(RestAPIBase):
             else:
                 if result is None: return self.missingResult( task )
                 dataset: Optional[xa.Dataset] = result.popDataset()
-                if dataset is None: return self.getErrorResponse( "No more results available")
+                if dataset is None:
+                    if result.getResultClass() == "METADATA":
+                        metadata = json.dumps(result.header)
+                        self.logger.info(f"Sending metadata response: " + metadata )
+                        response =  flask.Response( response=metadata, status=200, mimetype="application/json" )
+                        response.headers.set('Content-Format', 'metrics' )
+                        response.headers.set('Results-Remaining', '0')
+                        return response
+                    else:
+                        return self.getErrorResponse( "No more results available")
                 path = f"/tmp/{rid}.nc"
                 self.logger.info(f"Saving temp file to {path}")
                 dataset.to_netcdf( path, mode="w", format='NETCDF4' )
@@ -161,9 +179,14 @@ class RestAPI(RestAPIBase):
             if task.status() == Status.EXECUTING:
                 return self.jsonResponse( dict(status="executing", rid=task.rid) )
             else:
-                if result is None: return self.missingResult( task )
+                if result is None:
+                    return self.missingResult( task )
                 dataset: Optional[xa.Dataset] = result.popDataset()
-                if dataset is None: return self.getErrorResponse( "No more results available")
+                if dataset is None:
+                    if result.getResultClass() == "METADATA":
+                        return flask.Response(response=json.dumps(result.header), status=200, mimetype="application/json")
+                    else:
+                        return self.getErrorResponse( "No more results available")
                 self.logger.info( "Downloading pickled xa.Dataset, attrs: " + str(dataset.attrs) )
                 response = make_response( pickle.dumps( dataset ) )
                 response.headers.set('Content-Type', 'application/octet-stream')

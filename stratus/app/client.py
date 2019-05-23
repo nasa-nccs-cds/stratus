@@ -98,4 +98,9 @@ class StratusClient:
         return cid in self.clients
 
 
+class StratusClientApp(StratusClient):
 
+
+    def __init__( self, type: str, **kwargs ):
+        StratusClient.__init__( self, type, **kwargs )
+#        self.app =
