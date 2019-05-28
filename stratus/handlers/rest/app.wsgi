@@ -1,0 +1,1 @@
+from stratus.handlers.rest import app as application
