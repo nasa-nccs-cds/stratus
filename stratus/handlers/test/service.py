@@ -11,11 +11,10 @@ class ServiceHandler( Handler ):
         htype = os.path.basename(os.path.dirname(__file__))
         super(ServiceHandler, self).__init__( htype, **kwargs )
 
-    def newClient( self, cid = None, gateway=False ) -> StratusClient:
-        cparms = {"cid": cid, **self.parms}
-        return TestClient( gateway=gateway, **cparms )
+    def newClient( self, core: StratusCore, **kwargs ) -> StratusClient:
+        return TestClient( **kwargs )
 
-    def newApplication(self, core: StratusCore ) -> StratusAppBase:
+    def newApplication(self, core: StratusCore, **kwargs ) -> StratusAppBase:
         return TestStratusApp( core )
 
 

@@ -3,6 +3,7 @@ from typing import List, Dict, Callable, Optional
 from stratus.app.client import StratusClient
 from stratus_endpoint.util.config import StratusLogger
 from stratus.app.base import StratusFactory
+from stratus.app.base import StratusCoreBase
 from stratus.app.operations import Op
 import traceback
 import importlib
@@ -43,24 +44,24 @@ class Handlers:
         assert result is not None, "Attempt to access unknown handler in Handlers: {} ".format( key )
         return result
 
-    def getClients( self, op: Op = None, **kwargs ) -> List[StratusClient]:
+    def getClients( self, core: StratusCoreBase, op: Op = None, **kwargs ) -> List[StratusClient]:
         assert self.configSpec is not None, "Error, the handlers have not yet been initialized"
         clients = []
         self.logger.info( f"GET CLIENTS, handlers: {[str(h) for h in self._handlers.values()]}")
         for service in self._handlers.values():
             if op == None:
-                clients.append( service.client() )
+                clients.append( service.client(core,**kwargs) )
             else:
                 cid = op.get( "cid",  None )
                 for epa in op.epas:
-                    if service.client().handles( epa, **kwargs):
+                    if service.client(core,**kwargs).handles( epa, **kwargs):
                         clients.append( service.client(cid) )
         return clients
 
-    def getEpas(self) -> List[str]:
+    def getEpas(self, core: StratusCoreBase, **kwargs) -> List[str]:
         epas = []
         for service in self._handlers.values():
-            epas.extend( service.client().endpointSpecs )
+            epas.extend( service.client(core,**kwargs).endpointSpecs )
         return epas
 
     def getApplicationHandler(self) -> Optional[StratusFactory]:

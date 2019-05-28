@@ -97,10 +97,3 @@ class StratusClient:
     def hasClient(self, cid: str ) -> bool:
         return cid in self.clients
 
-
-class StratusClientApp(StratusClient):
-
-
-    def __init__( self, type: str, **kwargs ):
-        StratusClient.__init__( self, type, **kwargs )
-#        self.app =

@@ -15,7 +15,9 @@ class ServiceHandler( Handler ):
         htype = os.path.basename(os.path.dirname(__file__))
         super(ServiceHandler, self).__init__( htype, **kwargs )
 
-    def newClient( self, cid = None, gateway=False ) -> StratusClient:
+    def newClient( self, core: StratusCore, **kwargs ) -> StratusClient:
+        cid = kwargs.get("cid")
+        gateway = kwargs.get("gateway")
         API = self.parm("API","core").lower()
         cparms = {"cid": cid, **self.parms} if cid else self.parms
         if API == "core":    return CoreRestClient( gateway=gateway, **cparms )
@@ -23,5 +25,5 @@ class ServiceHandler( Handler ):
         if API == "ows_wps": return OwsWpsClient(   gateway=gateway, **cparms )
         raise Exception( "Unrecognized API in REST ServiceHandler: " + API)
 
-    def newApplication(self, core: StratusCore ) -> StratusApp:
+    def newApplication(self, core: StratusCore, **kwargs ) -> StratusApp:
         return StratusApp( core )

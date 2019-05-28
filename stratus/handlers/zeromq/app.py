@@ -1,4 +1,4 @@
-from stratus.app.base import StratusAppBase
+from stratus.app.base import StratusServerApp
 from stratus.app.core import StratusCore
 import json
 from stratus_endpoint.util.config import StratusLogger
@@ -11,10 +11,10 @@ from stratus_endpoint.handler.base import Status, TaskFuture
 from stratus_endpoint.handler.base import TaskHandle, Endpoint, TaskResult
 MB = 1024 * 1024
 
-class StratusApp(StratusAppBase):
+class StratusApp(StratusServerApp):
 
-    def __init__( self, core: StratusCore ):
-        StratusAppBase.__init__(self, core )
+    def __init__( self, core: StratusCore, **kwargs ):
+        StratusServerApp.__init__(self, core, **kwargs)
         self.logger =  StratusLogger.getLogger()
         self.active = True
         self.parms = self.getConfigParms('stratus')

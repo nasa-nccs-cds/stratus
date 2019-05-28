@@ -4,10 +4,9 @@ from flask import Flask, Response, Blueprint, request
 import json, importlib
 from stratus_endpoint.util.config import StratusLogger
 from stratus.app.core import StratusCore
-from stratus.app.operations import WorkflowExeFuture
 from stratus_endpoint.handler.base import TaskHandle, Status
 from flask_sqlalchemy import SQLAlchemy
-from stratus.app.base import StratusAppBase
+from stratus.app.base import StratusAppBase, StratusServerApp
 from jsonschema import validate
 HERE = os.path.dirname(os.path.abspath(__file__))
 API_DIR = os.path.join( HERE, "api" )
@@ -15,7 +14,7 @@ API_DIR = os.path.join( HERE, "api" )
 class RestAPIBase:
     __metaclass__ = abc.ABCMeta
 
-    def __init__( self, name: str, app: StratusAppBase, **kwargs ):
+    def __init__(self, name: str, app: StratusAppBase, **kwargs):
         self.logger = StratusLogger.getLogger()
         self.parms = kwargs
         self.name = name
@@ -75,12 +74,12 @@ class RestAPIBase:
     def xmlResponse(self, type: str, message: Dict, code: int = 200 ) -> Response:
         return Response( response="" , status=code, mimetype="application/xml")
 
-class StratusApp(StratusAppBase):
+class StratusApp(StratusServerApp):
 
-    def __init__( self, core: StratusCore ):
+    def __init__( self, core: StratusCore, **kwargs ):
         self.apis = []
         self.available_apis =  [f.name for f in os.scandir(API_DIR) if f.is_dir() ]
-        StratusAppBase.__init__( self, core )
+        StratusServerApp.__init__(self, core, **kwargs)
         self.flask_parms = self.getConfigParms('flask')
         self.flask_parms['SQLALCHEMY_DATABASE_URI'] = self.flask_parms.get('DATABASE_URI','sqlite:////tmp/test.db')
         self.app = self.create_app( self.flask_parms )
@@ -126,5 +125,5 @@ if __name__ == "__main__":
     HERE = os.path.dirname(os.path.abspath(__file__))
     SETTINGS_FILE = os.path.join(HERE, "wps_server_edas_settings.ini")
     core = StratusCore( SETTINGS_FILE  )
-    app = core.getApplication()
+    app: StratusApp = core.getApplication()
     app.run()

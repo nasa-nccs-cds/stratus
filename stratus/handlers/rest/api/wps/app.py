@@ -14,7 +14,7 @@ TEMPLATES = os.path.join(HERE, "templates")
 class RestAPI(RestAPIBase):
     debug = True
 
-    def __init__( self, name: str, app: StratusAppBase, **kwargs ):
+    def __init__(self, name: str, app: StratusAppBase, **kwargs):
         RestAPIBase.__init__( self, name, app, **kwargs )
         self.jenv = Environment( loader=PackageLoader( 'stratus.handlers.rest.api.wps',  "templates" ), autoescape=select_autoescape(['html','xml']) )
         self.templates = { template:self.jenv.get_template(f'{template}.xml') for template in ["describe_process", "execute_response", "get_capabilities"] }

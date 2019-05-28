@@ -1,8 +1,7 @@
 import os, json, yaml, abc, itertools
 from typing import List, Union, Dict, Set, Iterator
 from stratus_endpoint.util.config import Config, StratusLogger
-from concurrent.futures import ThreadPoolExecutor, Future, Executor
-from stratus_endpoint.handler.base import TaskHandle
+from stratus.app.base import StratusAppBase
 from multiprocessing import Process as SubProcess
 from stratus.app.operations import *
 
@@ -53,18 +52,35 @@ class StratusCoreBase:
     @abc.abstractmethod
     def getClients( self, op: Op = None, **kwargs ) -> List[StratusClient]: pass
 
+    @abc.abstractmethod
+    def getClient( self, **kwargs ) -> StratusClient: pass
+
+    @abc.abstractmethod
+    def getApplication( self ) -> StratusAppBase: pass
+
+    @abc.abstractmethod
+    def getEpas( self,  **kwargs ) -> List[str]: pass
+
+
 class StratusAppBase:
     __metaclass__ = abc.ABCMeta
 
-    def __init__( self, _core: StratusCoreBase ):
+    def __init__( self, _core: StratusCoreBase, **kwargs ):
         self.logger = StratusLogger.getLogger()
         self.core = _core
-        self._executor = ThreadPoolExecutor()
 
-    def getExecutor(self):
-        if self._executor is None:
-            self._executor = ThreadPoolExecutor()
-        return self._executor
+    #     self._executor = ThreadPoolExecutor()
+    #
+    # def getExecutor(self):
+    #     if self._executor is None:
+    #         self._executor = ThreadPoolExecutor()
+    #     return self._executor
+
+    # def processWorkflowExec( self, request: Dict ) -> WorkflowExeFuture:
+    #     clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
+    #     tasks: List[WorkflowTask] = [ WorkflowTask(cOpSet) for cOpSet in self.distributeOps( clientOpsets ) ]
+    #     workflow = Workflow( nodes=tasks )
+    #     return WorkflowExeFuture( request, workflow.submitExec(self.getExecutor()) )
 
     def distributeOps(self, clientOpsets: Dict[str, ClientOpSet]) -> Iterator[ClientOpSet]:
         # Distributes ops to clients while maximizing locality of operations
@@ -85,12 +101,6 @@ class StratusAppBase:
             sorted_opsets = list( sorted( sorted_opsets, reverse=True, key=lambda x: x[1] ) )
         distributed_opsets = [opset.connectedOpsets() for opset in filtered_opsets]
         return itertools.chain.from_iterable(distributed_opsets)
-
-    def processWorkflowExec( self, request: Dict ) -> WorkflowExeFuture:
-        clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
-        tasks: List[WorkflowTask] = [ WorkflowTask(cOpSet) for cOpSet in self.distributeOps( clientOpsets ) ]
-        workflow = Workflow( nodes=tasks )
-        return WorkflowExeFuture( request, workflow.submitExec(self.getExecutor()) )
 
     def processWorkflow( self, request: Dict ) -> Dict[str,TaskHandle]:
         clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
@@ -123,6 +133,12 @@ class StratusAppBase:
     def getConfigParms(self, module: str ) -> Dict:
         return self.core.getConfigParms( module )
 
+class StratusServerApp(StratusAppBase):
+    __metaclass__ = abc.ABCMeta
+
+    def __init__( self, core: StratusCoreBase, **kwargs ):
+        StratusAppBase.__init__( self, core, **kwargs )
+
     @abc.abstractmethod
     def run(self): pass
 
@@ -131,7 +147,13 @@ class StratusAppBase:
         proc.start()
         return proc
 
-class TestStratusApp(StratusAppBase):
+class StratusEmbeddedApp(StratusAppBase):
+    __metaclass__ = abc.ABCMeta
+
+    def __init__( self, _core: StratusCoreBase, **kwargs ):
+        StratusAppBase.__init__( self, core, **kwargs )
+
+class TestStratusApp(StratusServerApp):
 
     def run(self): return
 
@@ -146,7 +168,7 @@ class StratusFactory:
         assert htype1 == htype, "Sanity check of Handler type failed: {} vs {}".format(htype1,htype)
 
     @abc.abstractmethod
-    def client( self, cid = None ) -> StratusClient: pass
+    def client( self, core: StratusCoreBase, **kwargs ) -> StratusClient: pass
 
     @abc.abstractmethod
     def app(self, core: StratusCoreBase ) -> StratusAppBase: pass
