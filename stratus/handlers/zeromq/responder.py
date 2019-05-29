@@ -117,7 +117,7 @@ class StratusZMQResponder(Thread):
             self.logger.info("@@R: Sent data packet for " + dataPacket.id + ", data Size: " + str(len(bdata)) )
             self.logger.info("@@R: Data header: " + dataPacket.message)
         else:
-            self.logger.info( "@@R: Sent data header only for " + dataPacket.id + "---> NO DATA!" )
+            self.logger.info( "@@R: Sent data header only for " + dataPacket.id + "---> NO DATA!   BODY = " + dataPacket.message )
         self.socket.send_multipart( multipart_msg )
 
     def setExeStatus( self, rid: str, status: Status ):
