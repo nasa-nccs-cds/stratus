@@ -4,7 +4,7 @@ from stratus_endpoint.util.config import StratusLogger, UID
 from threading import Thread
 from typing import Dict, Optional, List
 from stratus.util.parsing import s2b, b2s
-from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult
+from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult, FailedTask
 import os, pickle, queue
 import xarray as xa
 from enum import Enum
@@ -61,7 +61,8 @@ class ZMQClient(StratusClient):
     def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
         response = self.sendMessage( "exe", requestSpec, **kwargs )
         self.log( f"Got exe response: {response}" )
-        if "error" in response: raise Exception( f"Server Error: {response['error']}" )
+        if "error" in response:
+            return FailedTask( Exception( f"Server Error: {response['error']}" ) )
         status = Status.decode( response.get('status') )
         self.log( str(response) )
         response_manager = ResponseManager( self.context, response["rid"], self.host_address, self.response_port, status, self.cache_dir, **kwargs )
