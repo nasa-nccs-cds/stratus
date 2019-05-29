@@ -3,7 +3,7 @@ from typing import List, Dict, Set, Iterator, Any, Optional
 from stratus_endpoint.util.config import StratusLogger, UID
 from stratus.app.client import StratusClient
 from concurrent.futures import wait, as_completed, Executor, Future
-from stratus_endpoint.handler.base import TaskHandle, TaskResult, TaskFuture, Status
+from stratus_endpoint.handler.base import TaskHandle, TaskResult, TaskFuture, Status, FailedTask
 from stratus.app.graph import DGNode, DependencyGraph, graphop, Connection
 
 class Op(DGNode):
@@ -295,10 +295,9 @@ class Workflow(DependencyGraph):
                 if wtask.id not in completed_tasks:
                     stat = wtask.status()
                     if stat == Status.ERROR:
-                        exc = wtask.exception()
-                        raise Exception( "Workflow Errored out: " + ( getattr(exc, 'message', repr(exc)) if exc is not None else "" )  )
+                        results[wtask.id] = FailedTask( wtask.exception() )
                     elif stat == Status.CANCELED:
-                        raise Exception("Workflow Canceled")
+                        results[wtask.id] = FailedTask( Exception( "Task canceled") )
                     elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
                         taskHandle = wtask.async_execute()
                         self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}")
