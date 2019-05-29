@@ -304,7 +304,7 @@ class Workflow(DependencyGraph):
                         completed_tasks.append(wtask.id)
                     elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
                         taskHandle = wtask.async_execute()
-                        self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}")
+                        self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}, taskHandle: {taskHandle.__class__.__name__}")
                         if wtask.id in output_ids:
                             results[ wtask.id ] =  taskHandle
                         completed = False
