@@ -296,8 +296,12 @@ class Workflow(DependencyGraph):
                     stat = wtask.status()
                     if stat == Status.ERROR:
                         results[wtask.id] = FailedTask( wtask.exception() )
+                        self.logger.info(f"Failed TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}")
+                        completed_tasks.append(wtask.id)
                     elif stat == Status.CANCELED:
                         results[wtask.id] = FailedTask( Exception( "Task canceled") )
+                        self.logger.info(f"Cancelled TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}")
+                        completed_tasks.append(wtask.id)
                     elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
                         taskHandle = wtask.async_execute()
                         self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}")
