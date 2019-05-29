@@ -160,6 +160,7 @@ class StratusFactory:
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, htype: str, **kwargs):
+        self.logger = StratusLogger.getLogger()
         self.parms = kwargs
         self.name = self['name']
         self.type: str = htype
