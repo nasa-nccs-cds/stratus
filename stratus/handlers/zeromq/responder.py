@@ -76,7 +76,7 @@ class StratusZMQResponder(Thread):
                 self.logger.info(f"@@R: process Task, Num datasets= {len(datasets)}, header = {taskResult.header}")
                 return [ self.createDataPacket( task.rid, dataset ) for dataset in datasets ]
         elif (status == Status.ERROR):
-            return [ self.createMessage(task.rid, {"error": task["error"]}) ]
+            return [ self.createMessage(task.rid, {"error": str(task.exception()) }) ]
         else:
             raise Exception( f"Unexpected Status in getDataPackets: {Status.str(status)}")
 
@@ -94,7 +94,7 @@ class StratusZMQResponder(Thread):
         self.importTasks()
         for tid, task in self.current_tasks.items():
             status = task.status()
-            self.logger.info(f"@@R: process Task {tid}, status= {status}")
+            self.logger.info(f"@@R: process Task {tid}, status= {status}, type = {task.__class__.__name__}")
             self.setExeStatus( tid, status )
             if status in [Status.COMPLETED, Status.ERROR, Status.CANCELED]:
                 dataPackets = self.getDataPackets( status, task )
