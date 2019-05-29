@@ -1,7 +1,6 @@
 import os, json, yaml, abc, itertools
 from typing import List, Union, Dict, Set, Iterator
 from stratus_endpoint.util.config import Config, StratusLogger
-from stratus.app.base import StratusAppBase
 from multiprocessing import Process as SubProcess
 from stratus.app.operations import *
 
@@ -56,7 +55,7 @@ class StratusCoreBase:
     def getClient( self, **kwargs ) -> StratusClient: pass
 
     @abc.abstractmethod
-    def getApplication( self ) -> StratusAppBase: pass
+    def getApplication( self ) -> "StratusAppBase": pass
 
     @abc.abstractmethod
     def getEpas( self,  **kwargs ) -> List[str]: pass
