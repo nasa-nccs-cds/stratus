@@ -28,7 +28,7 @@ class Handler(StratusFactory):
         cid = kwargs.get("cid")
         client: StratusClient = self.getClient( cid )
         if client is None:
-            self.logger.info(f"create client {cid}:\n kwargs= {kwargs}\n parms = {core.parms}\n config = {core.config}")
+            self.logger.info(f"create client {self.name}:\n kwargs= {kwargs}\n core.parms = {core.parms}\n core.config = {core.config}\n handler.parms = {self.parms}\n handler.type = {self.type}\n handler.name = {self.name}")
             client = self.newClient( core, **kwargs )
             client.activate()
             self._clients[ client.cid ] = client
