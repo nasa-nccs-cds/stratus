@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
 from stratus_endpoint.util.config import Config, StratusLogger, UID
 from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult
-import abc, fnmatch
+import abc, fnmatch, traceback
 from decorator import decorator, dispatch_on
 
 class EndpointSpec:
@@ -79,7 +79,7 @@ class StratusClient:
 
     def __getitem__( self, key: str ) -> str:
         result =  self.parms.get( key, None )
-        assert result is not None, "Missing required parameter in {}: {}, params: {} ".format( self.__class__.__name__, key, str(self.parms) )
+        assert result is not None, "Missing required parameter in {}: {}, params: {}\n  * {} ".format( self.__class__.__name__, key, str(self.parms), "\n  * ".join(traceback.format_stack()) )
         return result
 
     def parm(self, key: str, default: str = None) -> Optional[str]:
@@ -97,10 +97,3 @@ class StratusClient:
     def hasClient(self, cid: str ) -> bool:
         return cid in self.clients
 
-
-class StratusClientApp(StratusClient):
-
-
-    def __init__( self, type: str, **kwargs ):
-        StratusClient.__init__( self, type, **kwargs )
-#        self.app =

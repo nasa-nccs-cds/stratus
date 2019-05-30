@@ -6,7 +6,7 @@ import connexion, json
 from functools import partial
 from flask_sqlalchemy import SQLAlchemy
 from stratus.app.core import StratusCore
-from stratus.app.base import StratusAppBase
+from stratus.app.base import StratusServerApp
 
 class StratusResolver(Resolver):
 
@@ -23,10 +23,10 @@ class StratusResolver(Resolver):
         assert len(clients), "No handlers found for operation: " + operation_id
         return partial( clients[0].request, operation_id )
 
-class StratusApp(StratusAppBase):
+class StratusApp(StratusServerApp):
 
     def __init__( self, core: StratusCore ):
-        StratusAppBase.__init__( self, core )
+        StratusServerApp.__init__(self, core)
         self.app = connexion.FlaskApp("stratus.handlers.openapi", specification_dir='api/', debug=True )
         self.app.add_error_handler( 500, self.render_server_error )
         self.app.app.register_error_handler( TypeError, self.render_server_error )

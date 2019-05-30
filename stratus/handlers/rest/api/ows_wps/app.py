@@ -15,7 +15,7 @@ class RestAPI(RestAPIBase):
     debug = True
     API = "ows_wps"
 
-    def __init__( self, name: str, app: StratusAppBase, **kwargs ):
+    def __init__(self, name: str, app: StratusAppBase, **kwargs):
         RestAPIBase.__init__( self, name, app, **kwargs )
         self.jenv = Environment( loader=PackageLoader( f'stratus.handlers.rest.api.{self.API}',  "templates" ), autoescape=select_autoescape(['html','xml']) )
         self.templates = { template:self.jenv.get_template(f'{template}.xml') for template in ["describe_process", "execute_response", "get_capabilities"] }
@@ -32,10 +32,13 @@ class RestAPI(RestAPIBase):
     def processRequest( self, requestDict: Dict ) -> flask.Response:
         rid = requestDict.setdefault( "rid", UID.randomId(6) )
         if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
-        current_tasks = self.app.processWorkflow(requestDict)
-        if self.debug: self.logger.info("Current tasks: {} ".format(str(list(current_tasks.items()))))
-        for task in current_tasks.values(): self.addTask( task )
-        return self.executeResponse( dict( status="executing", message="Executing Request", rid=rid ) )
+        try:
+            current_tasks = self.app.processWorkflow(requestDict)
+            if self.debug: self.logger.info("Current tasks: {} ".format(str(list(current_tasks.items()))))
+            for task in current_tasks.values(): self.addTask( task )
+            return self.executeResponse( dict( status="executing", message="Executing Request", rid=rid ) )
+        except Exception as err:
+            return self.executeResponse(dict(status="error", message=getattr(err, 'message', repr(err)), rid=rid))
 
     def executeResponse(self, response: Dict ) -> flask.Response:
         if self.debug: self.logger.info( " #####>>>> response: " + str(response) )

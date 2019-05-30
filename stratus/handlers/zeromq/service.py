@@ -13,11 +13,10 @@ class ServiceHandler( Handler ):
         htype = os.path.basename(os.path.dirname(__file__))
         super(ServiceHandler, self).__init__( htype, **kwargs )
 
-    def newClient( self, cid = None, gateway=False ) -> StratusClient:
-        cparms = {"cid": cid, **self.parms}
-        return ZMQClient( gateway=gateway, **cparms )
+    def newClient( self, core: StratusCore, **kwargs ) -> StratusClient:
+        return ZMQClient( **kwargs )
 
-    def newApplication(self, core: StratusCore ) -> StratusApp:
-        return StratusApp( core )
+    def newApplication(self, core: StratusCore, **kwargs ) -> StratusApp:
+        return StratusApp( core, **kwargs )
 
 
