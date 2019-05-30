@@ -38,7 +38,7 @@ class RestAPI(RestAPIBase):
             for task in current_tasks.values(): self.addTask( task )
             return self.executeResponse( dict( status="executing", message="Executing Request", rid=rid ) )
         except Exception as err:
-            return self.executeResponse(dict(status="error", message=str(err), rid=rid))
+            return self.executeResponse(dict(status="error", message=getattr(err, 'message', repr(err)), rid=rid))
 
     def executeResponse(self, response: Dict ) -> flask.Response:
         if self.debug: self.logger.info( " #####>>>> response: " + str(response) )
