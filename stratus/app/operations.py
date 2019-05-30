@@ -295,16 +295,13 @@ class Workflow(DependencyGraph):
                 if wtask.id not in completed_tasks:
                     stat = wtask.status()
                     if stat == Status.ERROR:
-                        results[wtask.id] = FailedTask( wtask.exception() )
-                        self.logger.info(f"Failed TASK: taskID: {wtask.id}, exception: {wtask.exception()}")
-                        completed_tasks.append(wtask.id)
+                        exc = wtask.exception()
+                        raise Exception( "Workflow Errored out: " + ( getattr(exc, 'message', repr(exc)) if exc is not None else "" )  )
                     elif stat == Status.CANCELED:
-                        results[wtask.id] = FailedTask( Exception( "Task canceled") )
-                        self.logger.info(f"Cancelled TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}")
-                        completed_tasks.append(wtask.id)
+                        raise Exception("Workflow Canceled")
                     elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
                         taskHandle = wtask.async_execute()
-                        self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}, taskHandle: {taskHandle.__class__.__name__}")
+                        self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}, exception: {taskHandle.exception()}, status: {taskHandle.status()}")
                         if wtask.id in output_ids:
                             results[ wtask.id ] =  taskHandle
                         completed = False
