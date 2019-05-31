@@ -152,6 +152,16 @@ class StratusEmbeddedApp(StratusAppBase):
     def __init__( self, _core: StratusCoreBase, **kwargs ):
         StratusAppBase.__init__( self, core, **kwargs )
 
+    @abc.abstractmethod
+    def init(self, **kwargs): pass
+
+    @abc.abstractmethod
+    def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle: pass
+
+    @abc.abstractmethod
+    def capabilities(self, ctype: str, **kwargs ) -> Dict: pass
+
+
 class TestStratusApp(StratusServerApp):
 
     def run(self): return
