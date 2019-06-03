@@ -16,7 +16,7 @@ if __name__ == "__main__":
                  dict( name='test3:op', input=["r1","r2"], result="r3", cid = "C2", workTime="1.0" )   ]
     request=dict( operation=operation, rid="R0", cid="C0" )
 
-    taskHandles: Dict[str,TaskHandle] = app.processWorkflow( request )
+    app.submitWorkflow(request)
     for taskHandle in taskHandles.values():
         result = taskHandle.getResult()
         print( result )

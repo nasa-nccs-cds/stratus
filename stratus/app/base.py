@@ -1,8 +1,9 @@
-import os, json, yaml, abc, itertools
+import os, json, yaml, abc, itertools, queue
 from typing import List, Union, Dict, Set, Iterator
 from stratus_endpoint.util.config import Config, StratusLogger
 from multiprocessing import Process as SubProcess
 from stratus.app.operations import *
+from threading import Thread
 
 class StratusCoreBase:
     HERE = os.path.dirname(__file__)
@@ -61,25 +62,23 @@ class StratusCoreBase:
     def getEpas( self,  **kwargs ) -> List[str]: pass
 
 
-class StratusAppBase:
+class StratusAppBase(Thread):
     __metaclass__ = abc.ABCMeta
 
     def __init__( self, _core: StratusCoreBase, **kwargs ):
+        Thread.__init__( self )
         self.logger = StratusLogger.getLogger()
         self.core = _core
+        self.requestQueue = queue.Queue()
+        self.active_workflows: List[Workflow] = []
+        self.completed_workflows: List[Workflow] = {}
+        self._active = True
 
-    #     self._executor = ThreadPoolExecutor()
-    #
-    # def getExecutor(self):
-    #     if self._executor is None:
-    #         self._executor = ThreadPoolExecutor()
-    #     return self._executor
+    @abc.abstractmethod
+    def initInteractions(self): pass
 
-    # def processWorkflowExec( self, request: Dict ) -> WorkflowExeFuture:
-    #     clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
-    #     tasks: List[WorkflowTask] = [ WorkflowTask(cOpSet) for cOpSet in self.distributeOps( clientOpsets ) ]
-    #     workflow = Workflow( nodes=tasks )
-    #     return WorkflowExeFuture( request, workflow.submitExec(self.getExecutor()) )
+    @abc.abstractmethod
+    def updateInteractions(self): pass
 
     def distributeOps(self, clientOpsets: Dict[str, ClientOpSet]) -> Iterator[ClientOpSet]:
         # Distributes ops to clients while maximizing locality of operations
@@ -101,11 +100,54 @@ class StratusAppBase:
         distributed_opsets = [opset.connectedOpsets() for opset in filtered_opsets]
         return itertools.chain.from_iterable(distributed_opsets)
 
-    def processWorkflow( self, request: Dict ) -> Dict[str,TaskHandle]:
-        clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
-        tasks: List[WorkflowTask] = [ WorkflowTask(cOpSet) for cOpSet in self.distributeOps( clientOpsets ) ]
-        workflow = Workflow( nodes=tasks )
-        return workflow.submit()
+    def submitWorkflow(self, request: Dict):
+        self.requestQueue.put( request )
+
+    def ingestRequests( self ):
+        while True:
+            try:
+                request = self.requestQueue.get_nowait()
+                clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
+                tasks: List[WorkflowTask] = [WorkflowTask(cOpSet) for cOpSet in self.distributeOps(clientOpsets)]
+                workflow = Workflow(nodes=tasks)
+                self.active_workflows.append(workflow)
+            except queue.Empty:
+                return
+            except Exception as err:
+                self.logger.error( f"Error ingesting request: {err}")
+                return
+
+    def update_workflows(self):
+        completed_list = []
+        for workflow in self.active_workflows:
+            completed = workflow.update()
+            if completed: completed_list.append( workflow )
+        for workflow in completed_list:
+            self.completed_workflows.append( workflow )
+            self.active_workflows.remove(workflow)
+
+    def getTask( self, rid ) -> Optional[TaskHandle]:
+        for workflow in self.completed_workflows:
+            task = workflow.getOutputTask( rid )
+            if task != None: return task.taskHandle
+
+    def getTaskIds(self) -> List[str]:
+        return [ wtask.rid for workflow in self.completed_workflows for wtask in workflow.getOutputTasks() ]
+
+    def getTasks(self) -> List[WorkflowTask]:
+        workflows = self.completed_workflows + self.active_workflows
+        return [ wtask for workflow in workflows for wtask in workflow.getOutputTasks() ]
+
+    def removeTask( self, rid  ):
+        pass
+
+    def run(self):
+        self.initInteractions()
+        while self._active:
+            self.ingestRequests()
+            self.update_workflows()
+            self.updateInteractions()
+            time.sleep(0)
 
     def geClientOpsets(self, request: Dict ) -> Dict[str, ClientOpSet]:
         # Returns map of client id to list of ops in request that can be handled by that client
@@ -121,7 +163,8 @@ class StratusAppBase:
                opSet.add( op )
         return clientOpsets
 
-    def shutdown(self): pass
+    def shutdown(self):
+        self._active = False
 
     def parm(self, name: str, default = None ) -> str:
         return self.core.parm( name, default )
@@ -137,9 +180,6 @@ class StratusServerApp(StratusAppBase):
 
     def __init__( self, core: StratusCoreBase, **kwargs ):
         StratusAppBase.__init__( self, core, **kwargs )
-
-    @abc.abstractmethod
-    def run(self): pass
 
     def exec(self) -> SubProcess:
         proc = SubProcess( target=self.run )
@@ -164,7 +204,9 @@ class StratusEmbeddedApp(StratusAppBase):
 
 class TestStratusApp(StratusServerApp):
 
-    def run(self): return
+    def initInteractions(self): return
+
+    def updateInteractions(self): return
 
 class StratusFactory:
     __metaclass__ = abc.ABCMeta

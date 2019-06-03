@@ -6,7 +6,6 @@ import zmq, traceback
 from typing import Dict
 import queue, datetime
 from .responder import StratusZMQResponder, StratusResponse
-from stratus.app.operations import WorkflowExeFuture
 from stratus_endpoint.handler.base import Status, TaskFuture
 from stratus_endpoint.handler.base import TaskHandle, Endpoint, TaskResult
 MB = 1024 * 1024
@@ -22,7 +21,6 @@ class StratusApp(StratusServerApp):
         self.request_port = self.parms.get( "request_port", 4556 )
         self.response_port = self.parms.get( "response_port", 4557 )
         self.active_handlers = {}
-        self.tasks = queue.Queue()
 
     def initSocket( self ):
         try:
@@ -54,21 +52,20 @@ class StratusApp(StratusServerApp):
         self.request_socket.send_string( packaged_msg )
         return packaged_msg
 
-    def run(self):
-
+    def initInteractions(self):
         try:
             self.zmqContext: zmq.Context = zmq.Context()
             self.request_socket: zmq.Socket = self.zmqContext.socket(zmq.REP)
             self.responder = StratusZMQResponder(self.zmqContext, self.response_port, self.tasks, client_address = self.client_address)
             self.responder.start()
             self.initSocket()
+            self.logger.info(  "@@Portal:Listening for requests on port: {}".format( self.request_port ) )
 
         except Exception as err:
             self.logger.error( "@@Portal:  ------------------------------- StratusApp Init error: {} ------------------------------- ".format( err ) )
 
-
-        while self.active:
-            self.logger.info(  "@@Portal:Listening for requests on port: {}".format( self.request_port ) )
+    def updateInteractions(self):
+        while self.request_socket.poll(0) != 0:
             request_header = self.request_socket.recv_string().strip().strip("'")
             parts = request_header.split("!")
             submissionId = str(parts[0])
@@ -83,8 +80,7 @@ class StratusApp(StratusServerApp):
                     if len(parts) <= 2: raise Exception( "Missing parameters to exe request")
                     request["rid"] = submissionId
                     self.logger.info( "Processing Request: '{}' '{}' '{}'".format( submissionId, rType, str(request)) )
-                    tasks: Dict[str,TaskHandle] = self.processWorkflow(request)
-                    for task in tasks.values(): self.tasks.put( task )                                                                                                               #   TODO: Send results when tasks complete.
+                    self.submitWorkflow(request)                                                                                                             #   TODO: Send results when tasks complete.
                     response = { "status": "Executing" }
                     self.sendResponseMessage(StratusResponse(submissionId, response))
                 elif rType == "quit" or rType == "shutdown":
@@ -104,7 +100,7 @@ class StratusApp(StratusServerApp):
                 response = { "error": str(ex), "traceback": tb }
                 self.sendResponseMessage(StratusResponse(submissionId, response))
 
-        self.logger.info( "@@Portal: EXIT EDASPortal")
+
 
     def term( self, msg ):
         self.logger.info( "@@Portal: !!EDAS Shutdown: " + msg )

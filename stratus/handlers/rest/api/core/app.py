@@ -1,6 +1,5 @@
 from flask import request, Blueprint, make_response
 from stratus_endpoint.handler.base import TaskHandle, TaskResult
-from stratus.app.operations import WorkflowExeFuture
 import pickle
 from typing import *
 from stratus.handlers.rest.app import RestAPIBase
@@ -15,8 +14,7 @@ class RestAPI(RestAPIBase):
             if request.method == 'POST':    requestDict: Dict = request.json
             else:                           requestDict: Dict = self.jsonRequest( request.args.get("request",None) )
             if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
-            current_tasks: Dict[str,TaskHandle] = self.app.processWorkflow(requestDict)
-            for task in current_tasks.values(): self.addTask( task )
+            self.app.submitWorkflow(requestDict)
             return self.jsonResponse( dict( status="executing", rid=requestDict['rid'] ), code=202 )
 
         @bp.route('/status', methods=('GET',))
@@ -29,8 +27,8 @@ class RestAPI(RestAPIBase):
         @bp.route('/result', methods=('GET',))
         def result():
             rid = self.getParameter("rid")
-            task: TaskHandle = self.tasks.get( rid, None )
-            assert task is not None, f"Can't find task for rid {rid}, current tasks: {str(list(self.tasks.keys()))}"
+            task: TaskHandle = self.app.getTask( rid )
+            assert task is not None, f"Can't find task for rid {rid}, current tasks: {self.getTaskIds()}"
             result: Optional[TaskResult] = task.getResult()
             if result is None:
                 return self.jsonResponse( dict(status="executing", id=task.rid) )
@@ -38,7 +36,7 @@ class RestAPI(RestAPIBase):
                 response = make_response( pickle.dumps( result ) )
                 response.headers.set('Content-Type', 'application/octet-stream')
                 response.headers.set('Content-Format', 'xarray-dataset' )
-                self.removeTask( rid )
+                self.app.removeTask( rid )
                 return response
 
         @bp.route('/capabilities', methods=('GET',))

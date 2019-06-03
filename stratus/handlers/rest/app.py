@@ -19,17 +19,6 @@ class RestAPIBase:
         self.parms = kwargs
         self.name = name
         self.app = app
-        self.tasks: Dict[str, TaskHandle] = {}
-
-    def addTask( self, task: TaskHandle ):
-        self.logger.info(f"REST-SERVER: Add Task {task.rid}" )
-        self.tasks[ task.rid ] = task
-        return task.rid
-
-    def removeTask( self, rid: str ):
-        self.logger.info(f"REST-SERVER: Delete Task {rid}")
-        if rid in self.tasks:
-            del self.tasks[ rid ]
 
     def getStatus( self, cid: str = None ) -> Dict[str,Status]:
         statusMap = { rid: task.status() for rid, task in self.tasks.items() if ( cid is None or task.cid == cid ) }
@@ -87,11 +76,14 @@ class StratusApp(StratusServerApp):
         try:            os.makedirs(self.app.instance_path)
         except OSError: pass
 
-    def run(self):
+    def initInteractions(self):
         port = self.flask_parms.get( 'PORT', 5000 )
         host = self.flask_parms.get( 'HOST', "127.0.0.1" )
         self.db.create_all( )
-        return self.app.run( port=int( port ), host=host, debug=False )
+        self.app.run( port=int( port ), host=host, debug=False )
+
+    def updateInteractions(self):
+        pass
 
     def create_app(self, parms: Dict ):
         app = Flask( "stratus", instance_relative_config=True )

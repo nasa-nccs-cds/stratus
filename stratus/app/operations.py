@@ -105,7 +105,7 @@ class ClientOpSet(OpSet):
         if self._taskHandle is None: return Status.IDLE
         return self._taskHandle.status()
 
-    def exception(self) -> Exception:
+    def exception(self) -> Optional[Exception]:
         if self._taskHandle is None: return None
         return self._taskHandle.exception()
 
@@ -260,6 +260,8 @@ class Workflow(DependencyGraph):
 
     def __init__( self, **kwargs ):
         DependencyGraph.__init__( self, **kwargs )
+        self.results = {}
+        self.completed_tasks = []
 
     @DependencyGraph.add.register(WorkflowTask)
     def add( self, obj ):
@@ -279,39 +281,74 @@ class Workflow(DependencyGraph):
         wtasks: List[WorkflowTask] = list(self.nodes.values())
         return wtasks
 
-    @graphop
-    def submitExec( self, executor: Executor ) -> Dict[str,TaskFuture]:
-        results: Dict[str,TaskFuture] = { wtask.id: wtask.submit(executor) for wtask in self.tasks }
-        return { tid:fut for tid,fut in results.items() if tid in self.getOutputNodes() }
+    def getOutputTasks(self) -> List[WorkflowTask]:
+        output_ids = self.getOutputNodes()
+        return [ wtask for wtask in self.tasks if wtask.id in output_ids ]
+
+    def getOutputTask( self, rid: str ) -> WorkflowTask:
+        output_ids = self.getOutputNodes()
+        for wtask in self.tasks:
+            if wtask.id in output_ids and wtask.rid == rid:
+                return wtask
+
+    # @graphop
+    # def submitExec( self, executor: Executor ) -> Dict[str,TaskFuture]:
+    #     results: Dict[str,TaskFuture] = { wtask.id: wtask.submit(executor) for wtask in self.tasks }
+    #     return { tid:fut for tid,fut in results.items() if tid in self.getOutputNodes() }
+    #
+    # @graphop
+    # def submit( self ) -> Dict[str,TaskHandle]:
+    #     results = {}
+    #     output_ids = self.getOutputNodes()
+    #     completed_tasks = []
+    #     while True:
+    #         completed = True
+    #         for wtask in self.tasks:
+    #             if wtask.id not in completed_tasks:
+    #                 stat = wtask.status()
+    #                 if stat == Status.ERROR:
+    #                     exc = wtask.exception()
+    #                     raise Exception( "Workflow Errored out: " + ( getattr(exc, 'message', repr(exc)) if exc is not None else "" )  )
+    #                 elif stat == Status.CANCELED:
+    #                     raise Exception("Workflow Canceled")
+    #                 elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
+    #                     taskHandle = wtask.async_execute()
+    #                     self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}, exception: {taskHandle.exception()}, status: {taskHandle.status()}")
+    #                     if wtask.id in output_ids:
+    #                         results[ wtask.id ] =  taskHandle
+    #                     completed = False
+    #                 elif ( stat == Status.EXECUTING ):
+    #                     completed = False
+    #                 elif ( stat == Status.COMPLETED ):
+    #                     completed_tasks.append( wtask.id )
+    #         if completed: break
+    #         time.sleep(0.02)
+    #     return results
 
     @graphop
-    def submit( self ) -> Dict[str,TaskHandle]:
-        results = {}
+    def update( self ) -> bool:
         output_ids = self.getOutputNodes()
-        completed_tasks = []
-        while True:
-            completed = True
-            for wtask in self.tasks:
-                if wtask.id not in completed_tasks:
-                    stat = wtask.status()
-                    if stat == Status.ERROR:
-                        exc = wtask.exception()
-                        raise Exception( "Workflow Errored out: " + ( getattr(exc, 'message', repr(exc)) if exc is not None else "" )  )
-                    elif stat == Status.CANCELED:
-                        raise Exception("Workflow Canceled")
-                    elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
-                        taskHandle = wtask.async_execute()
-                        self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}, exception: {taskHandle.exception()}, status: {taskHandle.status()}")
-                        if wtask.id in output_ids:
-                            results[ wtask.id ] =  taskHandle
-                        completed = False
-                    elif ( stat == Status.EXECUTING ):
-                        completed = False
-                    elif ( stat == Status.COMPLETED ):
-                        completed_tasks.append( wtask.id )
-            if completed: break
-            time.sleep(0.02)
-        return results
+        completed = True
+        for wtask in self.tasks:
+            if wtask.id not in self.completed_tasks:
+                stat = wtask.status()
+                if stat == Status.ERROR:
+                    exc = wtask.exception()
+                    raise Exception( "Workflow Errored out: " + ( getattr(exc, 'message', repr(exc)) if exc is not None else "" )  )
+                elif stat == Status.CANCELED:
+                    raise Exception("Workflow Canceled")
+                elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
+                    wtask.async_execute()
+                    completed = False
+                elif ( stat == Status.EXECUTING ):
+                    completed = False
+                elif ( stat == Status.COMPLETED ):
+                    self.completed_tasks.append( wtask.id )
+                    self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}, exception: {wtask.taskHandle.exception()}, status: {wtask.taskHandle.status()}")
+                    if wtask.id in output_ids:
+                        self.results[ wtask.id ] =  wtask.taskHandle
+        return completed
+
 
 if __name__ == "__main__":
     from stratus.app.core import StratusCore

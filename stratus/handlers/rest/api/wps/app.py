@@ -4,7 +4,7 @@ import xarray as xa
 from stratus_endpoint.util.config import UID
 import pickle, json, flask, os
 from jinja2 import Environment, PackageLoader, select_autoescape
-from stratus.app.operations import WorkflowExeFuture
+from stratus_endpoint.handler.base import TaskHandle
 from stratus.app.base import StratusAppBase
 from typing import *
 from stratus.handlers.rest.app import RestAPIBase
@@ -32,9 +32,7 @@ class RestAPI(RestAPIBase):
         rid = requestDict.setdefault( "rid", UID.randomId(6) )
         if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
         try:
-            current_tasks = self.app.processWorkflow(requestDict)
-            if self.debug: self.logger.info("Current tasks: {} ".format(str(list(current_tasks.items()))))
-            for task in current_tasks.values(): self.addTask( task )
+            self.app.submitWorkflow(requestDict)
             return self.executeResponse( dict( status="executing", message="Executing Request", rid=rid ) )
         except Exception as err:
             return self.executeResponse(dict(status="error", message=getattr(err, 'message', repr(err)), rid=rid))
@@ -133,8 +131,8 @@ class RestAPI(RestAPIBase):
         @bp.route('/file', methods=['GET'])
         def file_result():
             rid = self.getParameter("rid")
-            task: WorkflowExeFuture = self.tasks.get( rid, None )
-            assert task is not None, f"Can't find task for rid {rid}, current tasks: {str(list(self.tasks.keys()))}"
+            task: TaskHandle = self.app.getTask( rid )
+            assert task is not None, f"Can't find task for rid {rid}, current tasks: {self.app.getTaskIds()}"
             result: Optional[TaskResult] = task.getResult()
             self.logger.info(f"Got File Request for task rid={rid}, result = {str(result)}")
             if task.status() == Status.EXECUTING:
@@ -162,8 +160,8 @@ class RestAPI(RestAPIBase):
         @bp.route('/data', methods=['GET'])
         def data_result():
             rid = self.getParameter("rid")
-            task: WorkflowExeFuture = self.tasks.get( rid, None )
-            assert task is not None, f"Can't find task for rid {rid}, current tasks: {str(list(self.tasks.keys()))}"
+            task: TaskHandle = self.app.getTask( rid )
+            assert task is not None, f"Can't find task for rid {rid}, current tasks: {self.app.getTaskIds()}"
             result: Optional[TaskResult] = task.getResult()
             if task.status() == Status.EXECUTING:
                 return self.jsonResponse( dict(status="executing", rid=task.rid) )
