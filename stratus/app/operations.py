@@ -260,7 +260,7 @@ class Workflow(DependencyGraph):
 
     def __init__( self, **kwargs ):
         DependencyGraph.__init__( self, **kwargs )
-        self.results: Dict[str,TaskHandle] = {}
+        self.result: TaskHandle = None
         self.completed_tasks = []
         self._status = Status.IDLE
 
@@ -285,12 +285,12 @@ class Workflow(DependencyGraph):
         wtasks: List[WorkflowTask] = list(self.nodes.values())
         return wtasks
 
-    def getOutputTasks( self, rid: str = None ) -> List[WorkflowTask]:
-        output_ids = self.getOutputNodes()
-        return [ wtask for wtask in self.tasks if ( wtask.id in output_ids ) and ( rid is None or wtask.rid == rid ) ]
+    def getOutputTask( self ) -> WorkflowTask:
+        outputTask: WorkflowTask = self.nodes.get( self.getOutputNode() )
+        return outputTask
 
-    def getResults(self) -> Dict[str,TaskHandle]:
-        return self.results
+    def getResult(self) -> TaskHandle:
+        return self.result
 
     def completed(self):
         return self._status not in [Status.EXECUTING, Status.IDLE]
@@ -335,7 +335,7 @@ class Workflow(DependencyGraph):
         completed = True
         if self._status in [Status.EXECUTING, Status.IDLE]:
             self._status = Status.EXECUTING
-            output_ids = self.getOutputNodes()
+            output_id = self.getOutputNode()
             for wtask in self.tasks:
                 if wtask.id not in self.completed_tasks:
                     stat = wtask.status()
@@ -354,9 +354,9 @@ class Workflow(DependencyGraph):
                     elif ( stat == Status.COMPLETED ):
                         self._status = Status.COMPLETED
                         self.completed_tasks.append( wtask.id )
-                        self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}, exception: {wtask.taskHandle.exception()}, status: {wtask.taskHandle.status()}")
-                        if wtask.id in output_ids:
-                            self.results[ wtask.id ] =  wtask.taskHandle
+                        self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputID: {output_id}, nodes: {list(self.ids)}, exception: {wtask.taskHandle.exception()}, status: {wtask.taskHandle.status()}")
+                        if wtask.id == output_id:
+                            self.result =  wtask.taskHandle
         return completed
 
 

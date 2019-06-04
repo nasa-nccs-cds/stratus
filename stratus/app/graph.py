@@ -70,6 +70,7 @@ class DependencyGraph():
         self.nodes: Dict[str, DGNode] = {}
         self.graph = kwargs.get( "graph", nx.DiGraph( ) )
         for node in kwargs.get( "nodes", [] ): self.add( node )
+        self._allow_multiple_outputs = kwargs.get( "allow_multiple_outputs", False )
         self._connected = False
 
     def _addDependency(self, depId, srcId: str, destId: str ):
@@ -189,11 +190,19 @@ class DependencyGraph():
             outgoing_connection_ids = [ conn.id for conn in self.getConnections( nid, Connection.OUTGOING ) ]
             for oid in dnode.getOutputs():
                 if oid not in outgoing_connection_ids: olist.append( Connection(oid,nid,None) )
+        if not self._allow_multiple_outputs:
+            if len( olist ) > 1: raise Exception( "Multiple output nodes in workflow (not allowed)")
+        if len(olist) == 0: raise Exception("Missing output node in workflow")
         return olist
 
     @graphop
     def getOutputNodes(self) -> List[str]:
         return [ conn.src_nid for conn in self.getOutputs() ]
+
+    @graphop
+    def getOutputNode(self) -> str:
+        outputs = self.getOutputs()
+        return outputs[0].src_nid
 
 if __name__ == "__main__":
     dgraph = DependencyGraph()
