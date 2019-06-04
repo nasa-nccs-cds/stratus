@@ -58,28 +58,27 @@ class StratusZMQResponder(Thread):
         self.client_address = kwargs.get( "client_address", "*" )
         self.socket: zmq.Socket = self.initSocket()
 
-    def getDataPackets(self, rid: str, status: Status, workflow: Workflow ) -> List[DataPacket]:
+    def getDataPacket(self, rid: str, status: Status, workflow: Workflow ) -> DataPacket:
         from stratus_endpoint.handler.base import TaskResult
         if (status == Status.COMPLETED):
-            taskHandles: Dict[str,TaskHandle] = workflow.getResults()
-            dataPackets:  List[DataPacket] = []
-            for tid, taskHandle in taskHandles.items():
-                taskResult: TaskResult = taskHandle.getResult()
-                if taskResult is None:
-                    self.logger.warn( f" Enpty result for task {tid} in request {rid}")
-                elif taskResult.getResultClass() == "METADATA":
-                    self.logger.info(f"@@R: process Metadata Task, header = {taskResult.header}")
-                    metadata = taskResult.header
-                    metadata["type"] = taskResult.getResultType()
-                    metadata["status"] = str(Status.COMPLETED)
-                    dataPackets.append( self.createMessage( rid, metadata ) )
-                else:
-                    datasets = taskResult.data
-                    self.logger.info(f"@@R: process Task, Num datasets= {len(datasets)}, header = {taskResult.header}")
-                    for dataset in datasets: dataPackets.append( self.createDataPacket(  rid, dataset ) )
-            return dataPackets
+            taskHandle: TaskHandle = workflow.getResult()
+            assert taskHandle is not None, f"Can't get result for completed workflow: {rid}"
+            taskResult: TaskResult = taskHandle.getResult()
+            if taskResult is None:
+                self.logger.warn( f" Enpty result in request {rid}")
+            elif taskResult.getResultClass() == "METADATA":
+                self.logger.info(f"@@R: process Metadata Task, header = {taskResult.header}")
+                metadata = taskResult.header
+                metadata["type"] = taskResult.getResultType()
+                metadata["status"] = str(Status.COMPLETED)
+                return self.createMessage( rid, metadata )
+            else:
+                dataset = taskResult.getDataset()
+                self.logger.info(f"@@R: process Task, Num datasets= {taskResult.size()}, header = {taskResult.header}")
+                return self.createDataPacket(  rid, dataset )
         elif (status == Status.ERROR):
-            return [ self.createMessage( rid, {"error": str(taskHandle.exception()) }) for tid, taskHandle in workflow.getResults() ]
+            taskHandle: TaskHandle = workflow.getResult()
+            return  self.createMessage( rid, {"error": str(taskHandle.exception()) })
         else:
             raise Exception( f"Unexpected Status in getDataPackets: {Status.str(status)}")
 
@@ -90,10 +89,9 @@ class StratusZMQResponder(Thread):
             self.logger.info( f"@@R: process Workflow {rid}, status= {status} " )
             self.setExeStatus( rid, status )
             if status in [Status.COMPLETED, Status.ERROR, Status.CANCELED]:
-                dataPackets = self.getDataPackets( rid, status, workflow )
-                self.logger.info(f"@@R: Sending Completed Results, Num dataPackets= {len(dataPackets)}" )
-                for dataPacket in dataPackets:
-                    self.sendDataPacket( dataPacket )
+                dataPacket = self.getDataPacket( rid, status, workflow )
+                self.logger.info(f"@@R: Sending Completed Result for request {rid}" )
+                self.sendDataPacket( dataPacket )
                 completed_requests.append(rid)
         return completed_requests
 

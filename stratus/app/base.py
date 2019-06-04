@@ -128,9 +128,9 @@ class StratusAppBase(Thread):
             self.completed_workflows[rid] = workflow
             del self.active_workflows[rid]
 
-    def getResults( self, rid: str  ) -> Optional[List[TaskHandle]]:
+    def getResult( self, rid: str  ) -> Optional[TaskHandle]:
         workflow = self.completed_workflows.get( rid )
-        return None if workflow is None else workflow.getResults().values()
+        return None if workflow is None else workflow.getResult()
 
     def getWorkflows(self) -> Dict[str,Workflow]:
         return { **self.completed_workflows, **self.active_workflows }
