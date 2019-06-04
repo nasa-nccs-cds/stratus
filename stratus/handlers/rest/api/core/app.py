@@ -14,7 +14,7 @@ class RestAPI(RestAPIBase):
             if request.method == 'POST':    requestDict: Dict = request.json
             else:                           requestDict: Dict = self.jsonRequest( request.args.get("request",None) )
             if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
-            self.app.submitWorkflow(requestDict)
+            requestDict = self.app.submitWorkflow(requestDict)
             return self.jsonResponse( dict( status="executing", rid=requestDict['rid'] ), code=202 )
 
         @bp.route('/status', methods=('GET',))
@@ -28,7 +28,7 @@ class RestAPI(RestAPIBase):
         def result():
             rid = self.getParameter("rid")
             task: TaskHandle = self.app.getTask( rid )
-            assert task is not None, f"Can't find task for rid {rid}, current tasks: {self.getTaskIds()}"
+            assert task is not None, f"Can't find task for rid {rid}, current tasks: {self.app.getTaskIds()}"
             result: Optional[TaskResult] = task.getResult()
             if result is None:
                 return self.jsonResponse( dict(status="executing", id=task.rid) )

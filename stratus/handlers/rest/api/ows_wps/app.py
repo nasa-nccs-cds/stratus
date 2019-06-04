@@ -33,7 +33,7 @@ class RestAPI(RestAPIBase):
         rid = requestDict.setdefault( "rid", UID.randomId(6) )
         if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
         try:
-            self.app.submitWorkflow(requestDict)
+            requestDict = self.app.submitWorkflow(requestDict)
             return self.executeResponse( dict( status="executing", message="Executing Request", rid=rid ) )
         except Exception as err:
             return self.executeResponse(dict(status="error", message=getattr(err, 'message', repr(err)), rid=rid))

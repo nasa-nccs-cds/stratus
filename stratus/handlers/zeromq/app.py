@@ -56,15 +56,17 @@ class StratusApp(StratusServerApp):
         try:
             self.zmqContext: zmq.Context = zmq.Context()
             self.request_socket: zmq.Socket = self.zmqContext.socket(zmq.REP)
-            self.responder = StratusZMQResponder(self.zmqContext, self.response_port, self.tasks, client_address = self.client_address)
-            self.responder.start()
+            self.responder = StratusZMQResponder(self.zmqContext, self.response_port, client_address = self.client_address)
             self.initSocket()
             self.logger.info(  "@@Portal:Listening for requests on port: {}".format( self.request_port ) )
 
         except Exception as err:
             self.logger.error( "@@Portal:  ------------------------------- StratusApp Init error: {} ------------------------------- ".format( err ) )
 
-    def updateInteractions(self):
+    def processResults(self):
+        self.responder.processWorkflows(self.getWorkflows())
+
+    def processRequests(self):
         while self.request_socket.poll(0) != 0:
             request_header = self.request_socket.recv_string().strip().strip("'")
             parts = request_header.split("!")
@@ -100,7 +102,9 @@ class StratusApp(StratusServerApp):
                 response = { "error": str(ex), "traceback": tb }
                 self.sendResponseMessage(StratusResponse(submissionId, response))
 
-
+    def updateInteractions(self):
+        self.processRequests()
+        self.processResults()
 
     def term( self, msg ):
         self.logger.info( "@@Portal: !!EDAS Shutdown: " + msg )

@@ -5,6 +5,7 @@ from threading import Thread
 import zmq, traceback, time, logging, xml, socket
 from stratus.app.operations import Status
 from stratus_endpoint.handler.base import TaskHandle
+from stratus.app.operations import Workflow
 from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
 from stratus.util.parsing import s2b, b2s, ia2s, sa2s, m2s
@@ -47,7 +48,7 @@ class DataPacket(StratusResponse):
 
 class StratusZMQResponder(Thread):
 
-    def __init__( self,  _context: zmq.Context, _response_port: int, input_tasks: queue.Queue, **kwargs ):
+    def __init__( self,  _context: zmq.Context, _response_port: int, **kwargs ):
         super(StratusZMQResponder, self).__init__()
         self.logger =  StratusLogger.getLogger()
         self.context: zmq.Context =  _context
@@ -56,59 +57,45 @@ class StratusZMQResponder(Thread):
         self.status_reports: Dict[str,str] = {}
         self.client_address = kwargs.get( "client_address", "*" )
         self.socket: zmq.Socket = self.initSocket()
-        self.input_tasks = input_tasks
-        self.current_tasks: Dict[str,TaskHandle] = {}
-        self.completed_tasks = collections.deque()
-        self.pause_duration = 0.1
-        self.active = True
 
-    def getDataPackets(self, status: Status, task: TaskHandle ) -> List[DataPacket]:
+    def getDataPackets(self, rid: str, status: Status, workflow: Workflow ) -> List[DataPacket]:
         from stratus_endpoint.handler.base import TaskResult
         if (status == Status.COMPLETED):
-            taskResult: TaskResult = task.getResult()
-            if taskResult.getResultClass() == "METADATA":
-                self.logger.info(f"@@R: process Metadata Task, header = {taskResult.header}")
-                metadata = taskResult.header
-                metadata["type"] = taskResult.getResultType()
-                metadata["status"] = str(Status.COMPLETED)
-                return [ self.createMessage(task.rid, metadata ) ]
-            else:
-                datasets = taskResult.data
-                self.logger.info(f"@@R: process Task, Num datasets= {len(datasets)}, header = {taskResult.header}")
-                return [ self.createDataPacket( task.rid, dataset ) for dataset in datasets ]
+            taskHandles: Dict[str,TaskHandle] = workflow.getResults()
+            dataPackets:  List[DataPacket] = []
+            for tid, taskHandle in taskHandles.items():
+                taskResult: TaskResult = taskHandle.getResult()
+                if taskResult is None:
+                    self.logger.warn( f" Enpty result for task {tid} in request {rid}")
+                elif taskResult.getResultClass() == "METADATA":
+                    self.logger.info(f"@@R: process Metadata Task, header = {taskResult.header}")
+                    metadata = taskResult.header
+                    metadata["type"] = taskResult.getResultType()
+                    metadata["status"] = str(Status.COMPLETED)
+                    dataPackets.append( self.createMessage( rid, metadata ) )
+                else:
+                    datasets = taskResult.data
+                    self.logger.info(f"@@R: process Task, Num datasets= {len(datasets)}, header = {taskResult.header}")
+                    for dataset in datasets: dataPackets.append( self.createDataPacket(  rid, dataset ) )
+            return dataPackets
         elif (status == Status.ERROR):
-            return [ self.createMessage(task.rid, {"error": str(task.exception()) }) ]
+            return [ self.createMessage( rid, {"error": str(taskHandle.exception()) }) for tid, taskHandle in workflow.getResults() ]
         else:
             raise Exception( f"Unexpected Status in getDataPackets: {Status.str(status)}")
 
-    def importTasks(self):
-        while not self.input_tasks.empty():
-            task = self.input_tasks.get()
-            self.current_tasks[task.rid] = task
-
-    def removeCompletedTasks(self):
-        for completed_task in self.completed_tasks:
-            del self.current_tasks[completed_task]
-        self.completed_tasks.clear()
-
-    def processResults(self):
-        self.importTasks()
-        for tid, task in self.current_tasks.items():
-            status = task.status()
-            self.logger.info(f"@@R: process Task {tid}, status= {status}, type = {task.__class__.__name__}")
-            self.setExeStatus( tid, status )
+    def processWorkflows(self, workflows: Dict[str, Workflow]) -> List[str]:
+        completed_requests = []
+        for rid, workflow in workflows.items():
+            status = workflow.status()
+            self.logger.info( f"@@R: process Workflow {rid}, status= {status} " )
+            self.setExeStatus( rid, status )
             if status in [Status.COMPLETED, Status.ERROR, Status.CANCELED]:
-                dataPackets = self.getDataPackets( status, task )
+                dataPackets = self.getDataPackets( rid, status, workflow )
                 self.logger.info(f"@@R: Sending Completed Results, Num dataPackets= {len(dataPackets)}" )
                 for dataPacket in dataPackets:
                     self.sendDataPacket( dataPacket )
-                self.completed_tasks.append(tid)
-        self.removeCompletedTasks()
-
-    def run(self):
-        while self.active:
-            self.processResults()
-            time.sleep( self.pause_duration )
+                completed_requests.append(rid)
+        return completed_requests
 
     def sendDataPacket( self, dataPacket: DataPacket ):
         multipart_msg = [ s2b( dataPacket.id ), dataPacket.getTransferHeader() ]
@@ -142,7 +129,6 @@ class StratusZMQResponder(Thread):
         return socket
 
     def shutdown(self):
-        self.active = False
         self.close_connection()
 
     def close_connection( self ):

@@ -70,8 +70,8 @@ class StratusAppBase(Thread):
         self.logger = StratusLogger.getLogger()
         self.core = _core
         self.requestQueue = queue.Queue()
-        self.active_workflows: List[Workflow] = []
-        self.completed_workflows: List[Workflow] = {}
+        self.active_workflows: Dict[str,Workflow] = []
+        self.completed_workflows: Dict[str,Workflow] = {}
         self._active = True
 
     @abc.abstractmethod
@@ -101,7 +101,9 @@ class StratusAppBase(Thread):
         return itertools.chain.from_iterable(distributed_opsets)
 
     def submitWorkflow(self, request: Dict):
+        request.setdefault("rid", UID.randomId(6))
         self.requestQueue.put( request )
+        return request
 
     def ingestRequests( self ):
         while True:
@@ -110,7 +112,7 @@ class StratusAppBase(Thread):
                 clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
                 tasks: List[WorkflowTask] = [WorkflowTask(cOpSet) for cOpSet in self.distributeOps(clientOpsets)]
                 workflow = Workflow(nodes=tasks)
-                self.active_workflows.append(workflow)
+                self.active_workflows[ request["rid"] ] = workflow
             except queue.Empty:
                 return
             except Exception as err:
@@ -118,36 +120,37 @@ class StratusAppBase(Thread):
                 return
 
     def update_workflows(self):
-        completed_list = []
-        for workflow in self.active_workflows:
+        completed_list = {}
+        for rid, workflow in self.active_workflows.items():
             completed = workflow.update()
-            if completed: completed_list.append( workflow )
-        for workflow in completed_list:
-            self.completed_workflows.append( workflow )
-            self.active_workflows.remove(workflow)
+            if completed: completed_list[rid] = workflow
+        for rid, workflow in completed_list.items():
+            self.completed_workflows[rid] = workflow
+            del self.active_workflows[rid]
 
-    def getTask( self, rid ) -> Optional[TaskHandle]:
-        for workflow in self.completed_workflows:
-            task = workflow.getOutputTask( rid )
-            if task != None: return task.taskHandle
+    def getResults( self, rid: str  ) -> Optional[List[TaskHandle]]:
+        workflow = self.completed_workflows.get( rid )
+        return None if workflow is None else workflow.getResults().values()
 
-    def getTaskIds(self) -> List[str]:
-        return [ wtask.rid for workflow in self.completed_workflows for wtask in workflow.getOutputTasks() ]
+    def getWorkflows(self) -> Dict[str,Workflow]:
+        return { **self.completed_workflows, **self.active_workflows }
 
-    def getTasks(self) -> List[WorkflowTask]:
-        workflows = self.completed_workflows + self.active_workflows
-        return [ wtask for workflow in workflows for wtask in workflow.getOutputTasks() ]
 
-    def removeTask( self, rid  ):
-        pass
-
-    def run(self):
-        self.initInteractions()
-        while self._active:
-            self.ingestRequests()
-            self.update_workflows()
-            self.updateInteractions()
-            time.sleep(0)
+    # def getTask( self, rid ) -> Optional[TaskHandle]:
+    #     for workflow in self.completed_workflows:
+    #         task = workflow.getOutputTask( rid )
+    #         if task != None: return task.taskHandle
+    #
+    # def getCompletedTasks( self, rid ) -> List[TaskHandle]:
+    #     for workflow in self.completed_workflows:
+    #         task = workflow.getResults()
+    #
+    # def getTaskIds(self) -> List[str]:
+    #     return [ wtask.rid for workflow in self.completed_workflows for wtask in workflow.getOutputTasks() ]
+    #
+    #
+    # def removeTask( self, rid  ):
+    #     pass
 
     def geClientOpsets(self, request: Dict ) -> Dict[str, ClientOpSet]:
         # Returns map of client id to list of ops in request that can be handled by that client
@@ -185,6 +188,14 @@ class StratusServerApp(StratusAppBase):
         proc = SubProcess( target=self.run )
         proc.start()
         return proc
+
+    def run(self):
+        self.initInteractions()
+        while self._active:
+            self.ingestRequests()
+            self.update_workflows()
+            self.updateInteractions()
+            time.sleep(0)
 
 class StratusEmbeddedApp(StratusAppBase):
     __metaclass__ = abc.ABCMeta
