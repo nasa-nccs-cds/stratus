@@ -6,7 +6,7 @@ import zmq, traceback
 from typing import Dict
 import queue, datetime
 from .responder import StratusZMQResponder, StratusResponse
-from stratus_endpoint.handler.base import Status, TaskFuture
+from stratus_endpoint.handler.base import Status
 from stratus_endpoint.handler.base import TaskHandle, Endpoint, TaskResult
 MB = 1024 * 1024
 
@@ -64,7 +64,8 @@ class StratusApp(StratusServerApp):
             self.logger.error( "@@Portal:  ------------------------------- StratusApp Init error: {} ------------------------------- ".format( err ) )
 
     def processResults(self):
-        self.responder.processWorkflows(self.getWorkflows())
+        completed_workflows = self.responder.processWorkflows(self.getWorkflows())
+        for rid in completed_workflows: self.clearWorkflow( rid )
 
     def processRequests(self):
         while self.request_socket.poll(0) != 0:

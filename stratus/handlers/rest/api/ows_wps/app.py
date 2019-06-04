@@ -33,7 +33,7 @@ class RestAPI(RestAPIBase):
         rid = requestDict.setdefault( "rid", UID.randomId(6) )
         if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
         try:
-            requestDict = self.app.submitWorkflow(requestDict)
+            self.app.submitWorkflow(requestDict)
             return self.executeResponse( dict( status="executing", message="Executing Request", rid=rid ) )
         except Exception as err:
             return self.executeResponse(dict(status="error", message=getattr(err, 'message', repr(err)), rid=rid))
@@ -140,13 +140,13 @@ class RestAPI(RestAPIBase):
         @bp.route('/file', methods=['GET'])
         def file_result():
             rid = self.getParameter("rid")
-            task: TaskHandle = self.app.getTask( rid )
-            assert task is not None, f"Can't find task for rid {rid}, current tasks: {self.app.getTaskIds()}"
-            result: Optional[TaskResult] = task.getResult()
-            self.logger.info(f"Got File Request for task rid={rid}, result = {str(result)}")
-            if task.status() == Status.EXECUTING:
-                return self.jsonResponse( dict(status="executing", id=task.rid) )
+            workflow = self.app.getWorkflow(rid)
+            if workflow.status() == Status.EXECUTING:
+                return self.jsonResponse( dict(status="executing", id=rid) )
             else:
+                task: Optional[TaskHandle] = workflow.getResult()
+                result: Optional[TaskResult] = task.getResult() if task is not None else None
+                self.logger.info(f"Got File Request for task rid={rid}, result = {str(result)}")
                 if result is None: return self.missingResult( task )
                 dataset: Optional[xa.Dataset] = result.popDataset()
                 if dataset is None:
@@ -167,19 +167,20 @@ class RestAPI(RestAPIBase):
                     response.headers.set('Content-Type', 'application/octet-stream')
                     response.headers.set('Content-Format', 'netcdf-file' )
                     response.headers.set('Results-Remaining', str(result.size()) )
-                    if result.empty(): self.removeTask( rid )
+                    if result.empty(): self.app.clearWorkflow( rid )
                 self.logger.info(f"Returning file response.")
                 return response
 
         @bp.route('/data', methods=['GET'])
         def data_result():
             rid = self.getParameter("rid")
-            task: TaskHandle = self.app.getTask( rid )
-            assert task is not None, f"Can't find task for rid {rid}, current tasks: {self.app.getTaskIds()}"
-            result: Optional[TaskResult] = task.getResult()
-            if task.status() == Status.EXECUTING:
-                return self.jsonResponse( dict(status="executing", rid=task.rid) )
+            workflow = self.app.getWorkflow(rid)
+            if workflow.status() == Status.EXECUTING:
+                return self.jsonResponse( dict(status="executing", id=rid) )
             else:
+                task: Optional[TaskHandle] = workflow.getResult()
+                result: Optional[TaskResult] = task.getResult() if task is not None else None
+                self.logger.info(f"Got File Request for task rid={rid}, result = {str(result)}")
                 if result is None:
                     return self.missingResult( task )
                 dataset: Optional[xa.Dataset] = result.popDataset()
@@ -193,7 +194,7 @@ class RestAPI(RestAPIBase):
                 response.headers.set('Content-Type', 'application/octet-stream')
                 response.headers.set('Content-Format', 'xarray-dataset' )
                 response.headers.set('Results-Remaining', str(result.size()))
-                if result.empty(): self.removeTask( rid )
+                if result.empty(): self.app.clearWorkflow( rid )
                 return response
 
 

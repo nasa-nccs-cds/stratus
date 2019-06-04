@@ -27,16 +27,15 @@ class RestAPI(RestAPIBase):
         @bp.route('/result', methods=('GET',))
         def result():
             rid = self.getParameter("rid")
-            task: TaskHandle = self.app.getTask( rid )
-            assert task is not None, f"Can't find task for rid {rid}, current tasks: {self.app.getTaskIds()}"
-            result: Optional[TaskResult] = task.getResult()
+            task:  Optional[TaskHandle] = self.app.getResult( rid )
+            result: Optional[TaskResult] = task.getResult() if task is not None else None
             if result is None:
                 return self.jsonResponse( dict(status="executing", id=task.rid) )
             else:
                 response = make_response( pickle.dumps( result ) )
                 response.headers.set('Content-Type', 'application/octet-stream')
                 response.headers.set('Content-Format', 'xarray-dataset' )
-                self.app.removeTask( rid )
+                self.app.clearWorkflow( rid )
                 return response
 
         @bp.route('/capabilities', methods=('GET',))

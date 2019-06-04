@@ -135,6 +135,14 @@ class StratusAppBase(Thread):
     def getWorkflows(self) -> Dict[str,Workflow]:
         return { **self.completed_workflows, **self.active_workflows }
 
+    def getWorkflow(self, rid: str) -> Optional[Workflow]:
+        return self.getWorkflows().get(rid)
+
+    def clearWorkflow(self, rid: str):
+        if rid in self.completed_workflows:
+            del self.completed_workflows[rid]
+        else:
+            self.logger.error( f"Attampt to clear a workflow {rid} that is not in the completed_workflows")
 
     # def getTask( self, rid ) -> Optional[TaskHandle]:
     #     for workflow in self.completed_workflows:

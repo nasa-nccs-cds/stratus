@@ -21,9 +21,9 @@ class RestAPIBase:
         self.app = app
 
     def getStatus( self, cid: str = None ) -> Dict[str,Status]:
-        statusMap = { rid: task.status() for rid, task in self.tasks.items() if ( cid is None or task.cid == cid ) }
+        statusMap = { rid: workflow.status() for rid, workflow in self.app.getWorkflows() if ( cid is None or workflow.cid == cid ) }
         result =  { rid: str(status) for rid, status in statusMap.items() }
-        self.logger.info( f"REST-SERVER: getStatus(cid={cid}): {str(result)}, all tasks: " + str( [str(task) for task in self.tasks.values()] ))
+        self.logger.info( f"REST-SERVER: getStatus(cid={cid}): {str(result)}, all tasks: " + str( [str(workflow) for workflow in self.app.getWorkflows().values()] ))
         return result
 
     def getParameter(self, name: str, default = None, required = True ):
