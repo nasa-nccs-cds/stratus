@@ -43,6 +43,7 @@ class RestAPI(RestAPIBase):
             ctype = self.getParameter("type",self.getParameter("identifier","epas"))
             self.logger.info( "REST_APP: Processing capabilities request, type = " + str(ctype) + ", parms = " + str(request.args))
             response: Dict = self.app.core.getCapabilities( ctype )
+            self.logger.info( f"REST_APP: Sending capabilities response: {response}" )
             return self.jsonResponse( response )
 
 

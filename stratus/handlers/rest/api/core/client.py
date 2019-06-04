@@ -33,6 +33,7 @@ class CoreRestClient(StratusClient):
         if "rid" not in requestSpec: requestSpec["rid"] = UID.randomId(6)
         response = self.response_manager.postMessage( "exe", requestSpec, **kwargs )
         self.log( "Got response: " + str(response) )
+        self.response_manager.addRequest( requestSpec["rid"] )
         return RestTask( requestSpec['rid'], self.cid, self.response_manager )
 
     def status(self, **kwargs ) -> Status:
@@ -80,6 +81,7 @@ class ResponseManager(Thread):
         self.poll_freq = kwargs.get( "poll_freq", 0.5 )
         self.timeout = kwargs.get("timeout", 60.0)
         self.statusMap: Dict[str,Status] = {}
+        self.active_requests = set()
 
     @classmethod
     def getManger( cls, cid: str, host_address: str)  ->  "ResponseManager":
@@ -90,15 +92,19 @@ class ResponseManager(Thread):
         try:
             self.log("Run RM thread")
             while( self.active ):
-                statMap = self._getStatusMap()
-                for key,value in statMap.items(): self.statusMap[key] = Status.decode( value )
-                if debug: self.logger.info( "Server Job Status: " + str( statMap ) + ";  Client Job Status: " + str( self.statusMap ) )
+                if len( self.active_requests ) > 0:
+                    statMap = self._getStatusMap()
+                    for key,value in statMap.items(): self.statusMap[key] = Status.decode( value )
+                    if debug: self.logger.info( "Server Job Status: " + str( statMap ) + ";  Client Job Status: " + str( self.statusMap ) )
                 time.sleep( self.poll_freq )
 
         except Exception as err:
             self.log( "ResponseManager error: " + str(err) )
             self.log( traceback.format_exc() )
             self.statusMap.clear()
+
+    def addRequest(self, rid: str ):
+        self.active_requests.add( rid )
 
     def updateStatus(self, message: Dict ) -> Dict:
         if "status" in message:
@@ -142,10 +148,12 @@ class ResponseManager(Thread):
         if block: self.waitUntilReady( rid, timeout )
         result = self.getMessage( "result", dict(rid=rid) )
         rtype = result["type"]
+        self.active_requests.remove(rid)
         if   rtype == "error":  raise Exception( result["message"] )
         elif rtype == "json":   return TaskResult( { "rid":rid, "cid":self.cid, **result["json"] } )
         elif rtype == "data":   return result.get("content",None)
         else:                   raise Exception( f"Unrecognized result type: {rtype}")
+
 
     def _getStatusMap(self) -> Dict:
         result = self.getMessage( "status", {}, timeout=self.timeout  )

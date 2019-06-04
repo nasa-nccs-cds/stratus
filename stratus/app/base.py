@@ -46,6 +46,7 @@ class StratusCoreBase:
     def getCapabilities(self, ctype ) -> Dict:
         caps = {}
         for client in self.getClients():
+            self.logger.info( f"GET Capabilites from client: {client.__class__.__name__}, name = {client.name}, cid = {client.cid}")
             caps.update( client.capabilities(ctype) )
         return caps
 
@@ -70,7 +71,7 @@ class StratusAppBase(Thread):
         self.logger = StratusLogger.getLogger()
         self.core = _core
         self.requestQueue = queue.Queue()
-        self.active_workflows: Dict[str,Workflow] = []
+        self.active_workflows: Dict[str,Workflow] = {}
         self.completed_workflows: Dict[str,Workflow] = {}
         self._active = True
 
@@ -143,22 +144,6 @@ class StratusAppBase(Thread):
             del self.completed_workflows[rid]
         else:
             self.logger.error( f"Attampt to clear a workflow {rid} that is not in the completed_workflows")
-
-    # def getTask( self, rid ) -> Optional[TaskHandle]:
-    #     for workflow in self.completed_workflows:
-    #         task = workflow.getOutputTask( rid )
-    #         if task != None: return task.taskHandle
-    #
-    # def getCompletedTasks( self, rid ) -> List[TaskHandle]:
-    #     for workflow in self.completed_workflows:
-    #         task = workflow.getResults()
-    #
-    # def getTaskIds(self) -> List[str]:
-    #     return [ wtask.rid for workflow in self.completed_workflows for wtask in workflow.getOutputTasks() ]
-    #
-    #
-    # def removeTask( self, rid  ):
-    #     pass
 
     def geClientOpsets(self, request: Dict ) -> Dict[str, ClientOpSet]:
         # Returns map of client id to list of ops in request that can be handled by that client
