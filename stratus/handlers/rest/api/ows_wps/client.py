@@ -31,6 +31,9 @@ class OwsWpsTask(TaskHandle):
         except: pass
         return cacheDir
 
+    def exception(self) -> Optional[Exception]:
+        return self.execution.errors[0] if len(self.execution.errors) > 0 else None
+
     def getResult( self, **kwargs ) ->  Optional[TaskResult]:
         status = self.status()
         header = {}

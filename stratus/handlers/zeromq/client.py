@@ -116,6 +116,7 @@ class ResponseManager(Thread):
         self.cacheDir = os.path.expanduser( cache_dir )
         self.log("Created RM, cache dir = " + self.cacheDir )
         self._status = status
+        self._exception = None
 
     def cacheResult(self, header: Dict, data: Optional[xa.Dataset] ):
         self.logger.info( "Caching result: " + str(header) )
@@ -149,11 +150,15 @@ class ResponseManager(Thread):
         if self.active:
             self.active = False
 
-    def log(self, msg: str, maxPrintLen = 300 ):
+    def log(self, msg: str ):
         self.logger.info( "[RM] " + msg )
+
+    def exception(self):
+        return self._exception
 
     def processNextResponse(self, socket: zmq.Socket ):
         try:
+            self._exception = None
             self.log("Awaiting responses" )
             response = socket.recv_multipart()
             sId = b2s( response[0] )
@@ -164,11 +169,13 @@ class ResponseManager(Thread):
             if type == "xarray" and len(response) > 2:
                 dataset = pickle.loads(response[2])
                 self.cacheResult( header, dataset )
+            elif type == "error":
+                self._exception = Exception(response[2]) if len(response) > 2 else Exception()
             else:
                 self.cacheResult( header, None )
 
         except Exception as err:
-            self.log( "EDAS error: {0}\n{1}\n".format(err, traceback.format_exc() ), 1000 )
+            self.log( "EDAS error: {0}\n{1}\n".format(err, traceback.format_exc() ) )
 
     def getStatus(self):
         return self._status
