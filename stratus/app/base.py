@@ -75,6 +75,14 @@ class StratusAppBase(Thread):
         self.completed_workflows: Dict[str,Workflow] = {}
         self._active = True
 
+    def run(self):
+        self.initInteractions()
+        while self._active:
+            self.ingestRequests()
+            self.update_workflows()
+            self.updateInteractions()
+            time.sleep(0)
+
     @abc.abstractmethod
     def initInteractions(self): pass
 
@@ -107,9 +115,12 @@ class StratusAppBase(Thread):
         return request
 
     def ingestRequests( self ):
+        if not self.requestQueue.empty():
+            self.logger.error( f"Ingest requests:  " )
         while True:
             try:
                 request = self.requestQueue.get_nowait()
+                self.logger.error(f"Ingest request: {request['rid']}")
                 clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
                 tasks: List[WorkflowTask] = [WorkflowTask(cOpSet) for cOpSet in self.distributeOps(clientOpsets)]
                 workflow = Workflow(nodes=tasks)
@@ -186,14 +197,6 @@ class StratusServerApp(StratusAppBase):
         proc = SubProcess( target=self.run )
         proc.start()
         return proc
-
-    def run(self):
-        self.initInteractions()
-        while self._active:
-            self.ingestRequests()
-            self.update_workflows()
-            self.updateInteractions()
-            time.sleep(0)
 
 class StratusEmbeddedApp(StratusAppBase):
     __metaclass__ = abc.ABCMeta
