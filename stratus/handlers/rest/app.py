@@ -118,4 +118,4 @@ if __name__ == "__main__":
     SETTINGS_FILE = os.path.join(HERE, "wps_server_edas_settings.ini")
     core = StratusCore( SETTINGS_FILE  )
     app: StratusApp = core.getApplication()
-    app.run()
+    app.start()

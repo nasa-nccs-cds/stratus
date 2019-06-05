@@ -122,5 +122,5 @@ class StratusApp(StratusServerApp):
 if __name__ == "__main__":
     core = StratusCore( "test_settings1.ini" )
     app = core.getApplication()
-    app.run()
+    app.start()
 
