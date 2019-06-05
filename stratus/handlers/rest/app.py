@@ -8,6 +8,7 @@ from stratus_endpoint.handler.base import TaskHandle, Status
 from flask_sqlalchemy import SQLAlchemy
 from stratus.app.base import StratusAppBase, StratusServerApp
 from jsonschema import validate
+from threading import Thread
 HERE = os.path.dirname(os.path.abspath(__file__))
 API_DIR = os.path.join( HERE, "api" )
 
@@ -63,6 +64,21 @@ class RestAPIBase:
     def xmlResponse(self, type: str, message: Dict, code: int = 200 ) -> Response:
         return Response( response="" , status=code, mimetype="application/xml")
 
+class FlaskThread(Thread):
+    def __init__(self, parms ):
+        Thread.__init__(self)
+        self.port = parms.get( 'PORT', 5000 )
+        self.host = parms.get( 'HOST', "127.0.0.1" )
+        self.app = Flask( "stratus", instance_relative_config=True )
+        self.app.config.from_mapping(parms)
+        self.db = SQLAlchemy(self.app)
+        try: os.makedirs(self.app.instance_path)
+        except OSError: pass
+
+    def run(self):
+        self.db.create_all()
+        self.app.run( port=int( self.port ), host=self.host, debug=False )
+
 class StratusApp(StratusServerApp):
 
     def __init__( self, core: StratusCore, **kwargs ):
@@ -71,26 +87,15 @@ class StratusApp(StratusServerApp):
         StratusServerApp.__init__(self, core, **kwargs)
         self.flask_parms = self.getConfigParms('flask')
         self.flask_parms['SQLALCHEMY_DATABASE_URI'] = self.flask_parms.get('DATABASE_URI','sqlite:////tmp/test.db')
-        self.app = self.create_app( self.flask_parms )
-        self.db = SQLAlchemy( self.app )
-        try:            os.makedirs(self.app.instance_path)
-        except OSError: pass
 
     def initInteractions(self):
-        port = self.flask_parms.get( 'PORT', 5000 )
-        host = self.flask_parms.get( 'HOST', "127.0.0.1" )
-        self.db.create_all( )
-        self.app.run( port=int( port ), host=host, debug=False )
+        self.flaskThread = FlaskThread( self.flask_parms  )
+        self.addApis( self.flaskThread.app )
+        self.flaskThread.app.register_error_handler(TypeError, self.render_server_error)
+        self.flaskThread.start()
 
     def updateInteractions(self):
         pass
-
-    def create_app(self, parms: Dict ):
-        app = Flask( "stratus", instance_relative_config=True )
-        app.config.from_mapping( parms )
-        app.register_error_handler( TypeError, self.render_server_error )
-        self.addApis( app )
-        return app
 
     def addApis( self, app ):
         apiListParm = self.core.parms.get("API",None)
