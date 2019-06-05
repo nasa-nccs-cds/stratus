@@ -76,6 +76,7 @@ class StratusAppBase(Thread):
         self._active = True
 
     def run(self):
+        self.logger.info(" &&&&&&&&&&&&&&&&&&&&&&&&& Running STRATUS App: " + self.__class__.__name__ + " &&&&&&&&&&&&&&&&&&&&&&&&&")
         self.initInteractions()
         while self._active:
             self.ingestRequests()
