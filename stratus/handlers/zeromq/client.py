@@ -153,7 +153,7 @@ class ResponseManager(Thread):
     def log(self, msg: str ):
         self.logger.info( "[RM] " + msg )
 
-    def exception(self):
+    def exception(self) -> Optional[Exception]:
         return self._exception
 
     def processNextResponse(self, socket: zmq.Socket ):
@@ -190,6 +190,9 @@ class zmqTask(TaskHandle):
 
     def getResult( self, **kwargs ) ->  Optional[TaskResult]:
         return self.manager.getResult(**kwargs)
+
+    def exception(self) -> Optional[Exception]:
+        return self.manager.exception()
 
     def status(self) ->  Status:
         return self.manager.getStatus()
