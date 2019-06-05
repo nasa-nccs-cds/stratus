@@ -18,7 +18,7 @@ class RestAPIBase:
     def __init__(self, name: str, app: StratusAppBase, **kwargs):
         self.logger = StratusLogger.getLogger()
         self.parms = kwargs
-        self.name = name
+        self.name =  name
         self.app = app
 
     def getStatus( self, cid: str = None ) -> Dict[str,Status]:
