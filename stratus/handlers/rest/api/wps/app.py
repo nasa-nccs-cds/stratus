@@ -31,7 +31,7 @@ class RestAPI(RestAPIBase):
     def processRequest( self, requestDict: Dict ) -> flask.Response:
         try:
             requestDict = self.app.submitWorkflow(requestDict)
-            if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
+            if self.debug: self.logger.info(f"Processing wps Request: '{str(requestDict)}'")
             return self.executeResponse( dict( status="executing", message="Executing Request", rid=requestDict["rid"] ) )
         except Exception as err:
             return self.executeResponse(dict(status="error", message=getattr(err, 'message', repr(err)), rid=requestDict["rid"]))

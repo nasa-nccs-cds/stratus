@@ -31,7 +31,7 @@ class RestAPI(RestAPIBase):
 
     def processRequest( self, requestDict: Dict ) -> flask.Response:
         rid = requestDict.setdefault( "rid", UID.randomId(6) )
-        if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
+        if self.debug: self.logger.info(f"Processing ows-wps Request: '{str(requestDict)}'")
         try:
             self.app.submitWorkflow(requestDict)
             return self.executeResponse( dict( status="executing", message="Executing Request", rid=rid ) )

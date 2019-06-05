@@ -13,7 +13,7 @@ class RestAPI(RestAPIBase):
         def exe():
             if request.method == 'POST':    requestDict: Dict = request.json
             else:                           requestDict: Dict = self.jsonRequest( request.args.get("request",None) )
-            if self.debug: self.logger.info(f"Processing Request: '{str(requestDict)}'")
+            if self.debug: self.logger.info(f"Processing rest-core Request: '{str(requestDict)}'")
             requestDict = self.app.submitWorkflow(requestDict)
             return self.jsonResponse( dict( status="executing", rid=requestDict['rid'] ), code=202 )
 
