@@ -121,13 +121,13 @@ class StratusAppBase(Thread):
                 return
 
     def update_workflows(self):
-        self.logger.info( f" *********************************** StratusApp.update_workflows: {self.active_workflows.keys()}")
+        self.logger.info( f" ***********************************   StratusApp.update_workflows: {self.active_workflows.keys()}")
         completed_list = {}
         for rid, workflow in self.active_workflows.items():
-            self.logger.info(f" *********************************** StratusApp.update_workflow: {rid}")
+            self.logger.info(f" ***********************************   StratusApp.update_workflow: {rid}")
             completed = workflow.update()
             if completed:
-                self.logger.info(f" *********************************** StratusApp.completed_workflow: {rid}")
+                self.logger.info(f" ***********************************   StratusApp.completed_workflow: {rid}")
                 completed_list[rid] = workflow
         for rid, workflow in completed_list.items():
             self.completed_workflows[rid] = workflow
