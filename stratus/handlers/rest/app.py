@@ -24,7 +24,8 @@ class RestAPIBase:
     def getStatus( self, rid: str ) -> Dict[str,str]:
         workflow = self.app.getWorkflow(rid)
         if workflow is None:
-            return { "status":"error", "rid": rid, "message": "Unknown request: " + rid }
+            if rid in self.app.registeredRequests:  return {"status": str(Status.IDLE), "rid": rid }
+            else:                                   return { "status":"error", "rid": rid, "message": "Unknown request: " + rid }
         else:
             status = workflow.status()
             result = { "status": str(status), "rid": rid }

@@ -70,6 +70,7 @@ class StratusAppBase(Thread):
         Thread.__init__( self )
         self.logger = StratusLogger.getLogger()
         self.core = _core
+        self.registeredRequests = set()
         self.requestQueue = queue.Queue()
         self.active_workflows: Dict[str,Workflow] = {}
         self.completed_workflows: Dict[str,Workflow] = {}
@@ -114,6 +115,7 @@ class StratusAppBase(Thread):
     def submitWorkflow(self, request: Dict):
         request.setdefault("rid", UID.randomId(6))
         self.requestQueue.put( request )
+        self.registeredRequests.add( request["rid"] )
         return request
 
     def ingestRequests( self ):
@@ -164,6 +166,8 @@ class StratusAppBase(Thread):
     def clearWorkflow(self, rid: str):
         if rid in self.completed_workflows:
             del self.completed_workflows[rid]
+            try: self.registeredRequests.remove( rid )
+            except Exception: pass
         else:
             self.logger.error( f"Attampt to clear a workflow {rid} that is not in the completed_workflows")
 
