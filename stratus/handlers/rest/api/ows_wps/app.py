@@ -38,11 +38,11 @@ class RestAPI(RestAPIBase):
         except Exception as err:
             return self.executeResponse(dict(status="error", message=getattr(err, 'message', repr(err)), rid=rid))
 
-    def executeResponse(self, response: Dict ) -> flask.Response:
+    def executeResponse(self, response: Dict[str,str] ) -> flask.Response:
         if self.debug: self.logger.info( " #####>>>> response: " + str(response) )
         rid = response.get("rid","XXXXXX")
         message = response.get("message", "")
-        status = str(response["status"]).lower()
+        status = response["status"]
         if status == "executing":
             responseXml = self._getStatusXml("ProcessStarted", message, rid )
         elif status == "completed":
