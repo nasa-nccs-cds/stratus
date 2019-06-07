@@ -78,7 +78,7 @@ class StratusZMQResponder(Thread):
                 return self.createDataPacket(  rid, dataset )
         elif (status == Status.ERROR):
             taskHandle: TaskHandle = workflow.getResult()
-            return  self.createMessage( rid, {"error": str(taskHandle.exception()) })
+            return  self.createMessage( rid, {"status": "error", "error": str(taskHandle.exception()) })
         else:
             raise Exception( f"Unexpected Status in getDataPackets: {Status.str(status)}")
 
@@ -141,7 +141,7 @@ class StratusZMQResponder(Thread):
         self.sendDataPacket(dataPacket)
 
     def sendErrorMessage(self, rid: str, message: str = None):
-        self.sendMessage(rid, { "error": message }  )
+        self.sendMessage(rid, {  "status":"error", "error": message }  )
 
     def createDataPacket( self, rid: str, dataset: xa.Dataset, metadata: Dict = None ) -> DataPacket:
         data = pickle.dumps(dataset, protocol=-1)

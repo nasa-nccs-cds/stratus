@@ -94,13 +94,13 @@ class StratusApp(StratusServerApp):
                 else:
                     msg = "@@Portal: Unknown request type: " + rType
                     self.logger.info(msg)
-                    response = {"error": msg }
+                    response = { "status":"error", "error": msg }
                     self.sendResponseMessage(StratusResponse(submissionId, response))
             except Exception as ex:
                 tb = traceback.format_exc()
                 self.logger.error( "@@Portal: Execution error: " + str(ex) )
                 self.logger.error( tb )
-                response = { "error": str(ex), "traceback": tb }
+                response = { "status":"error",  "error": str(ex), "traceback": tb }
                 self.sendResponseMessage(StratusResponse(submissionId, response))
 
     def updateInteractions(self):

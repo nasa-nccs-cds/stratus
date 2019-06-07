@@ -142,7 +142,7 @@ class ResponseManager(Thread):
 
         except Exception as err:
             self.log( "ResponseManager error: " + str(err) )
-            self.cacheResult( { "error": str(err) }, None )
+            self.cacheResult( {  "status":"error", "error": str(err) }, None )
         finally:
             if response_socket: response_socket.close()
 
