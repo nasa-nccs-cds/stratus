@@ -19,12 +19,11 @@ class RestAPIBase:
         self.logger = StratusLogger.getLogger()
         self.parms = kwargs
         self.name =  name
-        self.app = app
+        self.app: StratusAppBase = app
 
-    def getStatus( self, cid: str = None ) -> Dict[str,Status]:
-        statusMap = { rid: workflow.status() for rid, workflow in self.app.getWorkflows() if ( cid is None or workflow.cid == cid ) }
-        result =  { rid: str(status) for rid, status in statusMap.items() }
-        self.logger.info( f"REST-SERVER: getStatus(cid={cid}): {str(result)}, all tasks: " + str( [str(workflow) for workflow in self.app.getWorkflows().values()] ))
+    def getStatus( self, rid: str = None ) -> Dict[str,Status]:
+        result = { wf_rid: str(workflow.status()) for wf_rid, workflow in self.app.getWorkflowItems() if ( rid is None or wf_rid == rid ) }
+        self.logger.info( f"REST-SERVER: getStatus(rid={rid}): {str(result)}, all tasks: {self.app.getWorkflows().keys()}" )
         return result
 
     def getParameter(self, name: str, default = None, required = True ):

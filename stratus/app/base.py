@@ -1,5 +1,5 @@
 import os, json, yaml, abc, itertools, queue
-from typing import List, Union, Dict, Set, Iterator
+from typing import List, Union, Dict, Set, Iterator, Tuple, ItemsView
 from stratus_endpoint.util.config import Config, StratusLogger
 from multiprocessing import Process as SubProcess
 from stratus.app.operations import *
@@ -134,11 +134,11 @@ class StratusAppBase(Thread):
                 return
 
     def update_workflows(self):
-        if len(self.active_workflows) > 0:
-            self.logger.info( f" ***********************************   StratusApp.update_workflows: {self.active_workflows.keys()}")
+#        if len(self.active_workflows) > 0:
+#            self.logger.info( f" ***********************************   StratusApp.update_workflows: {self.active_workflows.keys()}")
         completed_list = {}
         for rid, workflow in self.active_workflows.items():
-            self.logger.info(f" ***********************************   StratusApp.update_workflow: {rid}")
+#            self.logger.info(f" ***********************************   StratusApp.update_workflow: {rid}")
             completed = workflow.update()
             if completed:
                 self.logger.info(f" ***********************************   StratusApp.completed_workflow: {rid}")
@@ -153,6 +153,10 @@ class StratusAppBase(Thread):
 
     def getWorkflows(self) -> Dict[str,Workflow]:
         return { **self.completed_workflows, **self.active_workflows }
+
+    def getWorkflowItems(self) -> ItemsView[str,Workflow]:
+        workflows = self.getWorkflows()
+        return workflows.items()
 
     def getWorkflow(self, rid: str) -> Optional[Workflow]:
         return self.getWorkflows().get(rid)

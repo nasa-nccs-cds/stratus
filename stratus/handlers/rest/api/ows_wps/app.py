@@ -50,11 +50,11 @@ class RestAPI(RestAPIBase):
         elif status == "idle":
             responseXml = self._getStatusXml("ProcessAccepted", message, rid )
         elif status == "error":
-            responseXml = self._getStatusXml("ProcessFailed", message, rid, False )
+            responseXml = self._getStatusXml("ProcessFailed", "Error: " + message, rid, False )
         elif status == "canceled":
-            responseXml = self._getStatusXml("ProcessCanceled", message, rid, False)
+            responseXml = self._getStatusXml("ProcessFailed", "Process Cancelled: " + message, rid, False)
         elif status == "unknown":
-            responseXml = self._getStatusXml("ProcessUnknown", rid , rid, False )
+            responseXml = self._getStatusXml("ProcessPaused", "Unregistered Process: " + rid , rid, False )
         else: raise Exception( "Unknown status: " + status )
         return flask.Response( response=responseXml, status=200, mimetype="application/xml" )
 

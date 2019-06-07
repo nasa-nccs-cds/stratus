@@ -86,7 +86,7 @@ class StratusZMQResponder(Thread):
         completed_requests = []
         for rid, workflow in workflows.items():
             status = workflow.status()
-            self.logger.info( f"@@R: process Workflow {rid}, status= {status} " )
+#            self.logger.info( f"@@R: process Workflow {rid}, status= {status} " )
             self.setExeStatus( rid, status )
             if status in [Status.COMPLETED, Status.ERROR, Status.CANCELED]:
                 dataPacket = self.getDataPacket( rid, status, workflow )
