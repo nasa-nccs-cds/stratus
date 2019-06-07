@@ -164,13 +164,13 @@ class ResponseManager(Thread):
             sId = b2s( response[0] )
             header = json.loads( b2s( response[1] ) )
             type = header["type"]
-            self.log(f"[{sId}]: Received response: " +  str( header ) + ", new status = " + str( self._status ) )
             self._status =  Status.decode( header["status"] )
+            self.log(f"[{sId}]: Received response: " +  str( header ) + ", new status = " + str( self._status ) )
             if type == "xarray" and len(response) > 2:
                 dataset = pickle.loads(response[2])
                 self.cacheResult( header, dataset )
-            elif type == "error":
-                self._exception = Exception(response[2]) if len(response) > 2 else Exception()
+            elif self._status == Status.ERROR:
+                self._exception = Exception( header["error"] )
             else:
                 self.cacheResult( header, None )
 
