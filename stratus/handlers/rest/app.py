@@ -27,8 +27,8 @@ class RestAPIBase:
             if rid in self.app.registeredRequests:  return { "status": Status.str( Status.IDLE  ), "rid": rid }
             else:                                   return { "status": Status.str( Status.ERROR ), "rid": rid, "message": "Unknown request: " + rid }
         else:
-            status = Status.str( workflow.status() )
-            result = { "status": status, "rid": rid }
+            status = workflow.status()
+            result = { "status": Status.str( status ), "rid": rid }
             if status == Status.ERROR:
                 result["message"] = str( workflow.getResult().exception() )
             self.logger.info( f"REST-SERVER: getStatus(rid={rid}): {str(result)}, all tasks: {self.app.getWorkflows().keys()}" )
