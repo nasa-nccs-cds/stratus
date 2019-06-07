@@ -21,10 +21,17 @@ class RestAPIBase:
         self.name =  name
         self.app: StratusAppBase = app
 
-    def getStatus( self, rid: str = None ) -> Dict[str,Status]:
-        result = { wf_rid: str(workflow.status()) for wf_rid, workflow in self.app.getWorkflowItems() if ( rid is None or wf_rid == rid ) }
-        self.logger.info( f"REST-SERVER: getStatus(rid={rid}): {str(result)}, all tasks: {self.app.getWorkflows().keys()}" )
-        return result
+    def getStatus( self, rid: str ) -> Dict[str,str]:
+        workflow = self.app.getWorkflow(rid)
+        if workflow is None:
+            return { "status":"error", "rid": rid, "message": "Unknown request: " + rid }
+        else:
+            status = workflow.status()
+            result = { "status": str(status), "rid": rid }
+            if status == Status.ERROR:
+                result["message"] = str( workflow.getResult().exception() )
+            self.logger.info( f"REST-SERVER: getStatus(rid={rid}): {str(result)}, all tasks: {self.app.getWorkflows().keys()}" )
+            return result
 
     def getParameter(self, name: str, default = None, required = True ):
         param = request.args.get( name, default )

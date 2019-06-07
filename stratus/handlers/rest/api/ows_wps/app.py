@@ -132,10 +132,9 @@ class RestAPI(RestAPIBase):
         @bp.route('/status', methods=['GET'])
         def status():
             rid = self.getParameter( "rid", None, False)
-            statusMap = self.getStatus()
-            status = statusMap.get( rid, Status.UNKNOWN )
-            if self.debug: self.logger.info( f" ----> Status Request[{rid}]: {str(status)} ----> Status Map: " + str(statusMap) )
-            return self.executeResponse( dict( status=Status.str(status), message ="", rid=rid ) )
+            status_results = self.getStatus(rid)
+            if self.debug: self.logger.info( f" ----> Status Request[{rid}]: " + str(status_results) )
+            return self.executeResponse( status_results )
 
         @bp.route('/file', methods=['GET'])
         def file_result():
