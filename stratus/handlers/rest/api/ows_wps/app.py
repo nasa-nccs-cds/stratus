@@ -42,7 +42,7 @@ class RestAPI(RestAPIBase):
         if self.debug: self.logger.info( " #####>>>> response: " + str(response) )
         rid = response.get("rid","XXXXXX")
         message = response.get("message", "")
-        status = response["status"]
+        status = str(response["status"]).lower()
         if status == "executing":
             responseXml = self._getStatusXml("ProcessStarted", message, rid )
         elif status == "completed":
