@@ -170,7 +170,10 @@ class ResponseManager(Thread):
                 dataset = pickle.loads(response[2])
                 self.cacheResult( header, dataset )
             elif self._status == Status.ERROR:
-                self._exception = Exception( header["error"] )
+                error_message = header["error"]
+                self.log( " Register error message: " + error_message )
+                self._exception = Exception( error_message )
+                self.cacheResult(header, None)
             else:
                 self.cacheResult( header, None )
 
