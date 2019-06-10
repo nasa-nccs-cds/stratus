@@ -3,8 +3,8 @@ import os, traceback, abc
 from flask import Flask, Response, Blueprint, request
 import json, importlib
 from stratus_endpoint.util.config import StratusLogger
+from stratus_endpoint.util.messaging import *
 from stratus.app.core import StratusCore
-from stratus_endpoint.handler.base import TaskHandle, Status
 from flask_sqlalchemy import SQLAlchemy
 from stratus.app.base import StratusAppBase, StratusServerApp
 from jsonschema import validate
@@ -22,17 +22,12 @@ class RestAPIBase:
         self.app: StratusAppBase = app
 
     def getStatus( self, rid: str ) -> Dict[str,str]:
-        workflow = self.app.getWorkflow(rid)
-        if workflow is None:
-            if rid in self.app.registeredRequests:  return { "status": Status.str( Status.IDLE  ), "rid": rid }
-            else:                                   return { "status": Status.str( Status.ERROR ), "rid": rid, "message": "Unknown request: " + rid }
-        else:
-            status = workflow.status()
-            result = { "status": Status.str( status ), "rid": rid }
-            if status == Status.ERROR:
-                result["message"] = str( workflow.getResult().exception() )
-            self.logger.info( f"REST-SERVER: getStatus(rid={rid}): {str(result)}, all tasks: {self.app.getWorkflows().keys()}" )
-            return result
+        messages = messageCenter.request(rid)
+        status = messages.status
+        result = { "status": Status.str( status ), "rid": rid }
+        if status == Status.ERROR: result["message"] = repr( messages.error )
+        self.logger.info( f"REST-SERVER: getStatus(rid={rid}): {str(result)}, all tasks: {self.app.getWorkflows().keys()}" )
+        return result
 
     def getParameter(self, name: str, default = None, required = True ):
         param = request.args.get( name, default )

@@ -130,7 +130,7 @@ class WorkflowTask(DGNode):
 
     @property
     def messages(self) -> RequestMetadata:
-        return messageCemter.request( self._opset.rid)
+        return messageCenter.request( self._opset.rid)
 
     @property
     def handle(self) -> str:
@@ -219,7 +219,7 @@ class Workflow(DependencyGraph):
 
     @property
     def messages(self) -> RequestMetadata:
-        return messageCemter.request( self._rid )
+        return messageCenter.request( self._rid )
 
     @DependencyGraph.add.register(WorkflowTask)
     def add( self, obj ):

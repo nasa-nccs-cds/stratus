@@ -4,7 +4,7 @@ import xarray as xa
 from stratus_endpoint.util.config import StratusLogger
 from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult
 from stratus.app.core import StratusCore
-from stratus.app.messaging import messageCemter, RequestMetadata
+from stratus.app.messaging import messageCenter, RequestMetadata
 import os
 from stratus.handlers.rest.api.wps.wpsRequest import WPSExecuteRequest
 from enum import Enum

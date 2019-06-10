@@ -5,7 +5,7 @@ from threading import Thread
 from typing import Dict, Optional, List
 from stratus.util.parsing import s2b, b2s
 from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult, FailedTask
-from stratus.app.messaging import messageCemter, RequestMetadata
+from stratus.app.messaging import messageCenter, RequestMetadata
 import os, pickle, queue
 import xarray as xa
 from enum import Enum
@@ -155,7 +155,7 @@ class ResponseManager(Thread):
 
     @property
     def requestMetadata(self) -> RequestMetadata:
-        return messageCemter.request( self.requestId )
+        return messageCenter.request( self.requestId )
 
     def processNextResponse(self, socket: zmq.Socket ):
         try:

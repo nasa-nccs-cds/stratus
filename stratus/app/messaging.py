@@ -45,4 +45,4 @@ class MessageCenter:
 
 
 
-messageCemter = MessageCenter()
+messageCenter = MessageCenter()

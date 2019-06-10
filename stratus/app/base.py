@@ -114,8 +114,10 @@ class StratusAppBase(Thread):
 
     def submitWorkflow(self, request: Dict):
         request.setdefault("rid", UID.randomId(6))
+        rid = request["rid"]
+        messageCenter.request( rid ).setStatus( Status.IDLE )
         self.requestQueue.put( request )
-        self.registeredRequests.add( request["rid"] )
+        self.registeredRequests.add( rid )
         return request
 
     def ingestRequests( self ):
