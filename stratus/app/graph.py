@@ -65,11 +65,12 @@ class DGNode:
 
 class DependencyGraph():
 
-    def __init__( self, **kwargs ):
+    def __init__( self, nodes: List[DGNode] = None, **kwargs ):
         self.logger = StratusLogger.getLogger()
         self.nodes: Dict[str, DGNode] = {}
         self.graph = kwargs.get( "graph", nx.DiGraph( ) )
-        for node in kwargs.get( "nodes", [] ): self.add( node )
+        if nodes:
+            for node in nodes: self.add( node )
         self._allow_multiple_outputs = kwargs.get( "allow_multiple_outputs", False )
         self._connected = False
 
@@ -120,7 +121,7 @@ class DependencyGraph():
             except: pass
 
     def copy(self):
-        return DependencyGraph( nodes=self.nodes.values(), graph = copy.deepcopy(self.graph) )
+        return DependencyGraph( list(self.nodes.values()), graph = copy.deepcopy(self.graph) )
 
     def filter(self, iops: Set[str] ) -> "DependencyGraph":
         newDepGraph = self.copy()

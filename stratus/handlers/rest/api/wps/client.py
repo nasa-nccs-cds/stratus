@@ -4,6 +4,7 @@ import xarray as xa
 from stratus_endpoint.util.config import StratusLogger
 from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult
 from stratus.app.core import StratusCore
+from stratus.app.messaging import messageCemter, RequestMetadata
 import os
 from stratus.handlers.rest.api.wps.wpsRequest import WPSExecuteRequest
 from enum import Enum
@@ -58,7 +59,6 @@ class RestTask(TaskHandle):
         self.dataUrl: str = refs.get("data", None)
         self.dapUrl: str = refs.get("dap", None)
         self.wpsRequest: WPSExecuteRequest = wpsRequest
-        self._exception = None
         self._statMessage = None
         self._status = Status.UNKNOWN
         self.cacheDir: str = self.createCache( **kwargs )
@@ -69,21 +69,15 @@ class RestTask(TaskHandle):
         except: pass
         return cacheDir
 
-    def exception(self) -> Optional[Exception]:
-        return self._exception
-
     def getResult( self, **kwargs ) ->  Optional[TaskResult]:
-        raiseErrors = kwargs.get( "raiseErrors", False )
         type = kwargs.get("type","file")
         block = kwargs.get("block")
-        self._exception = None
         if block: self.waitUntilReady()
         self.status()
         self.logger.info( f"GetResult[{type}]-> STATUS: {self._status}, args: {kwargs}" )
         if self._status == Status.ERROR:
             self.logger.error( " *** Remote execution error: " + self._statMessage )
-            self._exception = Exception( self._statMessage )
-            if raiseErrors: raise self._exception
+            self.messages.setError( self._statMessage )
             return None
         elif self._status == Status.COMPLETED:
             if type == "file":

@@ -195,21 +195,12 @@ class RestTask(TaskHandle):
         super(RestTask, self).__init__( rid=rid, cid=cid, **kwargs )   # **{ "rid":rid, "cid":cid, **kwargs }
         self.logger = StratusLogger.getLogger()
         self.manager: ResponseManager = manager
-        self._exception = None
 
     def getResult( self, **kwargs ) ->  Optional[TaskResult]:
         try:
-            self._exception = None
             return self.manager.getResult( rid=self.rid, **kwargs )
         except Exception as err:
-            self._exception = err
-            raise err
-
-    def status(self) ->  Status:
-        return self.manager.getStatus( self.rid )
-
-    def exception(self) -> Optional[Exception]:
-        return self._exception
+            self.messages.setError( str(err), traceback.format_exc() )
 
 if __name__ == "__main__":
     from stratus.util.test import TestDataManager as mgr

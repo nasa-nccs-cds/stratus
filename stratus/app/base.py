@@ -124,10 +124,11 @@ class StratusAppBase(Thread):
         while True:
             try:
                 request = self.requestQueue.get_nowait()
-                self.logger.error(f"Ingest request: {request['rid']}")
+                rid = request['rid']
+                self.logger.error(f"Ingest request: {rid}")
                 clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
                 tasks: List[WorkflowTask] = [WorkflowTask(cOpSet) for cOpSet in self.distributeOps(clientOpsets)]
-                workflow = Workflow(nodes=tasks)
+                workflow = Workflow( rid, tasks )
                 self.active_workflows[ request["rid"] ] = workflow
             except queue.Empty:
                 return

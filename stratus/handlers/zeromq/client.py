@@ -5,6 +5,7 @@ from threading import Thread
 from typing import Dict, Optional, List
 from stratus.util.parsing import s2b, b2s
 from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult, FailedTask
+from stratus.app.messaging import messageCemter, RequestMetadata
 import os, pickle, queue
 import xarray as xa
 from enum import Enum
@@ -116,7 +117,6 @@ class ResponseManager(Thread):
         self.cacheDir = os.path.expanduser( cache_dir )
         self.log("Created RM, cache dir = " + self.cacheDir )
         self._status = status
-        self._exception = None
 
     def cacheResult(self, header: Dict, data: Optional[xa.Dataset] ):
         self.logger.info( "Caching result: " + str(header) )
@@ -153,12 +153,12 @@ class ResponseManager(Thread):
     def log(self, msg: str ):
         self.logger.info( "[RM] " + msg )
 
-    def exception(self) -> Optional[Exception]:
-        return self._exception
+    @property
+    def requestMetadata(self) -> RequestMetadata:
+        return messageCemter.request( self.requestId )
 
     def processNextResponse(self, socket: zmq.Socket ):
         try:
-            self._exception = None
             self.log("Awaiting responses" )
             response = socket.recv_multipart()
             sId = b2s( response[0] )
@@ -172,7 +172,7 @@ class ResponseManager(Thread):
             elif self._status == Status.ERROR:
                 error_message = header["error"]
                 self.log( " Register error message: " + error_message )
-                self._exception = Exception( error_message )
+                self.requestMetadata.setError( error_message )
                 self.cacheResult(header, None)
             else:
                 self.cacheResult( header, None )
@@ -193,9 +193,6 @@ class zmqTask(TaskHandle):
 
     def getResult( self, **kwargs ) ->  Optional[TaskResult]:
         return self.manager.getResult(**kwargs)
-
-    def exception(self) -> Optional[Exception]:
-        return self.manager.exception()
 
     def status(self) ->  Status:
         return self.manager.getStatus()
