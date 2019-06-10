@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tupl
 from stratus_endpoint.util.config import StratusLogger
 from threading import Thread
 import zmq, traceback, time, logging, xml, socket
-from stratus.app.operations import Status
+from stratus_endpoint.util.messaging import Status
 from stratus_endpoint.handler.base import TaskHandle
 from stratus.app.operations import Workflow
 from typing import List, Dict, Sequence, Set

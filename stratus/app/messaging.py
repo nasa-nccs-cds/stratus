@@ -1,4 +1,4 @@
-from stratus_endpoint.handler.base import Status
+from stratus_endpoint.util.messaging import Status
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
 
 class ErrorRecord:

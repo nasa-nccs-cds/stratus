@@ -6,7 +6,7 @@ import zmq, traceback
 from typing import Dict
 import queue, datetime
 from .responder import StratusZMQResponder, StratusResponse
-from stratus_endpoint.handler.base import Status
+from stratus_endpoint.util.messaging import Status
 from stratus_endpoint.handler.base import TaskHandle, Endpoint, TaskResult
 MB = 1024 * 1024
 
