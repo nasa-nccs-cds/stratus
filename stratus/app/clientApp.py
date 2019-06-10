@@ -17,7 +17,7 @@ class StratusAppClient(StratusClient):
         return self.app.init()
 
     @stratusrequest
-    def request(self, tid: str, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
+    def request(self, requestSpec: Dict, tid: str, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
         return self.app.request( tid, requestSpec, inputs, **kwargs )
 
     def capabilities(self, ctype: str, **kwargs ) -> Dict:

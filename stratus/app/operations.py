@@ -104,7 +104,7 @@ class ClientOpSet(OpSet):
         if self._taskHandle is None:
             filtered_request =  self.getFilteredRequest( self._request )
             self.logger.info( f"Client {self.client.handle}: submit operations {filtered_request['operations']}" )
-            self._taskHandle = self.client.request( self._tid, filtered_request, inputs  )
+            self._taskHandle = self.client.request( filtered_request, self._tid, inputs  )
         return self._taskHandle
 
     @property

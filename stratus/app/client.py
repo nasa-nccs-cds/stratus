@@ -60,7 +60,7 @@ class StratusClient:
 
     @abc.abstractmethod
     @stratusrequest
-    def request(self, tid: str, request: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle: pass
+    def request(self, request: Dict, tid: str, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle: pass
 
     @abc.abstractmethod
     def status(self, **kwargs ) -> Status: pass

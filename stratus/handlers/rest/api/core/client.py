@@ -29,7 +29,7 @@ class CoreRestClient(StratusClient):
         self.response_manager.start()
 
     @stratusrequest
-    def request( self,  tid: str, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
+    def request( self, requestSpec: Dict,  tid: str, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
         if "rid" not in requestSpec: requestSpec["rid"] = UID.randomId(6)
         response = self.response_manager.postMessage( "exe", requestSpec )
         self.log( "Got response: " + str(response) )

@@ -99,7 +99,7 @@ class OwsWpsClient(StratusClient):
     def getCapabilitiesStr( self, type ): return '%s?request=getCapabilities&service=WPS&identifier=%s' % ( self.host_address, type )
 
     @stratusrequest
-    def request( self, tid: str, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
+    def request( self, requestSpec: Dict, tid: str, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
         inputs = [ ( key, json.dumps(value) ) for key,value in requestSpec.items() ]
         response: WPSExecution =  self.wpsRequest.execute( "WORKFLOW", inputs )
         self.logger.info( "Got response xml: " + str(response["xml"]) )
