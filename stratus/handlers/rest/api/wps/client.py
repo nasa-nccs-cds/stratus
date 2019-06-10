@@ -29,12 +29,12 @@ class WPSRestClient(StratusClient):
         self.wpsRequest = WPSExecuteRequest(self.host_address)
 
     @stratusrequest
-    def request( self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
+    def request( self, tid: str, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
         self.log("WPSRestClient: Submit request: " + str(requestSpec))
         response =  self.wpsRequest.exe(requestSpec)
         self.log( "Got response xml: " + str(response["xml"]) )
         self.log("Got refs: " + str(response["refs"]))
-        return RestTask( requestSpec['rid'], self.cid, response["refs"], self.wpsRequest, cache=self.cache_dir )
+        return RestTask( tid, requestSpec['rid'], self.cid, response["refs"], self.wpsRequest, cache=self.cache_dir, **kwargs )
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
         return self.wpsRequest.getCapabilities( type )
@@ -51,8 +51,8 @@ class WPSRestClient(StratusClient):
 
 class RestTask(TaskHandle):
 
-    def __init__(self, rid: str, cid: str, refs: Dict, wpsRequest: WPSExecuteRequest, **kwargs):
-        super(RestTask, self).__init__( rid=rid, cid=cid, **kwargs )
+    def __init__(self, tid: str, rid: str, cid: str, refs: Dict, wpsRequest: WPSExecuteRequest, **kwargs):
+        super(RestTask, self).__init__( tid, rid, cid, **kwargs )
         self.logger = StratusLogger.getLogger()
         self.statusUrl: str  = refs.get("status",None)
         self.fileUrl: str = refs.get("file", None)

@@ -17,8 +17,8 @@ class MessageState(Enum):
 
 class OwsWpsTask(TaskHandle):
 
-    def __init__(self, rid: str, cid: str, wpsRequest: WPSExecution, **kwargs):
-        TaskHandle.__init__( self, rid=rid, cid=cid, **kwargs )
+    def __init__(self, tid: str, rid: str, cid: str, wpsRequest: WPSExecution, **kwargs):
+        TaskHandle.__init__( self, tid, rid, cid, **kwargs )
         self.logger = StratusLogger.getLogger()
         self.execution: WPSExecution = wpsRequest
         self._statMessage = None
@@ -99,12 +99,12 @@ class OwsWpsClient(StratusClient):
     def getCapabilitiesStr( self, type ): return '%s?request=getCapabilities&service=WPS&identifier=%s' % ( self.host_address, type )
 
     @stratusrequest
-    def request( self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
+    def request( self, tid: str, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
         inputs = [ ( key, json.dumps(value) ) for key,value in requestSpec.items() ]
         response: WPSExecution =  self.wpsRequest.execute( "WORKFLOW", inputs )
         self.logger.info( "Got response xml: " + str(response["xml"]) )
         self.logger.info("Got refs: " + str(response["refs"]))
-        return OwsWpsTask( requestSpec['rid'], self.cid, response, cache=self.cache_dir )
+        return OwsWpsTask( tid, requestSpec['rid'], self.cid, response, cache=self.cache_dir )
 
     def execJsonRequest( self, requestURL, parms: Dict) -> Dict:
         response: requests.Response = requests.get(requestURL, params=parms)

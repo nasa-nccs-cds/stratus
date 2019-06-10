@@ -4,7 +4,7 @@ from stratus_endpoint.util.config import StratusLogger, UID
 from stratus.app.client import StratusClient
 from  stratus_endpoint.util.messaging import *
 from concurrent.futures import wait, as_completed, Executor, Future
-from stratus_endpoint.handler.base import TaskHandle, TaskResult, TaskFuture, Status, FailedTask
+from stratus_endpoint.handler.base import TaskHandle, Endpoint, TaskResult, Status, FailedTask
 from stratus.app.graph import DGNode, DependencyGraph, graphop, Connection
 
 class Op(DGNode):
@@ -55,6 +55,7 @@ class ClientOpSet(OpSet):
         OpSet.__init__( self,  **kwargs )
         self.client: StratusClient = client
         self._request = request
+        self._tid = kwargs.get( "tid", Endpoint.randomStr(6) )
         self._taskHandle: TaskHandle = None
 
     def connectedOpsets(self) -> List["ClientOpSet"]:
@@ -88,6 +89,10 @@ class ClientOpSet(OpSet):
         return self._request["rid"]
 
     @property
+    def tid(self) -> str:
+        return self._tid
+
+    @property
     def type(self) -> str:
         return self.client.type
 
@@ -99,8 +104,20 @@ class ClientOpSet(OpSet):
         if self._taskHandle is None:
             filtered_request =  self.getFilteredRequest( self._request )
             self.logger.info( f"Client {self.client.handle}: submit operations {filtered_request['operations']}" )
-            self._taskHandle = self.client.request(filtered_request, inputs)
+            self._taskHandle = self.client.request( self._tid, filtered_request, inputs  )
         return self._taskHandle
+
+    @property
+    def messages(self) -> RequestMetadata:
+        return messageCenter.request( self._tid )
+
+    def status(self) -> Status:
+        if self._taskHandle is None: return Status.IDLE
+        return self.messages.status
+
+    def exception(self) -> Optional[ErrorRecord]:
+        if self._taskHandle is None: return None
+        return self.messages.error
 
 class WorkflowTask(DGNode):
 
@@ -108,9 +125,13 @@ class WorkflowTask(DGNode):
         self._opset = opset
         inputs = [ conn.id for conn in opset.getInputs() ]
         outputs = [conn.id for conn in opset.getOutputs()]
-        DGNode.__init__( self, inputs, outputs, **kwargs )
+        DGNode.__init__( self, inputs, outputs,  id=opset.tid, **kwargs )
         self.dependencies: List["WorkflowTask"] = None
         self._future: Future = None
+
+    @property
+    def messages(self) -> RequestMetadata:
+        return messageCenter.request( self.tid )
 
     @property
     def name(self) -> str:
@@ -129,8 +150,8 @@ class WorkflowTask(DGNode):
         return self._opset.rid
 
     @property
-    def messages(self) -> RequestMetadata:
-        return messageCenter.request( self._opset.rid)
+    def tid(self) -> str:
+        return self._opset.tid
 
     @property
     def handle(self) -> str:
@@ -149,12 +170,6 @@ class WorkflowTask(DGNode):
 
     def status(self) -> Status:
         return self.messages.status
-
-    def submit( self, executor: Executor, **kwargs ) -> TaskFuture:
-        self.logger.info( f"Submitting Task[{self.handle}:{self.rid}]")
-        self._future = executor.submit( self.execute, **kwargs )
-        tparms = { "rid":self.rid, "cid":self.cid, **kwargs }
-        return TaskFuture( self._future, **tparms )
 
     def execute( self, **kwargs ) -> TaskResult:
         results: List[TaskResult] = self.waitOnTasks()
@@ -201,6 +216,7 @@ class WorkflowTask(DGNode):
                 self.logger.info(f"TASK[{self.handle}]: Got Dependency RESULT-> empty: {taskResult.empty()}, header = {taskResult.header}")
             return taskResults
         except Exception as err:
+            self.messages.setException( err )
             self.logger.error( f"Error waiting on dependencies in task [{self.handle}:{self.rid}]: {repr(err)}")
             self.logger.error( traceback.format_exc() )
             return []
@@ -255,26 +271,31 @@ class Workflow(DependencyGraph):
     @graphop
     def update( self ) -> bool:
         completed = True
+        current_task = None
         try:
-            if self.status() in [Status.EXECUTING, Status.IDLE]:
-                self.messages.setStatus(Status.EXECUTING)
+            wfStatus = self.status()
+            if wfStatus in [Status.EXECUTING, Status.IDLE]:
+                if wfStatus == Status.IDLE:
+                    self.messages.setStatus(Status.EXECUTING)
+                    self.logger.info( f"Initiating Execution of workflow {self._rid}")
                 output_id = self.getOutputNode()
                 for wtask in self.tasks:
+                    current_task = wtask
                     if wtask.id not in self.completed_tasks:
-                        stat = wtask.status()
-                        if stat == Status.ERROR:
+                        tstat = wtask.status()
+                        if tstat == Status.ERROR:
                             errorRec = wtask.exception()
                             self.messages.setErrorRecord( errorRec )
                             raise Exception( "Workflow Errored out: " + errorRec.message  )
-                        elif stat == Status.CANCELED:
+                        elif tstat == Status.CANCELED:
                             self.messages.setStatus( Status.CANCELED )
                             raise Exception("Workflow Canceled")
-                        elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
+                        elif (tstat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
                             wtask.async_execute()
                             completed = False
-                        elif ( stat == Status.EXECUTING ):
+                        elif ( tstat == Status.EXECUTING ):
                             completed = False
-                        elif ( stat == Status.COMPLETED ):
+                        elif ( tstat == Status.COMPLETED ):
                             self.completed_tasks.append( wtask.id )
                             self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputID: {output_id}, nodes: {list(self.ids)}, exception: {wtask.taskHandle.exception()}, status: {wtask.taskHandle.status()}")
                             if wtask.id == output_id:
@@ -282,7 +303,11 @@ class Workflow(DependencyGraph):
                                 self.result =  wtask.taskHandle
         except Exception as err:
             self.messages.setException( err )
-            self.result = FailedTask( err )
+            tid = current_task.tid if current_task else ""
+            cid = current_task.cid if current_task else ""
+            self.logger.error( getattr(err, 'message', repr(err)) )
+            self.logger.error( "\n".join( traceback.format_tb( err.__traceback__ )))
+            self.result = FailedTask( tid, self._rid, cid, err )
         return completed
 
 

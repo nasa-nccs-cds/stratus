@@ -17,9 +17,9 @@ class DirectClient(StratusClient):
         return epclass( **self.parms )
 
     @stratusrequest
-    def request(self, requestDict: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
-        eparms = { "handle":self.handle, "rid":requestDict["rid"], **self.parms, **kwargs }
-        return self.endpoint.request( requestDict, inputs, **eparms )
+    def request(self, tid: str, requestDict: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
+        eparms = { "handle":self.handle, **self.parms, **kwargs }
+        return self.endpoint.request( tid, requestDict["rid"], self.cid, requestDict, inputs, **eparms )
 
     def capabilities(self, type: str, **kwargs ) -> Dict:
         return self.endpoint.capabilities( type, **kwargs )

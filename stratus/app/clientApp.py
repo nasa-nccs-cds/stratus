@@ -7,8 +7,6 @@ from stratus.app.base import StratusEmbeddedApp
 import abc, fnmatch
 from decorator import decorator, dispatch_on
 
-
-
 class StratusAppClient(StratusClient):
 
     def __init__( self, core: StratusCore, type: str, **kwargs ):
@@ -19,8 +17,8 @@ class StratusAppClient(StratusClient):
         return self.app.init()
 
     @stratusrequest
-    def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
-        return self.app.request(requestSpec, inputs, **kwargs )
+    def request(self, tid: str, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
+        return self.app.request( tid, requestSpec, inputs, **kwargs )
 
     def capabilities(self, ctype: str, **kwargs ) -> Dict:
         return self.app.capabilities( ctype, **kwargs )

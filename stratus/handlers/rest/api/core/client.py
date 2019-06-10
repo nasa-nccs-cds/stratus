@@ -29,12 +29,12 @@ class CoreRestClient(StratusClient):
         self.response_manager.start()
 
     @stratusrequest
-    def request( self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
+    def request( self,  tid: str, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
         if "rid" not in requestSpec: requestSpec["rid"] = UID.randomId(6)
-        response = self.response_manager.postMessage( "exe", requestSpec, **kwargs )
+        response = self.response_manager.postMessage( "exe", requestSpec )
         self.log( "Got response: " + str(response) )
         self.response_manager.addRequest( requestSpec["rid"] )
-        return RestTask( requestSpec['rid'], self.cid, self.response_manager )
+        return RestTask( tid, requestSpec['rid'], self.cid, self.response_manager, **kwargs )
 
     def status(self, **kwargs ) -> Status:
         result = self.response_manager.getMessage( "status", {}, **kwargs)
@@ -191,8 +191,8 @@ class ResponseManager(Thread):
 
 class RestTask(TaskHandle):
 
-    def __init__(self, rid: str, cid: str, manager: ResponseManager, **kwargs):
-        super(RestTask, self).__init__( rid=rid, cid=cid, **kwargs )   # **{ "rid":rid, "cid":cid, **kwargs }
+    def __init__(self, tid: str, rid: str, cid: str, manager: ResponseManager, **kwargs):
+        super(RestTask, self).__init__( tid, rid, cid, **kwargs )   # **{ "rid":rid, "cid":cid, **kwargs }
         self.logger = StratusLogger.getLogger()
         self.manager: ResponseManager = manager
 

@@ -59,15 +59,16 @@ class ZMQClient(StratusClient):
 
 
     @stratusrequest
-    def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
-        response = self.sendMessage( "exe", requestSpec, **kwargs )
+    def request(self, tid: str, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
+        self.log(f"Sending exe request: {requestSpec}")
+        response = self.sendMessage( "exe", requestSpec )
         self.log( f"Got exe response: {response}" )
         if "error" in response: raise Exception( f"Server Error: {response['error']}" )
         status = Status.decode( response.get('status') )
         self.log( str(response) )
-        response_manager = ResponseManager( self.context, response["rid"], self.host_address, self.response_port, status, self.cache_dir, **kwargs )
+        response_manager = ResponseManager( self.context, response["rid"], self.host_address, self.response_port, status, self.cache_dir )
         response_manager.start()
-        return zmqTask( self.cid, response_manager )
+        return zmqTask( tid, self.cid, response_manager, **kwargs )
 
     def capabilities(self, ctype: str, **kwargs ) -> Dict:
         return self.sendMessage( "capabilities", {"type":ctype}, **kwargs )
@@ -98,6 +99,7 @@ class ZMQClient(StratusClient):
         parts = response.split("!")
         response = json.loads(parts[1])
         response["rid"] = requestId
+        self.log(f"Got {type} response: {response}" )
         return response
 
 class ResponseManager(Thread):
@@ -186,8 +188,8 @@ class ResponseManager(Thread):
 
 class zmqTask(TaskHandle):
 
-    def __init__(self, cid: str, manager: ResponseManager, **kwargs):
-        super(zmqTask,self).__init__( rid=manager.requestId, cid=cid, **kwargs )
+    def __init__(self, tid: str, cid: str, manager: ResponseManager, **kwargs):
+        super(zmqTask,self).__init__( tid, manager.requestId, cid, **kwargs )
         self.logger = StratusLogger.getLogger()
         self.manager = manager
 

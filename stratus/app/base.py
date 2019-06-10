@@ -116,6 +116,7 @@ class StratusAppBase(Thread):
         request.setdefault("rid", UID.randomId(6))
         rid = request["rid"]
         messageCenter.request( rid ).setStatus( Status.IDLE )
+        self.logger.info( f"Submit request {rid}")
         self.requestQueue.put( request )
         self.registeredRequests.add( rid )
         return request
@@ -221,7 +222,7 @@ class StratusEmbeddedApp(StratusAppBase):
     def init(self, **kwargs): pass
 
     @abc.abstractmethod
-    def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle: pass
+    def request(self, tid: str, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle: pass
 
     @abc.abstractmethod
     def capabilities(self, ctype: str, **kwargs ) -> Dict: pass
