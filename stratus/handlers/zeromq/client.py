@@ -158,7 +158,6 @@ class ResponseManager(Thread):
 
     def processNextResponse(self, socket: zmq.Socket ):
         try:
-            self._exception = None
             self.log("Awaiting responses" )
             response = socket.recv_multipart()
             sId = b2s( response[0] )
