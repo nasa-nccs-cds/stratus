@@ -86,6 +86,7 @@ class StratusZMQResponder(Thread):
         completed_requests = []
         for rid, workflow in workflows.items():
             status = workflow.status()
+            print(Status.str(status)[0], end='')
 #            self.logger.info( f"@@R: process Workflow {rid}, status= {status} " )
             self.setExeStatus( rid, status )
             if status in [Status.COMPLETED, Status.ERROR, Status.CANCELED]:
@@ -148,6 +149,7 @@ class StratusZMQResponder(Thread):
         header = metadata if metadata else {}
         header["type"] = "xarray"
         header["status"] = str( Status.COMPLETED )
+        self.logger.info( f"@@R: --> Sending task completion message, rid = {rid}" )
         return DataPacket( rid, header, data )
 
     def createMessage(self, rid: str, message: Dict = None ) -> DataPacket:

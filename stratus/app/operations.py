@@ -113,7 +113,10 @@ class ClientOpSet(OpSet):
 
     def status(self) -> Status:
         if self._taskHandle is None: return Status.IDLE
-        return self._taskHandle.status()
+#        return self._taskHandle.status()
+        stat = self.messages.status
+        self.logger.info( f"ClientOpSet[{self.tid}]: get status = {stat}")
+        return stat
 
     def exception(self) -> Optional[ErrorRecord]:
         if self._taskHandle is None: return None
@@ -283,7 +286,8 @@ class Workflow(DependencyGraph):
                     current_task = wtask
                     if wtask.id not in self.completed_tasks:
                         tstat = wtask.status()
-                        self.logger.info(f"Checking task[{wtask.taskHandle.__class__.__name__}:{wtask.id}] status: {tstat}")
+                        print(Status.str(tstat)[0], end='')
+#                        self.logger.info(f"Checking task[{wtask.taskHandle.__class__.__name__}:{wtask.id}] status: {tstat}")
                         if tstat == Status.ERROR:
                             errorRec = wtask.exception()
                             self.messages.setErrorRecord( errorRec )
