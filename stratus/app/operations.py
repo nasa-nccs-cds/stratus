@@ -283,7 +283,7 @@ class Workflow(DependencyGraph):
                     current_task = wtask
                     if wtask.id not in self.completed_tasks:
                         tstat = wtask.status()
-                        self.logger.info(f"Checking task[{wtask.__class__.__name__}:{wtask.id}] status: {tstat}")
+                        self.logger.info(f"Checking task[{wtask.taskHandle.__class__.__name__}:{wtask.id}] status: {tstat}")
                         if tstat == Status.ERROR:
                             errorRec = wtask.exception()
                             self.messages.setErrorRecord( errorRec )

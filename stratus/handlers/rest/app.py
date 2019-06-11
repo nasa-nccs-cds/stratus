@@ -26,7 +26,7 @@ class RestAPIBase:
         status = messages.status
         result = { "status": Status.str( status ), "rid": rid }
         if status == Status.ERROR: result["message"] = repr( messages.error )
-        self.logger.info( f"REST-SERVER: getStatus(rid={rid}): {str(result)}, all tasks: {self.app.getWorkflows().keys()}" )
+        self.logger.info( f"REST-SERVER: getStatus(rid={rid}): {str(result)}, all task workflows: {self.app.getWorkflows().keys()}" )
         return result
 
     def getParameter(self, name: str, default = None, required = True ):
