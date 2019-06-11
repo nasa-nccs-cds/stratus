@@ -164,7 +164,7 @@ class ResponseManager(Thread):
             header = json.loads( b2s( response[1] ) )
             type = header["type"]
             self._status =  Status.decode( header["status"] )
-            self.log(f"[{sId}]: Received response: " +  str( header ) + ", new status = " + str( self._status ) )
+
             if type == "xarray" and len(response) > 2:
                 dataset = pickle.loads(response[2])
                 self.cacheResult( header, dataset )
@@ -173,8 +173,11 @@ class ResponseManager(Thread):
             else:
                 self.cacheResult( header, None )
 
+            self.log(f"[{sId}]: Received response: " +  str( header ) + ", new status = " + str( self._status )  + ", exception = " + str( self._exception )  )
+
         except Exception as err:
             self.log( "EDAS error: {0}\n{1}\n".format(err, traceback.format_exc() ) )
+            self._exception = err
 
     def getStatus(self):
         return self._status
