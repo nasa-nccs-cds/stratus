@@ -107,7 +107,9 @@ class ClientOpSet(OpSet):
 
     def exception(self) -> Optional[Exception]:
         if self._taskHandle is None: return None
-        return self._taskHandle.exception()
+        exc = self._taskHandle.exception()
+        self.logger.info( f"ClientOpSet: get exceptionfrom handle[{self._taskHandle.__class__.__name__}]: {exc}")
+        return exc
 
 class WorkflowTask(DGNode):
 
@@ -343,7 +345,7 @@ class Workflow(DependencyGraph):
                         if stat == Status.ERROR:
                             self._status = Status.ERROR
                             exc = wtask.exception()
-                            raise Exception( "Workflow Errored out: " + ( getattr(exc, 'message', repr(exc)) if exc is not None else "" )  )
+                            raise Exception( "Workflow Errored out: " + ( getattr(exc, 'message', repr(exc)) if exc is not None else "NULL" )  )
                         elif stat == Status.CANCELED:
                             self._status = Status.CANCELED
                             raise Exception("Workflow Canceled")
