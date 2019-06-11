@@ -113,7 +113,7 @@ class ClientOpSet(OpSet):
 
     def status(self) -> Status:
         if self._taskHandle is None: return Status.IDLE
-        return self.messages.status
+        return self._taskHandle.status()
 
     def exception(self) -> Optional[ErrorRecord]:
         if self._taskHandle is None: return None
@@ -169,7 +169,7 @@ class WorkflowTask(DGNode):
         return self.messages.error
 
     def status(self) -> Status:
-        return self.messages.status
+        return self._opset.status()
 
     def execute( self, **kwargs ) -> TaskResult:
         results: List[TaskResult] = self.waitOnTasks()
