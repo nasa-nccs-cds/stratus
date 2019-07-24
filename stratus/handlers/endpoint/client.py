@@ -1,5 +1,6 @@
 from stratus.app.client import StratusClient, stratusrequest
 from stratus_endpoint.handler.base import TaskHandle, Endpoint, TaskResult
+from stratus_endpoint.handler.execution import Executable, ExecEndpoint
 from typing import Dict, List
 import importlib, traceback
 
@@ -9,12 +10,14 @@ class DirectClient(StratusClient):
         super(DirectClient, self).__init__( "endpoint", **kwargs )
         self.endpoint: Endpoint = None
 
-    def instantiateEndpoint( self ):
+    def instantiateEndpoint( self ) -> Endpoint:
         module = self["module"]
         class_name = self["object"]
         module = importlib.import_module(module)
         epclass = getattr(module, class_name)
-        return epclass( **self.parms )
+        epclass_inst = epclass( **self.parms )
+        if isinstance(epclass_inst, Endpoint): return  epclass_inst
+        else: return  ExecEndpoint( epclass )
 
     @stratusrequest
     def request(self, requestDict: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
