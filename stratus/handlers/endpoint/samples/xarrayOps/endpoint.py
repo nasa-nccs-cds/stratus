@@ -5,7 +5,7 @@ from stratus_endpoint.handler.execution import Executable, TaskExecHandler
 import abc
 
 
-class ExecEndpoint(Endpoint):
+class XaOpsEndpoint(Endpoint):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
