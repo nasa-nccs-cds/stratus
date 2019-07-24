@@ -15,9 +15,7 @@ class DirectClient(StratusClient):
         class_name = self["object"]
         module = importlib.import_module(module)
         epclass = getattr(module, class_name)
-        epclass_inst = epclass( **self.parms )
-        if isinstance(epclass_inst, Endpoint): return  epclass_inst
-        else: return  ExecEndpoint( epclass )
+        return  epclass( **self.parms )
 
     @stratusrequest
     def request(self, requestDict: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:

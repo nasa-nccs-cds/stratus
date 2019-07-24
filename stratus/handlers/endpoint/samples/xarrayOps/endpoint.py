@@ -1,16 +1,16 @@
-from stratus_endpoint.handler.base import TaskHandle, Endpoint, TaskResult
+from stratus_endpoint.handler.base import TaskHandle, TaskResult
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Callable
 from stratus_endpoint.util.config import StratusLogger
-from stratus_endpoint.handler.execution import Executable, TaskExecHandler
+from stratus_endpoint.handler.execution import Executable, ExecEndpoint
 import abc
 
 
-class XaOpsEndpoint(Endpoint):
+class XaOpsEndpoint(ExecEndpoint):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def createExecutable( self, rid: str, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> Executable:
-        return XaOpsExecutable( rid, requestSpec, inputs, **kwargs )
+    def createExecutable( self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> Executable:
+        return XaOpsExecutable( requestSpec, inputs, **kwargs )
 
     def shutdown(self, **kwargs ):
         return
