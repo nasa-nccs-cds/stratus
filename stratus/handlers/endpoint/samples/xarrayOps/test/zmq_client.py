@@ -8,7 +8,7 @@ USE_OPENDAP = True
 
 if __name__ == "__main__":
 
-    settings = dict(stratus=dict(type="zeromq", client_address="127.0.0.1", request_port="4556", response_port="4557"))
+    settings = dict(stratus=dict(type="zeromq", client_address="127.0.0.1", request_port="4566", response_port="4567"))
     stratus = StratusCore(settings)
     client = stratus.getClient()
     uri = mgr.getAddress("merra2", "tas") if USE_OPENDAP else "collection://cip_merra2_mth"
