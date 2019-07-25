@@ -1,13 +1,13 @@
 from stratus_endpoint.handler.base import TaskHandle, TaskResult
 from typing import Sequence, List, Dict, Mapping, Optional, Any
 from edas.process.test import TestDataManager as mgr
-import xarray as xa
+import time, xarray as xa
 from stratus.app.core import StratusCore
 
 USE_OPENDAP = True
 
 if __name__ == "__main__":
-
+    start = time.time()
     settings = dict(stratus=dict(type="zeromq", client_address="127.0.0.1", request_port="4566", response_port="4567"))
     stratus = StratusCore(settings)
     client = stratus.getClient()
@@ -21,9 +21,10 @@ if __name__ == "__main__":
     task: TaskHandle = client.request(requestSpec)
     result: Optional[TaskResult] = task.getResult(block=True)
 
-    print("\n\n\n")
+    print("\n\n")
     for dset in result.data:
-        print(f"Got result dataset containing Variables: ")
+        print(" Completed computation in " + str(time.time() - start) + " seconds")
+        print(f"Received result dataset containing variables: ")
         for name, var in dset.data_vars.items():
-            print( f"\t\t {name}:  dims = {var.dims}, shape = {var.shape}")
-    print("\n\n\n")
+            print( f"\t {name}:  dims = {var.dims}, shape = {var.shape}")
+    print("\n\n")
