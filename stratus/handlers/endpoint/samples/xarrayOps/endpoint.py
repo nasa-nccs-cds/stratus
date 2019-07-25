@@ -31,22 +31,24 @@ class XaOpsExecutable(Executable):
         print( f"Executing request {self.request}" )
         inputSpec = self.request['input']
         dset: xa.Dataset = xa.open_dataset( inputSpec['uri'] )
-        variable: xa.DataArray = dset.data_vars[ inputSpec['name'] ]
-        result_arrays = self.operate( variable )
+        vid = inputSpec['name']
+        variable: xa.DataArray = dset.data_vars[ vid ]
+        result_arrays = self.operate( vid, variable )
         resultDataset = xa.Dataset( result_arrays, dset.coords, dset.attrs)
         return TaskResult( kwargs, [ resultDataset ] )
 
-    def operate(self, variable: xa.DataArray )-> List[xa.DataArray] :
+    def operate(self, vid: str, variable: xa.DataArray )-> Dict[str,xa.DataArray] :
         opSpecs = self.request['operation']
-        result_arrays: List[xa.DataArray] = []
+        result_arrays: Dict[str,xa.DataArray] = {}
         for opSpec in opSpecs:
             opId = opSpec['name'].split(':')[1]
             opAxis = opSpec['axis']
-            if   opId == "mean": result_arrays.append( variable.mean( dim=opAxis ) )
-            elif opId == "ave":  result_arrays.append(variable.mean(dim=opAxis))
-            elif opId == "max":  result_arrays.append( variable.max( dim=opAxis ) )
-            elif opId == "min":  result_arrays.append( variable.min( dim=opAxis ) )
-            elif opId == "sum":  result_arrays.append(variable.sum(dim=opAxis))
-            elif opId == "std":  result_arrays.append( variable.std( dim=opAxis ) )
+            new_vid = "-".join([vid, opAxis, opId])
+            if   opId == "mean": result_arrays[new_vid] = variable.mean( dim=opAxis )
+            elif opId == "ave":  result_arrays[new_vid] = variable.mean( dim=opAxis)
+            elif opId == "max":  result_arrays[new_vid] = variable.max( dim=opAxis )
+            elif opId == "min":  result_arrays[new_vid] = variable.min( dim=opAxis )
+            elif opId == "sum":  result_arrays[new_vid] = variable.sum( dim=opAxis )
+            elif opId == "std":  result_arrays[new_vid] = variable.std( dim=opAxis )
             else: raise Exception( f"Unknown operation: '{opId}'")
         return result_arrays
