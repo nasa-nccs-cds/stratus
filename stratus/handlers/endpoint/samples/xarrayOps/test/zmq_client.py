@@ -22,9 +22,12 @@ if __name__ == "__main__":
     result: Optional[TaskResult] = task.getResult(block=True)
 
     print("\n\n")
+    print(" Completed computation in " + str(time.time() - start) + " seconds")
     for dset in result.data:
-        print(" Completed computation in " + str(time.time() - start) + " seconds")
         print(f"Received result dataset containing variables: ")
         for name, var in dset.data_vars.items():
             print( f"\t {name}:  dims = {var.dims}, shape = {var.shape}")
+        rpath = f"/tmp/endpoint-sample-result.nc"
+        print( f"Saving result to {rpath}")
+        dset.to_netcdf( rpath )
     print("\n\n")
