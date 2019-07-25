@@ -1,5 +1,5 @@
 import copy, os, time, traceback
-from typing import List, Dict, Set, Iterator, Any, Optional
+from typing import List, Dict, Set, Iterator, Any, Optional, Tuple
 from stratus_endpoint.util.config import StratusLogger, UID
 from stratus.app.client import StratusClient
 from concurrent.futures import wait, as_completed, Executor, Future
@@ -264,7 +264,14 @@ class Workflow(DependencyGraph):
         DependencyGraph.__init__( self, **kwargs )
         self.result: TaskHandle = None
         self.completed_tasks = []
-        self._status = Status.IDLE
+        error_report: Tuple[str, Exception] = kwargs.get('error', None)
+        if error_report:
+            ( self.error_msg, self.exc ) = error_report
+            self._status = Status.ERROR
+            self.result = FailedTask( self.exc )
+        else:
+            self._status = Status.IDLE
+            (self.error_msg, self.exc) = ( None, None )
 
     @DependencyGraph.add.register(WorkflowTask)
     def add( self, obj ):

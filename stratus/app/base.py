@@ -137,8 +137,10 @@ class StratusAppBase(Thread):
             except queue.Empty:
                 return
             except Exception as err:
-                self.logger.error( f"Error ingesting request: {err}\n" + "\n".join(traceback.format_stack()) )
-                self.processError( rid, err )
+                msg =  f"Error ingesting request: {err}\n" + "\n".join(traceback.format_stack())
+                self.logger.error(msg)
+                workflow = Workflow( error=(msg,err) )
+                self.active_workflows[ rid ] = workflow
 
     def update_workflows(self):
 #        if len(self.active_workflows) > 0:
