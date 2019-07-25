@@ -124,10 +124,11 @@ class StratusAppBase(Thread):
     def ingestRequests( self ):
         if not self.requestQueue.empty():
             self.logger.error( f"Ingest requests:  " )
+        rid = ""
         while True:
-            request = self.requestQueue.get_nowait()
-            rid = request.get("rid", UID.randomId(6))
             try:
+                request = self.requestQueue.get_nowait()
+                rid = request.get("rid", UID.randomId(6))
                 self.logger.error(f"Ingest request: {rid}")
                 clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
                 tasks: List[WorkflowTask] = [WorkflowTask(cOpSet) for cOpSet in self.distributeOps(clientOpsets)]
