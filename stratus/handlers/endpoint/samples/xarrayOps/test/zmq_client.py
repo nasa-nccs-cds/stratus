@@ -20,7 +20,10 @@ if __name__ == "__main__":
 
     task: TaskHandle = client.request(requestSpec)
     result: Optional[TaskResult] = task.getResult(block=True)
-    dsets: List[xa.Dataset] = result.data
-    for index, dset in enumerate(dsets):
-        fileName = f"/tmp/xops_endpoint_test_result-{index}.nc"
-        print(f"Got result[{index}]: Saving to file {fileName} ")
+
+    print("\n\n\n")
+    for dset in result.data:
+        print(f"Got result dataset containing Variables: ")
+        for name, var in dset.data_vars.items():
+            print( f"\t\t {name}:  dims = {var.dims}, shape = {var.shape}")
+    print("\n\n\n")
