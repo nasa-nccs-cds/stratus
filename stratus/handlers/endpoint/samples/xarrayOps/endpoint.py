@@ -29,24 +29,21 @@ class XaOpsExecutable(Executable):
 
     def execute(self, **kwargs) -> TaskResult:
         print( f"Executing request {self.request}" )
-        result_datasets: List[xa.Dataset] = []
-        for input in self.inputs:
-            dset : xa.Dataset = input.getDataset()
-            result_datasets.append( dset.mean( dim='time') )
-        return TaskResult( kwargs, result_datasets )
+        inputSpec = self.request['input']
+        dset: xa.Dataset = xa.open_dataset( inputSpec['uri'] )
+        variable: xa.Variable = dset.variables[ inputSpec['name'] ]
+        result_arrays = self.operate( variable )
+        resultDataset = xa.Dataset( result_arrays, dset.coords, dset.attrs)
+        return TaskResult( kwargs, [ resultDataset ] )
 
-
-    def execute1(self, **kwargs) -> TaskResult:
-        print( f"Executing request {self.request}" )
-        result_datasets: List[xa.Dataset] = []
-        for input in self.inputs:
-            result_vars = {}
-            dset : xa.Dataset = input.getDataset()
-            for id, var in dset.data_vars.items():
-                result_vars[id] = self.op( var )
-            result_datasets.append( xa.Dataset( result_vars, dset.coords, dset.attrs ) )
-        return TaskResult( kwargs, result_datasets )
-
-    def op(self, var: xa.DataArray ) -> xa.DataArray:
-        operation = self.request['operation']
-        return var.mean( dim='time' )
+    def operate(self, variable: xa.Variable )-> List[xa.DataArray] :
+        opSpec = self.request['operation']
+        opId = opSpec['name'].split(':')[1]
+        opAxis = opSpec['axis']
+        result_arrays: List[xa.DataArray] = []
+        if   opId == "ave": result_arrays.append( variable.data.ave( dim=opAxis ) )
+        elif opId == "max": result_arrays.append( variable.data.max( dim=opAxis ) )
+        elif opId == "min": result_arrays.append( variable.data.min( dim=opAxis ) )
+        elif opId == "std": result_arrays.append( variable.data.std( dim=opAxis ) )
+        else: raise Exception( f"Unknown operation: '{opId}'")
+        return result_arrays
