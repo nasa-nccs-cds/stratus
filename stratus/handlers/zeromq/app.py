@@ -96,11 +96,14 @@ class StratusApp(StratusServerApp):
                     response = { "status":"error", "error": msg }
                     self.sendResponseMessage(StratusResponse(submissionId, response))
             except Exception as ex:
-                tb = traceback.format_exc()
-                self.logger.error( "@@Portal: Execution error: " + str(ex) )
-                self.logger.error( tb )
-                response = { "status":"error",  "error": str(ex), "traceback": tb }
-                self.sendResponseMessage(StratusResponse(submissionId, response))
+                self.processError( submissionId, ex )
+
+    def processError(self, rid: str, ex: Exception ):
+        tb = traceback.format_exc()
+        self.logger.error("@@Portal: Execution error: " + str(ex))
+        self.logger.error(tb)
+        response = {"status": "error", "error": str(ex), "traceback": tb}
+        self.sendResponseMessage( StratusResponse( rid, response ) )
 
     def updateInteractions(self):
         self.processRequests()

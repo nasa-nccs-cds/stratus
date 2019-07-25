@@ -87,6 +87,9 @@ class StratusAppBase(Thread):
             time.sleep(0)
 
     @abc.abstractmethod
+    def processError(self, rid: str, ex: Exception): pass
+
+    @abc.abstractmethod
     def initInteractions(self): pass
 
     @abc.abstractmethod
@@ -122,17 +125,19 @@ class StratusAppBase(Thread):
         if not self.requestQueue.empty():
             self.logger.error( f"Ingest requests:  " )
         while True:
+            request = self.requestQueue.get_nowait()
+            rid = request.get("rid", UID.randomId(6))
             try:
-                request = self.requestQueue.get_nowait()
-                self.logger.error(f"Ingest request: {request['rid']}")
+                self.logger.error(f"Ingest request: {rid}")
                 clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
                 tasks: List[WorkflowTask] = [WorkflowTask(cOpSet) for cOpSet in self.distributeOps(clientOpsets)]
                 workflow = Workflow(nodes=tasks)
-                self.active_workflows[ request["rid"] ] = workflow
+                self.active_workflows[ rid ] = workflow
             except queue.Empty:
                 return
             except Exception as err:
                 self.logger.error( f"Error ingesting request: {err}\n" + "\n".join(traceback.format_stack()) )
+                self.processError( rid, err )
 
     def update_workflows(self):
 #        if len(self.active_workflows) > 0:
