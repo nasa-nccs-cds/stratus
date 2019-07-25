@@ -42,9 +42,11 @@ class XaOpsExecutable(Executable):
         for opSpec in opSpecs:
             opId = opSpec['name'].split(':')[1]
             opAxis = opSpec['axis']
-            if   opId == "ave": result_arrays.append( variable.ave( dim=opAxis ) )
-            elif opId == "max": result_arrays.append( variable.max( dim=opAxis ) )
-            elif opId == "min": result_arrays.append( variable.min( dim=opAxis ) )
-            elif opId == "std": result_arrays.append( variable.std( dim=opAxis ) )
+            if   opId == "mean": result_arrays.append( variable.mean( dim=opAxis ) )
+            elif opId == "ave":  result_arrays.append(variable.mean(dim=opAxis))
+            elif opId == "max":  result_arrays.append( variable.max( dim=opAxis ) )
+            elif opId == "min":  result_arrays.append( variable.min( dim=opAxis ) )
+            elif opId == "sum":  result_arrays.append(variable.sum(dim=opAxis))
+            elif opId == "std":  result_arrays.append( variable.std( dim=opAxis ) )
             else: raise Exception( f"Unknown operation: '{opId}'")
         return result_arrays
