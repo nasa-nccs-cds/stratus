@@ -21,13 +21,12 @@ if __name__ == "__main__":
     task: TaskHandle = client.request(requestSpec)
     result: Optional[TaskResult] = task.getResult(block=True)
 
-    print("\n\n")
-    print(" Completed computation in " + str(time.time() - start) + " seconds")
-    for dset in result.data:
+    print("\n\nCompleted computation in " + str(time.time() - start) + " seconds")
+    for ind, dset in enumerate(result.data):
         print(f"Received result dataset containing variables: ")
         for name, var in dset.data_vars.items():
             print( f"\t {name}:  dims = {var.dims}, shape = {var.shape}")
-        rpath = f"/tmp/endpoint-sample-result.nc"
-        print( f"Saving result to {rpath}")
+        rpath = f"/tmp/endpoint-sample-result-{ind}.nc"
+        print( f"Saving result to {rpath}\n\n")
         dset.to_netcdf( rpath )
-    print("\n\n")
+
