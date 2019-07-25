@@ -37,13 +37,14 @@ class XaOpsExecutable(Executable):
         return TaskResult( kwargs, [ resultDataset ] )
 
     def operate(self, variable: xa.Variable )-> List[xa.DataArray] :
-        opSpec = self.request['operation']
-        opId = opSpec['name'].split(':')[1]
-        opAxis = opSpec['axis']
+        opSpecs = self.request['operation']
         result_arrays: List[xa.DataArray] = []
-        if   opId == "ave": result_arrays.append( variable.data.ave( dim=opAxis ) )
-        elif opId == "max": result_arrays.append( variable.data.max( dim=opAxis ) )
-        elif opId == "min": result_arrays.append( variable.data.min( dim=opAxis ) )
-        elif opId == "std": result_arrays.append( variable.data.std( dim=opAxis ) )
-        else: raise Exception( f"Unknown operation: '{opId}'")
+        for opSpec in opSpecs:
+            opId = opSpec['name'].split(':')[1]
+            opAxis = opSpec['axis']
+            if   opId == "ave": result_arrays.append( variable.data.ave( dim=opAxis ) )
+            elif opId == "max": result_arrays.append( variable.data.max( dim=opAxis ) )
+            elif opId == "min": result_arrays.append( variable.data.min( dim=opAxis ) )
+            elif opId == "std": result_arrays.append( variable.data.std( dim=opAxis ) )
+            else: raise Exception( f"Unknown operation: '{opId}'")
         return result_arrays
