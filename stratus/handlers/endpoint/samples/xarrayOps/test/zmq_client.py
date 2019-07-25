@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
     requestSpec = dict(
         input=dict(uri=uri, name=f"tas"),
-        operation=dict(name="xop:ave", axis="time")
+        operation=[ dict(name="xop:ave", axis="time") ]
     )
 
     task: TaskHandle = client.request(requestSpec)
