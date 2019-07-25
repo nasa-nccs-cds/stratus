@@ -31,12 +31,12 @@ class XaOpsExecutable(Executable):
         print( f"Executing request {self.request}" )
         inputSpec = self.request['input']
         dset: xa.Dataset = xa.open_dataset( inputSpec['uri'] )
-        variable: xa.Variable = dset.variables[ inputSpec['name'] ]
+        variable: xa.DataArray = dset.data_vars[ inputSpec['name'] ]
         result_arrays = self.operate( variable )
         resultDataset = xa.Dataset( result_arrays, dset.coords, dset.attrs)
         return TaskResult( kwargs, [ resultDataset ] )
 
-    def operate(self, variable: xa.Variable )-> List[xa.DataArray] :
+    def operate(self, variable: xa.DataArray )-> List[xa.DataArray] :
         opSpecs = self.request['operation']
         result_arrays: List[xa.DataArray] = []
         for opSpec in opSpecs:
