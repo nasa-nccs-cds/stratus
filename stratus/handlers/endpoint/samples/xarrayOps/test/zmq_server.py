@@ -5,7 +5,9 @@ HERE: str = os.path.dirname(os.path.abspath(__file__))
 SETTINGS_FILE: str = os.path.join( HERE, "zmq_server_settings.ini" )
 
 if __name__ == '__main__':
-    if __name__ == "__main__":
-        core: StratusCore = StratusCore(SETTINGS_FILE)
-        app: StratusApp = core.getApplication()
-        app.run()
+
+# Start up a STRATUS server as configured in the settings file
+
+    core: StratusCore = StratusCore(SETTINGS_FILE)
+    app: StratusApp = core.getApplication()
+    app.run()
