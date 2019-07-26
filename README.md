@@ -42,6 +42,7 @@ A whitepaper describing the Stratus framework is available at: https://www.dropb
 ##### Examples
 
 In order to expose some capability within the Stratus framework, that capability must be wrapped as a Stratus endpoint.
-An example of a Stratus endpoint wrapping (with deployment examples in the 'test' subdirectory) can be found at: https://github.com/nasa-nccs-cds/edask/tree/stratus/edas/stratus
+Examples of Stratus endpoint wrappings can be found in the `stratus/handlers/endpoint/samples` directory.
+
 
 
