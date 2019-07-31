@@ -56,8 +56,8 @@ class StratusZMQResponder(Thread):
         self.executing_jobs: Dict[str, StratusResponse] = {}
         self.status_reports: Dict[str,str] = {}
         self.client_address = kwargs.get( "client_address", "*" )
-        self.socket: zmq.Socket = self.initSocket()
         self.getKeyDir( **kwargs )
+        self.socket: zmq.Socket = self.initSocket()
 
     def getKeyDir( self, **kwargs ):
         base_dir = kwargs.get( "certificate_path", os.path.expanduser("~/.stratus/") )
