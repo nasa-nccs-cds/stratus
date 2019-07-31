@@ -72,14 +72,14 @@ class StratusZMQResponder(Thread):
             if taskResult is None:
                 self.logger.warn( f" Enpty result in request {rid}")
             elif taskResult.getResultClass() == "METADATA":
-                self.logger.info(f"@@R: process Metadata Task, header = {taskResult.header}")
+                self.logger.info(f"@@SR: process Metadata Task, header = {taskResult.header}")
                 metadata = taskResult.header
                 metadata["type"] = taskResult.getResultType()
                 metadata["status"] = str(Status.COMPLETED)
                 return self.createMessage( rid, metadata )
             else:
                 dataset = taskResult.getDataset()
-                self.logger.info(f"@@R: process Task, Num datasets= {taskResult.size()}, header = {taskResult.header}")
+                self.logger.info(f"@@SR: process Task, Num datasets= {taskResult.size()}, header = {taskResult.header}")
                 return self.createDataPacket(  rid, dataset )
         elif (status == Status.ERROR):
             taskHandle: TaskHandle = workflow.getResult()
@@ -91,11 +91,11 @@ class StratusZMQResponder(Thread):
         completed_requests = []
         for rid, workflow in workflows.items():
             status = workflow.status()
-#            self.logger.info( f"@@R: process Workflow {rid}, status= {status} " )
+#            self.logger.info( f"@@SR: process Workflow {rid}, status= {status} " )
             self.setExeStatus( rid, status )
             if status in [Status.COMPLETED, Status.ERROR, Status.CANCELED]:
                 dataPacket = self.getDataPacket( rid, status, workflow )
-                self.logger.info(f"@@R: Sending Completed Result for request {rid}" )
+                self.logger.info(f"@@SR: Sending Completed Result for request {rid}" )
                 self.sendDataPacket( dataPacket )
                 completed_requests.append(rid)
         return completed_requests
@@ -105,15 +105,15 @@ class StratusZMQResponder(Thread):
         if dataPacket.hasData():
             bdata: bytes = dataPacket.getTransferData()
             multipart_msg.append( bdata )
-            self.logger.info("@@R: Sent data packet for " + dataPacket.id + ", data Size: " + str(len(bdata)) )
-            self.logger.info("@@R: Data header: " + dataPacket.message)
+            self.logger.info("@@SR: Sent data packet for " + dataPacket.id + ", data Size: " + str(len(bdata)) )
+            self.logger.info("@@SR: Data header: " + dataPacket.message)
         else:
-            self.logger.info( "@@R: Sent data header only for " + dataPacket.id + "---> NO DATA!   BODY = " + dataPacket.message )
+            self.logger.info( "@@SR: Sent data header only for " + dataPacket.id + "---> NO DATA!   BODY = " + dataPacket.message )
         self.socket.send_multipart( multipart_msg )
 
     def setExeStatus( self, rid: str, status: Status ):
         self.status_reports[rid] = status
-#        self.logger.info(f"@@R: --> Set Execution Status[{rid}]: {str(status)}")
+#        self.logger.info(f"@@SR: --> Set Execution Status[{rid}]: {str(status)}")
         try:
             if status == Status.EXECUTING:
                 self.executing_jobs[rid] = StratusResponse(rid, {"status": "executing"})
@@ -130,9 +130,9 @@ class StratusZMQResponder(Thread):
             socket.curve_publickey = server_public
             socket.curve_server = True
             socket.bind( "tcp://{}:{}".format( self.client_address, self.response_port ) )
-            self.logger.info( "@@R: --> Bound response socket to client at {} on port: {}".format( self.client_address, self.response_port ) )
+            self.logger.info( "@@SR: --> Bound authenticated response socket to client at {} on port: {}".format( self.client_address, self.response_port ) )
         except Exception as err:
-            self.logger.error( "@@R: Error initializing response socket on {}, port {}: {}".format( self.client_address, self.response_port, err ) )
+            self.logger.error( "@@SR: Error initializing response socket on {}, port {}: {}".format( self.client_address, self.response_port, err ) )
             self.logger.error(traceback.format_exc())
         return socket
 
