@@ -50,11 +50,11 @@ class ZMQClient(StratusClient):
         self.host_address = self.parm( "host", "127.0.0.1" )
         self.default_request_port = int( self.parm( "request_port", 4556 ) )
         self.response_port = int( self.parm( "response_port", 4557 ) )
-        self.connector = ConnectionMode( **kwargs )
 
     def init(self, **kwargs):
         try:
             self.context = zmq.Context()
+            self.connector = ConnectionMode(**kwargs)
             self.request_socket = self.context.socket(zmq.REQ)
             self.request_port = self.connector.connectSocket(self.request_socket, self.host_address, self.default_request_port )
             self.log("[1]Connected request socket to server {0} on port: {1}".format( self.host_address, self.request_port ) )
