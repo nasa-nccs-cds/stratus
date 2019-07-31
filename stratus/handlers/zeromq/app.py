@@ -91,7 +91,6 @@ class StratusApp(StratusServerApp):
         for rid in completed_workflows: self.clearWorkflow( rid )
 
     def processRequests(self):
-        self.logger.info( f"@@STRATUS-APP:  Listening for requests in port {self.request_port}" )
         while self.request_socket.poll(0) != 0:
             request_header = self.request_socket.recv_string().strip().strip("'")
             parts = request_header.split("!")
