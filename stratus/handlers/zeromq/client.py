@@ -1,10 +1,11 @@
 from stratus.app.client import StratusClient, stratusrequest
-import zmq, traceback, json
+import zmq, zmq.auth, traceback, json
 from stratus_endpoint.util.config import StratusLogger, UID
 from threading import Thread
 from typing import Dict, Optional, List
 from stratus.util.parsing import s2b, b2s
 from stratus_endpoint.handler.base import TaskHandle, Status, TaskResult, FailedTask
+from zmq.auth.thread import ThreadAuthenticator
 import os, pickle, queue
 import xarray as xa
 from enum import Enum

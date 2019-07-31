@@ -2,7 +2,7 @@ import json, string, random, abc, os, pickle, collections
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Tuple, Optional
 from stratus_endpoint.util.config import StratusLogger
 from threading import Thread
-import zmq, traceback, time, logging, xml, socket
+import zmq, zmq.auth, traceback, time, logging, xml, socket
 from stratus.app.operations import Status
 from stratus_endpoint.handler.base import TaskHandle
 from stratus.app.operations import Workflow
@@ -57,6 +57,11 @@ class StratusZMQResponder(Thread):
         self.status_reports: Dict[str,str] = {}
         self.client_address = kwargs.get( "client_address", "*" )
         self.socket: zmq.Socket = self.initSocket()
+        self.getKeyDir( **kwargs )
+
+    def getKeyDir( self, **kwargs ):
+        base_dir = kwargs.get( "certificate_path", os.path.expanduser("~/.stratus/") )
+        self.secret_keys_dir = os.path.join(base_dir, 'private_keys')
 
     def getDataPacket(self, rid: str, status: Status, workflow: Workflow ) -> DataPacket:
         from stratus_endpoint.handler.base import TaskResult
@@ -119,6 +124,11 @@ class StratusZMQResponder(Thread):
     def initSocket(self) -> zmq.Socket:
         socket: zmq.Socket   = self.context.socket(zmq.PUB)
         try:
+            server_secret_file = os.path.join( self.secret_keys_dir, "server.key_secret" )
+            server_public, server_secret = zmq.auth.load_certificate(server_secret_file)
+            socket.curve_secretkey = server_secret
+            socket.curve_publickey = server_public
+            socket.curve_server = True
             socket.bind( "tcp://{}:{}".format( self.client_address, self.response_port ) )
             self.logger.info( "@@R: --> Bound response socket to client at {} on port: {}".format( self.client_address, self.response_port ) )
         except Exception as err:
