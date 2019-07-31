@@ -134,7 +134,7 @@ class Handlers:
                 type = package_name.split(".")[-1]
                 self._addConstructor(type, constructor)
             except ModuleNotFoundError as err:
-                self.logger.info( "No handler found for path: " + module_name + ": " + repr(err))
+                self.logger.debug( "No handler found for path: " + module_name + ": " + repr(err))
             except Exception as err:
                 msg = "Unable to register constructor for {}: {} ({})".format( package_name, str(err), err.__class__.__name__ )
                 self.logger.error( msg )
