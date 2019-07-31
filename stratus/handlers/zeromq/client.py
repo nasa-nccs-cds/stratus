@@ -16,20 +16,25 @@ class ConnectionMode():
     CONNECT = 2
     DefaultPort = 4336
 
-    @classmethod
-    def bindSocket( cls, socket: zmq.Socket, server_address: str, port: int ):
-        test_port = port if( port > 0 ) else cls.DefaultPort
-        while( True ):
-            try:
-                socket.bind( "tcp://{0}:{1}".format(server_address,test_port) )
-                return test_port
-            except Exception as err:
-                test_port = test_port + 1
+    def __init__(self, **kwargs):
+        cert_dir = kwargs.get("certificate_path", os.path.expanduser("~/.stratus/zmq"))
+        self.public_keys_dir = os.path.join( cert_dir, 'public_keys' )
+        self.secret_keys_dir = os.path.join( cert_dir, 'private_keys' )
 
-    @classmethod
-    def connectSocket( cls, socket: zmq.Socket, host: str, port: int ):
+    def connectSocket( self, socket: zmq.Socket, host: str, port: int ):
+        self.addClientAuth( socket )
         socket.connect("tcp://{0}:{1}".format( host, port ) )
         return port
+
+    def addClientAuth( self, socket: zmq.Socket ):
+        client_secret_file = os.path.join( self.secret_keys_dir, "client.key_secret")
+        client_public, client_secret = zmq.auth.load_certificate(client_secret_file)
+        socket.curve_secretkey = client_secret
+        socket.curve_publickey = client_public
+
+        server_public_file = os.path.join( self.public_keys_dir, "server.key")
+        server_public, _ = zmq.auth.load_certificate(server_public_file)
+        socket.curve_serverkey = server_public
 
 class MessageState(Enum):
     ARRAY = 0
@@ -43,12 +48,13 @@ class ZMQClient(StratusClient):
         self.host_address = self.parm( "host", "127.0.0.1" )
         self.default_request_port = int( self.parm( "request_port", 4556 ) )
         self.response_port = int( self.parm( "response_port", 4557 ) )
+        self.connector = ConnectionMode( **kwargs )
 
     def init(self, **kwargs):
         try:
             self.context = zmq.Context()
             self.request_socket = self.context.socket(zmq.REQ)
-            self.request_port = ConnectionMode.connectSocket(self.request_socket, self.host_address, self.default_request_port )
+            self.request_port = self.connector.connectSocket(self.request_socket, self.host_address, self.default_request_port )
             self.log("[1]Connected request socket to server {0} on port: {1}".format( self.host_address, self.request_port ) )
             super(ZMQClient, self).init()
 
@@ -56,6 +62,7 @@ class ZMQClient(StratusClient):
             err_msg =  "\n-------------------------------\nWorker Init error: {0}\n{1}-------------------------------\n".format(err, traceback.format_exc() )
             self.logger.error(err_msg)
             self.shutdown()
+
 
 
     @stratusrequest
@@ -135,7 +142,7 @@ class ResponseManager(Thread):
         try:
             self.log("Run RM thread")
             response_socket: zmq.Socket = self.context.socket( zmq.SUB )
-            response_port = ConnectionMode.connectSocket( response_socket, self.host, self.port )
+            response_port = self.connector.connectSocket( response_socket, self.host, self.port )
             response_socket.subscribe( s2b( self.requestId ) )
             self.log("Connected response socket on port {} with subscription (client/request) id: '{}', active = {}".format( response_port, self.requestId, str(self.active) ) )
             while( self.active ):

@@ -1,10 +1,14 @@
 import os, sys
 import shutil
 import zmq.auth
+from stratus_endpoint.util.config import StratusLogger
 
 def generate_certificates(base_dir):
     ''' Generate client and server CURVE certificate files'''
+    logger = StratusLogger.getLogger()
     keys_dir = os.path.join(base_dir, 'certificates')
+    if not os.path.exists(keys_dir): os.makedirs(keys_dir)
+    logger.info( f"Generating ZMQ key and certificate files in {base_dir}")
     public_keys_dir = os.path.join(base_dir, 'public_keys')
     secret_keys_dir = os.path.join(base_dir, 'private_keys')
 
@@ -31,5 +35,5 @@ def generate_certificates(base_dir):
 if __name__ == '__main__':
     if zmq.zmq_version_info() < (4,0):
         raise RuntimeError("Security is not supported in libzmq version < 4.0. libzmq version {0}".format(zmq.zmq_version()))
-    cert_dir = sys.argv[1] if len(sys.argv ) > 1 else os.path.expanduser( "~/.stratus" )
+    cert_dir = sys.argv[1] if len(sys.argv ) > 1 else os.path.expanduser( "~/.stratus/zmq" )
     generate_certificates( cert_dir )
