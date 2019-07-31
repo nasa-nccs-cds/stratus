@@ -17,9 +17,10 @@ class ConnectionMode():
     DefaultPort = 4336
 
     def __init__(self, **kwargs):
-        cert_dir = kwargs.get("certificate_path", os.path.expanduser("~/.stratus/zmq"))
-        self.public_keys_dir = os.path.join( cert_dir, 'public_keys' )
-        self.secret_keys_dir = os.path.join( cert_dir, 'private_keys' )
+        self.logger = StratusLogger.getLogger()
+        self.cert_dir = kwargs.get("certificate_path", os.path.expanduser("~/.stratus/zmq"))
+        self.public_keys_dir = os.path.join( self.cert_dir, 'public_keys' )
+        self.secret_keys_dir = os.path.join( self.cert_dir, 'private_keys' )
 
     def connectSocket( self, socket: zmq.Socket, host: str, port: int ):
         self.addClientAuth( socket )
@@ -27,6 +28,7 @@ class ConnectionMode():
         return port
 
     def addClientAuth( self, socket: zmq.Socket ):
+        self.logger.info( f"Adding ZMQ client auth using keys from dir: {self.cert_dir}")
         client_secret_file = os.path.join( self.secret_keys_dir, "client.key_secret")
         client_public, client_secret = zmq.auth.load_certificate(client_secret_file)
         socket.curve_secretkey = client_secret
@@ -94,7 +96,7 @@ class ZMQClient(StratusClient):
     def sendMessage(self, type: str, requestData: Dict, **kwargs ) -> Dict:
         requestId = requestData.get( "rid", UID.randomId(6) )
         msg = json.dumps( requestData )
-        self.log( "Sending {} request {} on port {}, requestId = {}.".format( type, msg, str(self.request_port), requestId )  )
+        self.log( "Sending authenticated {} request {} on port {}, requestId = {}.".format( type, msg, str(self.request_port), requestId )  )
         try:
             message = "!".join( [ requestId, type, msg ] )
             self.request_socket.send_string( message )
