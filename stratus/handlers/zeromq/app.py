@@ -74,6 +74,7 @@ class StratusApp(StratusServerApp):
 
             self.auth = ThreadAuthenticator( self.zmqContext )
             self.auth.start()
+            self.auth.allow( "127.0.0.1" )
             self.auth.allow( self.client_address )
             self.auth.configure_curve( domain='*', location=self.public_keys_dir )  # Use 'location=zmq.auth.CURVE_ALLOW_ANY' for stonehouse security
 
@@ -90,6 +91,7 @@ class StratusApp(StratusServerApp):
         for rid in completed_workflows: self.clearWorkflow( rid )
 
     def processRequests(self):
+        self.logger.info( f"@@STRATUS-APP:  Listening for requests in port {self.request_port}" )
         while self.request_socket.poll(0) != 0:
             request_header = self.request_socket.recv_string().strip().strip("'")
             parts = request_header.split("!")
