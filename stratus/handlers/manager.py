@@ -125,7 +125,7 @@ class Handlers:
 
     def _addConstructors(self):
         packageList = self._listPackages()
-        self.logger.debug( f"Adding constructors for packages {packageList}")
+        self.logger.info( f"Adding constructors for packages {packageList}")
         for package_name in packageList:
             try:
                 module_name = package_name + ".service"
