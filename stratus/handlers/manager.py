@@ -98,6 +98,8 @@ class Handlers:
                 specs.append( spec )
             elif name == "stratus":
                 raise Exception( f"Must provide 'type' (in {htypes}) parm in 'stratus' configuration: {spec}")
+            else:
+                self.logger.warn( f" No constructor available for {spec.get('type')}-type client {name}, available types = {htypes}")
         return specs
 
     def _addConstructor(self, type: str, handler_constructor: Callable[[], StratusFactory]):
@@ -123,6 +125,7 @@ class Handlers:
 
     def _addConstructors(self):
         packageList = self._listPackages()
+        self.logger.debug( f"Adding constructors for packages {packageList}")
         for package_name in packageList:
             try:
                 module_name = package_name + ".service"

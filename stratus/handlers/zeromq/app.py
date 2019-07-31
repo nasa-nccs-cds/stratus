@@ -106,7 +106,7 @@ class StratusApp(StratusServerApp):
                     if len(parts) <= 2: raise Exception( "Missing parameters to exe request")
                     request["rid"] = submissionId
                     self.logger.info( "Processing zmq Request: '{}' '{}' '{}'".format( submissionId, rType, str(request)) )
-                    self.submitWorkflow(request)                                                                                                             #   TODO: Send results when tasks complete.
+                    self.submitWorkflow(request)                                                                            #   TODO: Send results when tasks complete.
                     response = { "status": "Executing" }
                     self.sendResponseMessage(StratusResponse(submissionId, response))
                 elif rType == "quit" or rType == "shutdown":
