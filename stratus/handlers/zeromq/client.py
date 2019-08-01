@@ -22,8 +22,7 @@ class ConnectionMode():
         self.public_keys_dir = os.path.join( self.cert_dir, 'public_keys' )
         self.secret_keys_dir = os.path.join( self.cert_dir, 'private_keys' )
         if not ( os.path.exists(self.public_keys_dir) and os.path.exists(self.secret_keys_dir) ):
-            from stratus.handlers.zeromq.security.generate_certificates import generate_certificates
-            generate_certificates( self.cert_dir, True )
+            raise Exception( f"Must copy zmq server certificates directory to {self.cert_dir}")
 
     def connectSocket( self, socket: zmq.Socket, host: str, port: int ):
         self.addClientAuth( socket )

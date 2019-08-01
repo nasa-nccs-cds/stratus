@@ -37,7 +37,7 @@ def run():
     auth.start()
     auth.allow('127.0.0.1')
     # Tell authenticator to use the certificate in a directory
-    auth.configure_curve( domain='*', location=zmq.auth.CURVE_ALLOW_ANY )   #  Use 'location=zmq.auth.CURVE_ALLOW_ANY' for stonehouse, 'location=public_keys_dir' for Ironhouse
+    auth.configure_curve( domain='*', location=public_keys_dir )   #  Use 'location=zmq.auth.CURVE_ALLOW_ANY' for stonehouse, 'location=public_keys_dir' for Ironhouse
 
     server = ctx.socket(zmq.PUSH)
 
