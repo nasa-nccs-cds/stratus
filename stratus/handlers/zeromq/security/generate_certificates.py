@@ -3,7 +3,7 @@ import shutil
 import zmq.auth
 from stratus_endpoint.util.config import StratusLogger
 
-def generate_certificates(base_dir):
+def generate_certificates( base_dir, client_only = False ):
     ''' Generate client and server CURVE certificate files'''
     logger = StratusLogger.getLogger()
     keys_dir = os.path.join(base_dir, 'certificates')
