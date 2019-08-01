@@ -22,7 +22,7 @@ class ConnectionMode():
         self.public_keys_dir = os.path.join( self.cert_dir, 'public_keys' )
         self.secret_keys_dir = os.path.join( self.cert_dir, 'private_keys' )
         if not ( os.path.exists(self.public_keys_dir) and os.path.exists(self.secret_keys_dir) ):
-            raise Exception( f"Must copy zmq server certificates directory to {self.cert_dir}")
+            raise Exception( f"Must copy the contents of the zmq server certificates directory to {self.cert_dir}")
 
     def connectSocket( self, socket: zmq.Socket, host: str, port: int ):
         self.addClientAuth( socket )
