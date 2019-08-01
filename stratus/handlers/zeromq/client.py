@@ -65,8 +65,6 @@ class ZMQClient(StratusClient):
             self.logger.error(err_msg)
             self.shutdown()
 
-
-
     @stratusrequest
     def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
         response = self.sendMessage( "exe", requestSpec, **kwargs )
@@ -74,7 +72,7 @@ class ZMQClient(StratusClient):
         if "error" in response: raise Exception( f"Server Error: {response['error']}" )
         status = Status.decode( response.get('status') )
         self.log( str(response) )
-        response_manager = ResponseManager( self.context, response["rid"], self.host_address, self.response_port, status, self.cache_dir, **kwargs )
+        response_manager = ResponseManager( self.context, self.connector, response["rid"], self.host_address, self.response_port, status, self.cache_dir, **kwargs )
         response_manager.start()
         return zmqTask( self.cid, response_manager )
 
@@ -111,9 +109,10 @@ class ZMQClient(StratusClient):
 
 class ResponseManager(Thread):
 
-    def __init__(self, context: zmq.Context, rid: str, host: str, port: int, status: Status, cache_dir: str, **kwargs ):
+    def __init__(self, context: zmq.Context, connector: ConnectionMode, rid: str, host: str, port: int, status: Status, cache_dir: str, **kwargs ):
         Thread.__init__(self)
         self.context = context
+        self._connector = connector
         self.logger = StratusLogger.getLogger()
         self.host = host
         self.port = port
@@ -144,7 +143,7 @@ class ResponseManager(Thread):
         try:
             self.log("Run RM thread")
             response_socket: zmq.Socket = self.context.socket( zmq.SUB )
-            response_port = self.connector.connectSocket( response_socket, self.host, self.port )
+            response_port = self._connector.connectSocket( response_socket, self.host, self.port )
             response_socket.subscribe( s2b( self.requestId ) )
             self.log("Connected response socket on port {} with subscription (client/request) id: '{}', active = {}".format( response_port, self.requestId, str(self.active) ) )
             while( self.active ):
