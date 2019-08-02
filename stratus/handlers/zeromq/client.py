@@ -18,7 +18,7 @@ class ConnectionMode():
 
     def __init__(self, **kwargs):
         self.logger = StratusLogger.getLogger()
-        self.cert_dir = kwargs.get("certificate_path", os.path.expanduser("~/.stratus/zmq"))
+        self.cert_dir = os.path.expanduser( kwargs.get("certificate_path", "~/.stratus/zmq" ) )
         self.public_keys_dir = os.path.join( self.cert_dir, 'public_keys' )
         self.secret_keys_dir = os.path.join( self.cert_dir, 'private_keys' )
         if not ( os.path.exists(self.public_keys_dir) and os.path.exists(self.secret_keys_dir) ):
