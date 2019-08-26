@@ -77,7 +77,7 @@ class StratusApp(StratusServerApp):
             self.auth.start()
             self.auth.allow( "127.0.0.1" )
             self.auth.allow( self.client_address )
-            self.auth.configure_curve( domain='*', location=self.public_keys_dir )  # Use 'location=zmq.auth.CURVE_ALLOW_ANY' for stonehouse security
+            self.auth.configure_curve( domain='*', location=zmq.auth.CURVE_ALLOW_ANY ) # self.public_keys_dir )  # Use 'location=zmq.auth.CURVE_ALLOW_ANY' for stonehouse security
 
             self.request_socket: zmq.Socket = self.zmqContext.socket(zmq.REP)
             self.responder = StratusZMQResponder( self.zmqContext, self.response_port, client_address = self.client_address, certificate_path=self.cert_dir )
