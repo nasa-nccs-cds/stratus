@@ -191,7 +191,8 @@ class DependencyGraph():
             for oid in dnode.getOutputs():
                 if oid not in outgoing_connection_ids: olist.append( Connection(oid,nid,None) )
         if not self._allow_multiple_outputs:
-            if len( olist ) > 1: raise Exception( "Multiple output nodes in workflow (not allowed)")
+            if len( olist ) > 1:
+                raise Exception( f"Multiple output nodes in workflow (not allowed), olist = {[c.__repr__() for c in olist]}, outgoing_connection_ids={outgoing_connection_ids}")
         if len(olist) == 0: raise Exception("Missing output node in workflow")
         return olist
 
