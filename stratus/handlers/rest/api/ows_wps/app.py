@@ -20,6 +20,7 @@ class RestAPI(RestAPIBase):
         self.jenv = Environment( loader=PackageLoader( f'stratus.handlers.rest.api.{self.API}',  "templates" ), autoescape=select_autoescape(['html','xml']) )
         self.templates = { template:self.jenv.get_template(f'{template}.xml') for template in ["describe_process", "execute_response", "get_capabilities"] }
         self.dapRoute = kwargs.get( "dapRoute", None )
+        self.secureConnection = False
 
     def parseDatainputs(self, datainputs: str) -> Dict:
         if datainputs is None: return {}
@@ -68,7 +69,8 @@ class RestAPI(RestAPIBase):
         process = dict( identifier="workflow", title="", abstract="", profile="" )
         if addDataRefs:
             url['file'] = f"{request.url_root}{self.API}/file?rid={rid}"
-            url['data'] = f"{request.url_root}{self.API}/data?rid={rid}"
+            if self.secureConnection:
+                url['data'] = f"{request.url_root}{self.API}/data?rid={rid}"
             if self.dapRoute is not None:
                 url['dap'] = f"{self.dapRoute}/{rid}.nc"
         return self.render( 'execute_response', status=status, url=url, process=process )
@@ -172,6 +174,8 @@ class RestAPI(RestAPIBase):
 
         @bp.route('/data', methods=['GET'])
         def data_result():
+            if not self.secureConnection:
+                return self.getErrorResponse("Can't serialize data over an insecure connection")
             rid = self.getParameter("rid")
             workflow = self.app.getWorkflow(rid)
             if workflow.status() == Status.EXECUTING:

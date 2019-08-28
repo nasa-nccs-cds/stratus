@@ -19,6 +19,7 @@ class RestAPI(RestAPIBase):
         self.jenv = Environment( loader=PackageLoader( 'stratus.handlers.rest.api.wps',  "templates" ), autoescape=select_autoescape(['html','xml']) )
         self.templates = { template:self.jenv.get_template(f'{template}.xml') for template in ["describe_process", "execute_response", "get_capabilities"] }
         self.dapRoute = kwargs.get( "dapRoute", None )
+        self.secureConnection = False
 
     def parseDatainputs(self, datainputs: str) -> Dict:
         if datainputs is None: return {}
@@ -65,7 +66,8 @@ class RestAPI(RestAPIBase):
         url = dict( status=f"{request.url_root}wps/status?rid={rid}" )
         if addDataRefs:
             url['file'] = f"{request.url_root}wps/file?rid={rid}"
-            url['data'] = f"{request.url_root}wps/data?rid={rid}"
+            if self.secureConnection:
+                url['data'] = f"{request.url_root}wps/data?rid={rid}"
             if self.dapRoute is not None:
                 url['dap'] = f"{self.dapRoute}/{rid}.nc"
         return self.render( 'execute_response', status=status, url=url )
@@ -157,6 +159,8 @@ class RestAPI(RestAPIBase):
 
         @bp.route('/data', methods=['GET'])
         def data_result():
+            if not self.secureConnection:
+                return self.getErrorResponse("Can't serialize data over an insecure connection")
             rid = self.getParameter("rid")
             task: TaskHandle = self.app.getTask( rid )
             assert task is not None, f"Can't find task for rid {rid}, current tasks: {self.app.getTaskIds()}"
