@@ -8,7 +8,7 @@ from stratus_endpoint.handler.base import TaskHandle
 from stratus.app.base import StratusAppBase
 from typing import *
 from stratus.handlers.rest.app import RestAPIBase
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname( os.path.abspath(__file__) )
 TEMPLATES = os.path.join(HERE, "templates")
 
 class RestAPI(RestAPIBase):
