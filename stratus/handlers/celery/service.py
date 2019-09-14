@@ -15,6 +15,9 @@ class ServiceHandler( Handler ):
         return CeleryClient( core, **kwargs )
 
     def newApplication(self, core: StratusCore, **kwargs ) -> StratusApp:
-        return StratusApp( core )
+        from .app import app
+        stratusApp =  StratusApp( core )
+        app.stratusApp = stratusApp
+        return stratusApp
 
 

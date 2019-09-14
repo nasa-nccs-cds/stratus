@@ -121,6 +121,9 @@ class StratusAppBase(Thread):
         self.registeredRequests.add( request["rid"] )
         return request
 
+    def getWorkflow( self, tasks: List[WorkflowTask] ) -> Workflow:
+        return Workflow(nodes=tasks)
+
     def ingestRequests( self ):
         if not self.requestQueue.empty():
             self.logger.error( f"Ingest requests:  " )
@@ -132,8 +135,7 @@ class StratusAppBase(Thread):
                 self.logger.error(f"Ingest request: {rid}")
                 clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
                 tasks: List[WorkflowTask] = [WorkflowTask(cOpSet) for cOpSet in self.distributeOps(clientOpsets)]
-                workflow = Workflow(nodes=tasks)
-                self.active_workflows[ rid ] = workflow
+                self.active_workflows[ rid ] = self.getWorkflow( tasks )
             except queue.Empty:
                 return
             except Exception as err:
