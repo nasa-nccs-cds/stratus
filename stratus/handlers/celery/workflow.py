@@ -16,10 +16,19 @@ class CeleryWorkflow( Workflow ):
 
 
     def connect(self):
+        from .app import celery_execute
+        wtask: WorkflowTask
         Workflow.connect(self)
         for wtask in self.tasks:
-            pass
-
+            out_edges = self.graph.out_edges(wtask.id)
+            connections = [Connection(self.graph.get_edge_data(*edge_tup)["id"], edge_tup[0], edge_tup[1]) for edge_tup in out_edges]
+            nids = [conn.nid(Connection.OUTGOING) for conn in connections]
+            consumer_tasks: List[WorkflowTask] = [self.nodes.get(nid) for nid in nids if nid is not None]
+            wtask.setConsumers(consumer_tasks)
+        for wtask in self.tasks:
+            dependencies = wtask.dependencies
+            consumers = wtask.consumers
+            celery_task = celery_execute.s( wtask.clientSpec )
 
     @graphop
     def update( self ) -> bool:

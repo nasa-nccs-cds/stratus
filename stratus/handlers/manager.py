@@ -23,6 +23,10 @@ class Handlers:
         self.configSpec: Dict[str,Dict] = settings
         self._init()
 
+    @property
+    def internal_clients(self):
+        return self._internal_clients
+
     def _init( self ):
         self._addConstructors()
         hspecs = self._getHandlerSpecs()
@@ -34,10 +38,9 @@ class Handlers:
                     self._app_handler = self._getHandler( service_spec )
                     self.logger.info(f"Initialized stratus node for service {htype}")
                 elif service_name:
-                    if self._internal_clients:
-                        self._handlers[ service_name ] = self._getHandler( service_spec )
-                        self.logger.info(f"Adding stratus handler for service {htype}")
-                    else:
+                    self._handlers[service_name] = self._getHandler(service_spec)
+                    self.logger.info(f"Adding stratus handler for service {htype}")
+                    if not self._internal_clients:
                         assert self._core is not None, "Must supply an instance of 'StratusCore' to 'Handlers' in order to build workers"
                         self._core.buildWorker( service_name, service_spec )
             except Exception as err:
@@ -56,12 +59,12 @@ class Handlers:
         self.logger.info( f"GET CLIENTS, handlers: {[str(h) for h in self._handlers.values()]}")
         for service in self._handlers.values():
             if op == None:
-                clients.append( service.client(core,**kwargs) )
+                clients.append( service.client( core, internal_clients=self.internal_clients, **kwargs ) )
             else:
                 cid = op.get( "cid",  None )
                 for epa in op.epas:
-                    if service.client(core,**kwargs).handles( epa, **kwargs):
-                        clients.append( service.client(cid) )
+                    if service.client( core, cid=cid, internal_clients=self.internal_clients, **kwargs ).handles( epa, **kwargs ):
+                        clients.append( service.getClient(cid) )
         return clients
 
     def getEpas(self, core: StratusCoreBase, **kwargs) -> List[str]:

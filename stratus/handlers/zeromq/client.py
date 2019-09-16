@@ -52,15 +52,19 @@ class ZMQClient(StratusClient):
         self.host_address = self.parm( "host", "127.0.0.1" )
         self.default_request_port = int( self.parm( "request_port", 4556 ) )
         self.response_port = int( self.parm( "response_port", 4557 ) )
+        self.context = None
 
     def init(self, **kwargs):
         try:
-            self.context = zmq.Context()
-            self.connector = ConnectionMode( **self.parms )
-            self.request_socket = self.context.socket(zmq.REQ)
-            self.request_port = self.connector.connectSocket(self.request_socket, self.host_address, self.default_request_port )
-            self.log("[1]Connected request socket to server {0} on port: {1}".format( self.host_address, self.request_port ) )
-            super(ZMQClient, self).init()
+            if self.context is None:
+                self.context = zmq.Context()
+                self.connector = ConnectionMode( **self.parms )
+                self.request_socket = self.context.socket(zmq.REQ)
+                self.request_port = self.connector.connectSocket(self.request_socket, self.host_address, self.default_request_port )
+                self.log("[1]Connected request socket to server {0} on port: {1}".format( self.host_address, self.request_port ) )
+                local_stack = str( [ str(sl) + "\n" for sl in traceback.format_stack() ] )
+                print( f"Initialized zmq client at:\n{local_stack}" )
+                super(ZMQClient, self).init()
 
         except Exception as err:
             err_msg =  "\n-------------------------------\nWorker Init error: {0}\n{1}-------------------------------\n".format(err, traceback.format_exc() )

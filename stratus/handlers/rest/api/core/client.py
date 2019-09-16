@@ -25,8 +25,13 @@ class CoreRestClient(StratusClient):
             port = self["port"]
             route = self.parm("route","core")
             self.host_address = f"http://{host}:{port}/{route}"
-        self.response_manager = ResponseManager.getManger( self.cid, self.host_address )
-        self.response_manager.start()
+        self.response_manager = None
+
+    def init(self):
+        if self.response_manager  is None:
+            self.response_manager = ResponseManager.getManger( self.cid, self.host_address )
+            self.response_manager.start()
+            super(CoreRestClient, self).init()
 
     @stratusrequest
     def request( self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:

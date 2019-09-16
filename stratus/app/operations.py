@@ -119,11 +119,20 @@ class WorkflowTask(DGNode):
         outputs = [conn.id for conn in opset.getOutputs()]
         DGNode.__init__( self, inputs, outputs, **kwargs )
         self.dependencies: List["WorkflowTask"] = None
+        self.consumers: List["WorkflowTask"] = None
         self._future: Future = None
 
     @property
     def name(self) -> str:
         return self._opset.name
+
+    @property
+    def client(self) -> StratusClient:
+        return self._opset.client
+
+    @property
+    def clientSpec(self) -> str:
+        return self._opset.client.parms
 
     @property
     def cid(self) -> str:
@@ -212,6 +221,11 @@ class WorkflowTask(DGNode):
 
     def setDependencies( self, dependencies: List["WorkflowTask"] ):
         self.dependencies = dependencies
+
+    def setConsumers(self, consumers: List["WorkflowTask"]):
+        self.consumers = consumers
+
+
 
 class WorkflowExeFuture:
 

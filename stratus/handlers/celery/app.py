@@ -1,7 +1,7 @@
 from stratus.app.base import StratusEmbeddedApp
 from stratus.app.core import StratusCore
 from stratus.app.client import stratusrequest
-from stratus_endpoint.util.config import StratusLogger
+from stratus_endpoint.util.config import StratusLogger, UID
 from stratus_endpoint.handler.base import TaskHandle, TaskResult
 from stratus.app.operations import Workflow, WorkflowTask
 from stratus.app.client import StratusClient
@@ -9,18 +9,18 @@ from stratus.handlers.manager import Handlers
 from stratus.handlers.base import Handler
 from celery import Celery
 from typing import Dict, List, Optional
-import queue, datetime
+import queue, traceback
 from celery.utils.log import get_task_logger
 from celery import Task
 logger = get_task_logger(__name__)
 
-class StratusCeleryApp( Celery ):
+class CeleryApp( Celery ):
 
     def __init__( self, *args, **kwargs ):
         Celery.__init__( *args, **kwargs  )
-        self.stratusApp: StratusApp = None
+        self.stratusApp: StratusAppCelery = None
 
-app = StratusCeleryApp( 'stratus', broker = 'redis://localhost', backend = 'redis://localhost' )
+app = CeleryApp( 'stratus', broker = 'redis://localhost', backend = 'redis://localhost' )
 
 app.conf.update(
     result_expires=3600,
@@ -51,7 +51,7 @@ def celery_execute( self, clientSpec: Dict, requestSpec: Dict, inputs: List[Task
     taskHandle: TaskHandle = client.request( requestSpec, inputs )
     return taskHandle.getResult()
 
-class StratusApp(StratusEmbeddedApp):
+class StratusAppCelery(StratusEmbeddedApp):
 
     def __init__( self, core: StratusCore ):
         StratusEmbeddedApp.__init__(self, core)
@@ -84,6 +84,7 @@ class StratusApp(StratusEmbeddedApp):
             self.active = False
 
     def getWorkflow( self, tasks: List[WorkflowTask] ) -> Workflow:
+        from handlers.celery.workflow import CeleryWorkflow
         return CeleryWorkflow(nodes=tasks)
 
 

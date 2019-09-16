@@ -65,6 +65,10 @@ class StratusCoreBase:
     @abc.abstractmethod
     def buildWorker( self, name: str, spec: Dict[str,str] ): pass
 
+    @abc.abstractmethod
+    @property
+    def internal_clients(self): pass
+
 
 class StratusAppBase(Thread):
     __metaclass__ = abc.ABCMeta
@@ -78,6 +82,10 @@ class StratusAppBase(Thread):
         self.active_workflows: Dict[str,Workflow] = {}
         self.completed_workflows: Dict[str,Workflow] = {}
         self._active = True
+
+    @property
+    def internal_clients(self):
+        return self.core.internal_clients
 
     def run(self):
         self.logger.info(" &&&&&&&&&&&&&&&&&&&&&&&&& Running STRATUS App: " + self.__class__.__name__ + " &&&&&&&&&&&&&&&&&&&&&&&&&")
@@ -255,6 +263,9 @@ class StratusFactory:
 
     @abc.abstractmethod
     def client( self, core: StratusCoreBase, **kwargs ) -> StratusClient: pass
+
+    @abc.abstractmethod
+    def getClient( self, cid: str = None ) -> StratusClient: pass
 
     @abc.abstractmethod
     def app(self, core: StratusCoreBase ) -> StratusAppBase: pass

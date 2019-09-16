@@ -16,7 +16,7 @@ class TaskManager(Thread):
     def run(self):
         from .app import celery_execute
         self.task = celery_execute.s( self._spec )
-        self._completedProcess = subprocess.run(['celery', '--app=stratus.handlers.celery.app:app', 'worker', '-l', 'info'], check = True )
+        self._completedProcess = subprocess.run(['celery', '--app=stratus.handlers.celery.app:app', 'worker', '-l', 'info',  '-Q', self._name ], check = True )
 
 
 class CeleryCore( StratusCore ):

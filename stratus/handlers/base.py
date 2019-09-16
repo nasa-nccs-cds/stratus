@@ -1,6 +1,7 @@
 from stratus.app.client import StratusClient
 from stratus.app.base import StratusAppBase, StratusFactory
 from stratus.app.core import StratusCore
+from stratus.app.base import StratusCoreBase
 from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional
 import abc
 
@@ -24,13 +25,14 @@ class Handler(StratusFactory):
     @abc.abstractmethod
     def newApplication(self, core: StratusCore, **kwargs ) -> StratusAppBase: pass
 
-    def client( self, **kwargs ) -> StratusClient:
+    def client( self, core: StratusCoreBase, **kwargs ) -> StratusClient:
         cid = kwargs.get("cid")
+        activate = kwargs.get( "activate", True )
         client: StratusClient = self.getClient( cid )
         if client is None:
             self.logger.info(f"create client {self.name}:\n kwargs= {kwargs}\n core.parms = {core.parms}\n core.config = {core.config}\n handler.parms = {self.parms}\n handler.type = {self.type}\n handler.name = {self.name}")
             client = self.newClient( **self.parms )
-            client.activate()
+            if activate: client.activate()
             self._clients[ client.cid ] = client
         return client
 

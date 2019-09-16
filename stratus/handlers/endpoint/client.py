@@ -28,9 +28,10 @@ class DirectClient(StratusClient):
 
     def init(self):
         try:
-            self.endpoint: Endpoint = self.instantiateEndpoint()
-            self.endpoint.init()
-            super(DirectClient, self).init()
+            if self.endpoint is None:
+                self.endpoint: Endpoint = self.instantiateEndpoint()
+                self.endpoint.init()
+                super(DirectClient, self).init()
 
         except Exception as err:
             err_msg =  "\n-------------------------------\nWorker Init error: {0}\n{1}-------------------------------\n".format(err, traceback.format_exc() )
