@@ -8,7 +8,7 @@ class StratusCore(StratusCoreBase):
 
     def __init__(self, configSpec: Union[str,Dict[str,Dict]], **kwargs ):
         StratusCoreBase.__init__(self, configSpec, **kwargs )
-        self.handlers = Handlers( self.config )
+        self.handlers = Handlers( self, self.config, **kwargs )
         self.service = None
 
     def getClients( self, op: Op = None, **kwargs ) -> List[StratusClient]:

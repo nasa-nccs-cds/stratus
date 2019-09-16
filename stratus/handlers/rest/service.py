@@ -15,7 +15,7 @@ class ServiceHandler( Handler ):
         htype = os.path.basename(os.path.dirname(__file__))
         super(ServiceHandler, self).__init__( htype, **kwargs )
 
-    def newClient( self, core: StratusCore, **kwargs ) -> StratusClient:
+    def newClient( self, **kwargs ) -> StratusClient:
         cid = kwargs.get("cid")
         gateway = kwargs.get("gateway")
         API = self.parm("API","core").lower()

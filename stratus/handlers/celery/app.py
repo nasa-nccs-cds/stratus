@@ -5,6 +5,8 @@ from stratus_endpoint.util.config import StratusLogger
 from stratus_endpoint.handler.base import TaskHandle, TaskResult
 from stratus.app.operations import Workflow, WorkflowTask
 from stratus.app.client import StratusClient
+from stratus.handlers.manager import Handlers
+from stratus.handlers.base import Handler
 from celery import Celery
 from typing import Dict, List, Optional
 import queue, datetime
@@ -28,14 +30,24 @@ app.conf.update(
 )
 
 class CeleryTask(Task):
-    def getClient( self, cid: str ) -> StratusClient:
-        core: StratusCore = app.stratusApp.core
-        return core.handlers.     #  getClients()
+    def __init__(self):
+        Task.__init__(self)
+        self._handlers: Handlers = None
+        self._name: str = None
+        self._handler: Handler = None
+
+    def initHandler( self, clientSpec: Dict[str,Dict] ):
+        if self._handlers is None:
+            self.handlers = Handlers( None, clientSpec )
+            self._name, handlerSpec = list(clientSpec.items())[0]
+            self._handler = self.handlers.available[ self._name ]
 
 @app.task( bind=True, base=CeleryTask )
-def celery_execute( self, cid, requestSpec: Dict, inputs: List[TaskResult] ) -> Optional[TaskResult]:
-    client: StratusClient = self.getClient(cid)
-    logger.info( f"Client[cid]: Executing request: {requestSpec}")
+def celery_execute( self, clientSpec: Dict, requestSpec: Dict, inputs: List[TaskResult] ) -> Optional[TaskResult]:
+    cid = requestSpec['cid']
+    self.initHandler( clientSpec )
+    client: StratusClient = self._handler.getClient( cid )
+    logger.info( f"Client[{cid}]: Executing request: {requestSpec}")
     taskHandle: TaskHandle = client.request( requestSpec, inputs )
     return taskHandle.getResult()
 

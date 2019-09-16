@@ -12,10 +12,12 @@ class Handlers:
     HERE = os.path.dirname( __file__ )
     STRATUS_ROOT = os.path.dirname( os.path.dirname( HERE ) )
 
-    def __init__(self, settings: Dict[str,Dict], **kwargs ):
+    def __init__(self, core: Optional[StratusCoreBase], settings: Dict[str,Dict], **kwargs ):
         self.logger = StratusLogger.getLogger()
+        self._core = core
         self._handlers: Dict[str, StratusFactory] = { }
         self._app_handler: StratusFactory = None
+        self._internal_clients = kwargs.get( "internal_clients", True )
         self._parms = kwargs
         self._constructors: Dict[str, Callable[[], StratusFactory]] = {}
         self.configSpec: Dict[str,Dict] = settings
@@ -27,13 +29,17 @@ class Handlers:
         for service_spec in hspecs:
             htype = service_spec["type"]
             try:
-                service = self._getHandler(service_spec)
-                if service.name == "stratus":
-                    self._app_handler = service
+                service_name = service_spec.get('name', "")
+                if service_name == "stratus":
+                    self._app_handler = self._getHandler( service_spec )
                     self.logger.info(f"Initialized stratus node for service {htype}")
-                else:
-                    self._handlers[ service.name ] = service
-                    self.logger.info(f"Adding stratus handler for service {htype}")
+                elif service_name:
+                    if self._internal_clients:
+                        self._handlers[ service_name ] = self._getHandler( service_spec )
+                        self.logger.info(f"Adding stratus handler for service {htype}")
+                    else:
+                        assert self._core is not None, "Must supply an instance of 'StratusCore' to 'Handlers' in order to build workers"
+                        self._core.buildWorker( service_name, service_spec )
             except Exception as err:
                 err_msg = "Error registering handler for service {}: {}".format( service_spec.get("name",""), str(err) )
                 print( err_msg )

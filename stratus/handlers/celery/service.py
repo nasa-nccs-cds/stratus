@@ -11,8 +11,8 @@ class ServiceHandler( Handler ):
         htype = os.path.basename(os.path.dirname(__file__))
         super(ServiceHandler, self).__init__( htype, **kwargs )
 
-    def newClient(self, core: StratusCore, **kwargs) -> StratusClient:
-        return CeleryClient( core, **kwargs )
+    def newClient(self, **kwargs) -> StratusClient:
+        return CeleryClient( **kwargs )
 
     def newApplication(self, core: StratusCore, **kwargs ) -> StratusApp:
         from .app import app

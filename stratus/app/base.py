@@ -62,6 +62,9 @@ class StratusCoreBase:
     @abc.abstractmethod
     def getEpas( self,  **kwargs ) -> List[str]: pass
 
+    @abc.abstractmethod
+    def buildWorker( self, name: str, spec: Dict[str,str] ): pass
+
 
 class StratusAppBase(Thread):
     __metaclass__ = abc.ABCMeta
