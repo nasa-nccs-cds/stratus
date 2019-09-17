@@ -3,7 +3,7 @@ from stratus.app.core import StratusCore
 from stratus.app.client import stratusrequest
 from stratus_endpoint.util.config import StratusLogger, UID
 from stratus_endpoint.handler.base import TaskHandle, TaskResult
-from stratus.app.operations import Workflow, WorkflowTask
+from stratus.app.operations import StratusWorkflow, WorkflowTask
 from stratus.app.client import StratusClient
 from stratus.handlers.manager import Handlers
 from stratus.handlers.base import Handler
@@ -83,7 +83,7 @@ class StratusAppCelery(StratusEmbeddedApp):
         if self.active:
             self.active = False
 
-    def getWorkflow( self, tasks: List[WorkflowTask] ) -> Workflow:
+    def getWorkflow( self, tasks: List[WorkflowTask] ) -> StratusWorkflow:
         from handlers.celery.workflow import CeleryWorkflow
         return CeleryWorkflow(nodes=tasks)
 

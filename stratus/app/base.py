@@ -79,8 +79,8 @@ class StratusAppBase(Thread):
         self.core = _core
         self.registeredRequests = set()
         self.requestQueue = queue.Queue()
-        self.active_workflows: Dict[str,Workflow] = {}
-        self.completed_workflows: Dict[str,Workflow] = {}
+        self.active_workflows: Dict[str, StratusWorkflow] = {}
+        self.completed_workflows: Dict[str, StratusWorkflow] = {}
         self._active = True
 
     @property
@@ -132,8 +132,8 @@ class StratusAppBase(Thread):
         self.registeredRequests.add( request["rid"] )
         return request
 
-    def getWorkflow( self, tasks: List[WorkflowTask] ) -> Workflow:
-        return Workflow(nodes=tasks)
+    def getWorkflow( self, tasks: List[WorkflowTask] ) -> StratusWorkflow:
+        return StratusWorkflow(nodes=tasks)
 
     def ingestRequests( self ):
         if not self.requestQueue.empty():
@@ -152,7 +152,7 @@ class StratusAppBase(Thread):
             except Exception as err:
                 msg =  f"Error ingesting request: {err}\n" + "\n".join(traceback.format_stack())
                 self.logger.error(msg)
-                workflow = Workflow( error=(msg,err) )
+                workflow = StratusWorkflow(error=(msg, err))
                 self.active_workflows[ rid ] = workflow
 
     def update_workflows(self):
@@ -173,14 +173,14 @@ class StratusAppBase(Thread):
         workflow = self.completed_workflows.get( rid )
         return None if workflow is None else workflow.getResult()
 
-    def getWorkflows(self) -> Dict[str,Workflow]:
+    def getWorkflows(self) -> Dict[str, StratusWorkflow]:
         return { **self.completed_workflows, **self.active_workflows }
 
-    def getWorkflowItems(self) -> ItemsView[str,Workflow]:
+    def getWorkflowItems(self) -> ItemsView[str, StratusWorkflow]:
         workflows = self.getWorkflows()
         return workflows.items()
 
-    def getWorkflow(self, rid: str) -> Optional[Workflow]:
+    def getWorkflow(self, rid: str) -> Optional[StratusWorkflow]:
         return self.getWorkflows().get(rid)
 
     def clearWorkflow(self, rid: str):

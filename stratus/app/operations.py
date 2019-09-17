@@ -1,4 +1,4 @@
-import copy, os, time, traceback
+import copy, os, time, traceback, abc
 from typing import List, Dict, Set, Iterator, Any, Optional, Tuple
 from stratus_endpoint.util.config import StratusLogger, UID
 from stratus.app.client import StratusClient
@@ -63,6 +63,10 @@ class ClientOpSet(OpSet):
     def new(self) -> "ClientOpSet":
         return ClientOpSet( self._request, self.client )
 
+    @property
+    def requestSpec(self) -> Dict:
+        return self._request
+
     def copy(self) -> "ClientOpSet":
         return ClientOpSet( self._request, self.client, nodes=self.nodes.values(), graph = copy.deepcopy(self.graph) )
 
@@ -121,6 +125,10 @@ class WorkflowTask(DGNode):
         self.dependencies: List["WorkflowTask"] = None
         self.consumers: List["WorkflowTask"] = None
         self._future: Future = None
+
+    @property
+    def requestSpec(self) -> Dict:
+        return self._opset.requestSpec
 
     @property
     def name(self) -> str:
@@ -272,7 +280,8 @@ class WorkflowExeFuture:
     def __getitem__( self, key: str ) -> Any:
         return  self.request.get( key, None )
 
-class Workflow(DependencyGraph):
+class WorkflowBase(DependencyGraph):
+    __metaclass__ = abc.ABCMeta
 
     def __init__( self, **kwargs ):
         DependencyGraph.__init__( self, **kwargs )
@@ -294,14 +303,9 @@ class Workflow(DependencyGraph):
     def status(self) -> Status:
         return self._status
 
-    def connect(self):
-        DependencyGraph.connect(self)
-        for wtask in self.tasks:
-            in_edges = self.graph.in_edges(wtask.id)
-            connections = [ Connection(self.graph.get_edge_data(*edge_tup)["id"], edge_tup[0], edge_tup[1]) for edge_tup in in_edges ]
-            nids = [conn.nid(Connection.INCOMING) for conn in connections ]
-            dep_tasks: List[WorkflowTask] =  [self.nodes.get(nid) for nid in nids if nid is not None]
-            wtask.setDependencies( dep_tasks )
+    @abc.abstractmethod
+    @graphop
+    def update( self ) -> bool: pass
 
     @property
     def tasks(self) -> List[WorkflowTask]:
@@ -318,40 +322,19 @@ class Workflow(DependencyGraph):
     def completed(self):
         return self._status not in [Status.EXECUTING, Status.IDLE]
 
+    def connect(self):
+        DependencyGraph.connect(self)
+        for wtask in self.tasks:
+            in_edges = self.graph.in_edges(wtask.id)
+            connections = [ Connection(self.graph.get_edge_data(*edge_tup)["id"], edge_tup[0], edge_tup[1]) for edge_tup in in_edges ]
+            nids = [conn.nid(Connection.INCOMING) for conn in connections ]
+            dep_tasks: List[WorkflowTask] =  [self.nodes.get(nid) for nid in nids if nid is not None]
+            wtask.setDependencies( dep_tasks )
 
-    # @graphop
-    # def submitExec( self, executor: Executor ) -> Dict[str,TaskFuture]:
-    #     results: Dict[str,TaskFuture] = { wtask.id: wtask.submit(executor) for wtask in self.tasks }
-    #     return { tid:fut for tid,fut in results.items() if tid in self.getOutputNodes() }
-    #
-    # @graphop
-    # def submit( self ) -> Dict[str,TaskHandle]:
-    #     results = {}
-    #     output_ids = self.getOutputNodes()
-    #     completed_tasks = []
-    #     while True:
-    #         completed = True
-    #         for wtask in self.tasks:
-    #             if wtask.id not in completed_tasks:
-    #                 stat = wtask.status()
-    #                 if stat == Status.ERROR:
-    #                     exc = wtask.exception()
-    #                     raise Exception( "Workflow Errored out: " + ( getattr(exc, 'message', repr(exc)) if exc is not None else "" )  )
-    #                 elif stat == Status.CANCELED:
-    #                     raise Exception("Workflow Canceled")
-    #                 elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
-    #                     taskHandle = wtask.async_execute()
-    #                     self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputIDs: {output_ids}, nodes: {list(self.ids)}, exception: {taskHandle.exception()}, status: {taskHandle.status()}")
-    #                     if wtask.id in output_ids:
-    #                         results[ wtask.id ] =  taskHandle
-    #                     completed = False
-    #                 elif ( stat == Status.EXECUTING ):
-    #                     completed = False
-    #                 elif ( stat == Status.COMPLETED ):
-    #                     completed_tasks.append( wtask.id )
-    #         if completed: break
-    #         time.sleep(0.02)
-    #     return results
+class StratusWorkflow(WorkflowBase):
+
+    def __init__( self, **kwargs ):
+        WorkflowBase.__init__( self, **kwargs )
 
     @graphop
     def update( self ) -> bool:

@@ -5,7 +5,7 @@ from threading import Thread
 import zmq, zmq.auth, traceback, time, logging, xml, socket
 from stratus.app.operations import Status
 from stratus_endpoint.handler.base import TaskHandle
-from stratus.app.operations import Workflow
+from stratus.app.operations import StratusWorkflow
 from typing import List, Dict, Sequence, Set
 import random, string, os, queue, datetime
 from stratus.util.parsing import s2b, b2s, ia2s, sa2s, m2s
@@ -63,7 +63,7 @@ class StratusZMQResponder(Thread):
         base_dir = kwargs.get( "certificate_path", os.path.expanduser("~/.stratus/") )
         self.secret_keys_dir = os.path.join(base_dir, 'private_keys')
 
-    def getDataPacket(self, rid: str, status: Status, workflow: Workflow ) -> DataPacket:
+    def getDataPacket(self, rid: str, status: Status, workflow: StratusWorkflow) -> DataPacket:
         from stratus_endpoint.handler.base import TaskResult
         if (status == Status.COMPLETED):
             taskHandle: TaskHandle = workflow.getResult()
@@ -87,7 +87,7 @@ class StratusZMQResponder(Thread):
         else:
             raise Exception( f"Unexpected Status in getDataPackets: {Status.str(status)}")
 
-    def processWorkflows(self, workflows: Dict[str, Workflow]) -> List[str]:
+    def processWorkflows(self, workflows: Dict[str, StratusWorkflow]) -> List[str]:
         completed_requests = []
         for rid, workflow in workflows.items():
             status = workflow.status()
