@@ -1,6 +1,7 @@
-from stratus.app.base import StratusEmbeddedApp
 from stratus.app.core import StratusCore
+from stratus.app.base import StratusAppBase, StratusEmbeddedApp
 from stratus.app.client import stratusrequest
+from stratus.app.operations import WorkflowBase
 from stratus_endpoint.util.config import StratusLogger, UID
 from stratus_endpoint.handler.base import TaskHandle, TaskResult
 from stratus.app.operations import StratusWorkflow, WorkflowTask
@@ -53,38 +54,12 @@ def celery_execute( self, clientSpec: Dict, requestSpec: Dict, inputs: List[Task
 
 class StratusAppCelery(StratusEmbeddedApp):
 
-    def __init__( self, core: StratusCore ):
-        StratusEmbeddedApp.__init__(self, core)
-        self.logger =  StratusLogger.getLogger()
-        self.active = True
-        self.parms = self.getConfigParms('stratus')
-
-    def run(self):
-        pass
-
-
-    def init(self, **kwargs):
-        pass   # get applicatoin object.
-
-    @stratusrequest
-    def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
-        pass
-
-    def capabilities(self, ctype: str, **kwargs ) -> Dict:
-        return {}
-
-    def log(self, msg: str ):
-        self.logger.info( "[ZP] " + msg )
-
-    def __del__(self):
-        self.shutdown()
-
-    def shutdown(self):
-        if self.active:
-            self.active = False
-
-    def getWorkflow( self, tasks: List[WorkflowTask] ) -> StratusWorkflow:
+    def getWorkflow( self, tasks: List[WorkflowTask] ) -> WorkflowBase:
         from handlers.celery.workflow import CeleryWorkflow
         return CeleryWorkflow(nodes=tasks)
 
+    def processError(self, rid: str, ex: Exception): pass
 
+    def initInteractions(self): pass
+
+    def updateInteractions(self): pass

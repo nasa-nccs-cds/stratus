@@ -1,6 +1,7 @@
 import os, json, yaml, abc, itertools, queue
 from typing import List, Union, Dict, Set, Iterator, Tuple, ItemsView
 from stratus_endpoint.util.config import Config, StratusLogger
+from stratus.app.client import stratusrequest
 from multiprocessing import Process as SubProcess
 from stratus.app.operations import *
 from threading import Thread
@@ -169,6 +170,11 @@ class StratusAppBase(Thread):
             self.completed_workflows[rid] = workflow
             del self.active_workflows[rid]
 
+    def waitForCompletion(self, rid: str ):
+        while( True ):
+            if rid in self.completed_workflows: return
+            time.sleep( 0.1 )
+
     def getResult( self, rid: str  ) -> Optional[TaskHandle]:
         workflow = self.completed_workflows.get( rid )
         return None if workflow is None else workflow.getResult()
@@ -229,20 +235,33 @@ class StratusServerApp(StratusAppBase):
         return proc
 
 class StratusEmbeddedApp(StratusAppBase):
-    __metaclass__ = abc.ABCMeta
 
-    def __init__( self, _core: StratusCoreBase, **kwargs ):
-        StratusAppBase.__init__( self, core, **kwargs )
+    def __init__( self, core: StratusCore ):
+        StratusAppBase.__init__(self, core)
+        self.logger =  StratusLogger.getLogger()
+        self.parms = self.getConfigParms('stratus')
+        self.app = None
 
-    @abc.abstractmethod
-    def init(self, **kwargs): pass
+    def run(self):
+        pass
 
-    @abc.abstractmethod
-    def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle: pass
+    def init(self, **kwargs):
+        self.app = self.core.getApplication()
 
-    @abc.abstractmethod
-    def capabilities(self, ctype: str, **kwargs ) -> Dict: pass
+    @stratusrequest
+    def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
+        rid = requestSpec["rid"]
+        self.requestQueue.put( requestSpec )
+        self.ingestRequests()
+        self.update_workflows()
+        self.waitForCompletion( rid )
+        return self.getResult( rid )
 
+    def capabilities(self, ctype: str, **kwargs ) -> Dict:
+        return {}
+
+    def log(self, msg: str ):
+        self.logger.info( "[ZP] " + msg )
 
 class TestStratusApp(StratusServerApp):
 
