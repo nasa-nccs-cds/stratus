@@ -30,13 +30,13 @@ class FlowerManager(Thread):
 class CeleryCore( StratusCore ):
 
     def __init__(self, configSpec: Union[str,Dict[str,Dict]], **kwargs ):
+        self._workers: Dict[str,TaskManager] = {}
+        self._flower = None
+        self.baseDir = os.path.dirname(__file__)
         StratusCore.__init__( self, configSpec, internal_clients=False, **kwargs )
         self.logger = StratusLogger.getLogger()
         self.logger.info( f"Starting CeleryCore with parms: {self.parms}" )
-        self._workers: Dict[str,TaskManager] = None
-        self._flower = None
         if self.parm( 'flower', False ): self._startFlower()
-        self.baseDir = os.path.dirname(__file__)
 
     def buildWorker( self, name: str, spec: Dict[str,str] ):
         if name not in self._workers:

@@ -46,6 +46,7 @@ class Handlers:
             except Exception as err:
                 err_msg = "Error registering handler for service {}: {}".format( service_spec.get("name",""), str(err) )
                 print( err_msg )
+                print( traceback.format_exc() )
                 self.logger.error( err_msg )
 
     def __getitem__( self, key: str ) -> StratusFactory:
