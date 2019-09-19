@@ -32,6 +32,7 @@ class CeleryCore( StratusCore ):
     def __init__(self, configSpec: Union[str,Dict[str,Dict]], **kwargs ):
         StratusCore.__init__( self, configSpec, internal_clients=False, **kwargs )
         self.logger = StratusLogger.getLogger()
+        self.logger.info( f"Starting CeleryCore with parms: {self.parms}" )
         self._workers: Dict[str,TaskManager] = None
         self._flower = None
         if self.parm( 'flower', False ): self._startFlower()
@@ -51,5 +52,6 @@ class CeleryCore( StratusCore ):
 
     def _startFlower(self):
         if self._flower is None:
+            self.logger.info( "Starting Flower")
             self._flower = FlowerManager()
             self._flower.start()

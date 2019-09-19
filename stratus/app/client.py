@@ -11,7 +11,7 @@ class EndpointSpec:
 
     def handles( self, epa: str, **kwargs ) -> bool:
         try:
-            self.logger.error(f"EndpointSpec: comparing '{epa}' against epaSpec '{self._epaSpec}'")
+            self.logger.debug(f"EndpointSpec: comparing '{epa}' against epaSpec '{self._epaSpec}'")
             return fnmatch.fnmatch( epa, self._epaSpec )
         except Exception as err:
             self.logger.error( f"Error Checking EPA '{epa}' against epaSpec '{self._epaSpec}': {str(err)}")

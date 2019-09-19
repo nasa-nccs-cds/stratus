@@ -56,7 +56,7 @@ class Handlers:
     def getClients( self, core: StratusCoreBase, op: Op = None, **kwargs ) -> List[StratusClient]:
         assert self.configSpec is not None, "Error, the handlers have not yet been initialized"
         clients = []
-        self.logger.info( f"GET CLIENTS, handlers: {[str(h) for h in self._handlers.values()]}")
+        self.logger.debug( f"GET CLIENTS, handlers: {[str(h) for h in self._handlers.values()]}")
         for service in self._handlers.values():
             if op == None:
                 clients.append( service.client( core, internal_clients=self.internal_clients, **kwargs ) )

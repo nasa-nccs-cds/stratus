@@ -10,7 +10,7 @@ from stratus.handlers.manager import Handlers
 from stratus.handlers.base import Handler
 from celery import Celery
 from typing import Dict, List, Optional
-import queue, traceback
+import queue, traceback, logging, os
 from celery.utils.log import get_task_logger
 from celery import Task
 logger = get_task_logger(__name__)
@@ -23,6 +23,8 @@ app.conf.update(
     accept_content = ['json', 'pickle', 'application/x-python-serialize'],
     result_serializer = 'pickle'
 )
+celery_log_file = os.path.expanduser("~/.stratus/logs/celery.log")
+app.log.setup( loglevel=logging.INFO, logfile=celery_log_file )
 
 class CeleryTask(Task):
     def __init__(self):

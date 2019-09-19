@@ -75,7 +75,7 @@ class DependencyGraph():
 
     def _addDependency(self, depId, srcId: str, destId: str ):
         if not self.graph.has_edge( srcId, destId ):
-            self.logger.info( f"Add Connection[{depId}]: {srcId} -> {destId}")
+            self.logger.debug( f"Add Connection[{depId}]: {srcId} -> {destId}")
             self.graph.add_edge( srcId, destId, id=depId )
 
     def __iter__(self) -> Iterator[DGNode]:
@@ -108,11 +108,11 @@ class DependencyGraph():
             for nid in self.nodes.keys(): self.graph.add_node(nid)
             for dnode in self.nodes.values():
                 inputs = dnode.getInputs()
-                self.logger.info(f"Checking dest node[{dnode.id}] inputs: {inputs}")
+                self.logger.debug(f"Checking dest node[{dnode.id}] inputs: {inputs}")
                 for iid in inputs:
                     for snode in self.nodes.values():
                         outputs = snode.getOutputs()
-                        self.logger.info(f"Checking src node[{snode.id}] outputs: {outputs}")
+                        self.logger.debug(f"Checking src node[{snode.id}] outputs: {outputs}")
                         if iid in outputs:
                             self._addDependency( iid, snode.id, dnode.id  )
             self._connected = True

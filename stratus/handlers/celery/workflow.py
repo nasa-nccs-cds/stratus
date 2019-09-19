@@ -89,6 +89,7 @@ class CeleryWorkflow(WorkflowBase):
 
         if self.celery_result == None:
             task_inputs = []
+            self.logger.info( "Executing Celery Workflow")
             self.celery_result = self.celery_workflow_sig.apply_async( args=[ task_inputs ] )
             self.result = CeleryTaskHandle( self.rid, self.cid, self.celery_result )
             self._status = Status.EXECUTING
