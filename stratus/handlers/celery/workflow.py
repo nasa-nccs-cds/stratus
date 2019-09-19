@@ -14,7 +14,7 @@ logger = get_task_logger(__name__)
 class CeleryTaskHandle(TaskHandle):
 
     def __init__(self, rid: str, cid: str, manager: AsyncResult, **kwargs):
-        TaskHandle.__init__( rid=rid, cid=cid, **kwargs )   # **{ "rid":rid, "cid":cid, **kwargs }
+        TaskHandle.__init__( self, rid=rid, cid=cid, **kwargs )   # **{ "rid":rid, "cid":cid, **kwargs }
         self.logger = StratusLogger.getLogger()
         self.manager: AsyncResult = manager
         self._exception = None
@@ -88,7 +88,8 @@ class CeleryWorkflow(WorkflowBase):
     def update( self ) -> bool:
 
         if self.celery_result == None:
-            self.celery_result = self.celery_workflow_sig.apply_async()
+            task_inputs = []
+            self.celery_result = self.celery_workflow_sig.apply_async( args=[ task_inputs ] )
             self.result = CeleryTaskHandle( self.rid, self.cid, self.celery_result )
             self._status = Status.EXECUTING
         else:

@@ -15,13 +15,7 @@ from celery.utils.log import get_task_logger
 from celery import Task
 logger = get_task_logger(__name__)
 
-class CeleryApp( Celery ):
-
-    def __init__( self, *args, **kwargs ):
-        Celery.__init__( *args, **kwargs  )
-        self.stratusApp: StratusAppCelery = None
-
-app = CeleryApp( 'stratus', broker = 'redis://localhost', backend = 'redis://localhost' )
+app = Celery( 'stratus', broker = 'redis://localhost', backend = 'redis://localhost' )
 
 app.conf.update(
     result_expires=3600,
@@ -55,7 +49,7 @@ def celery_execute( self, clientSpec: Dict, requestSpec: Dict, inputs: List[Task
 class StratusAppCelery(StratusEmbeddedApp):
 
     def getWorkflow( self, tasks: List[WorkflowTask] ) -> WorkflowBase:
-        from handlers.celery.workflow import CeleryWorkflow
+        from stratus.handlers.celery.workflow import CeleryWorkflow
         return CeleryWorkflow(nodes=tasks)
 
     def processError(self, rid: str, ex: Exception): pass

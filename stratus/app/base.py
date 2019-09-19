@@ -14,6 +14,7 @@ class StratusCoreBase:
         self.logger = StratusLogger.getLogger()
         self.config = self.getSettings( configSpec )
         self.parms = self.getConfigParms('stratus')
+        self.id = UID.randomId(8)
 
     @classmethod
     def getSettings( cls, configSpec: Union[str,Dict[str,Dict]] ) -> Dict[str,Dict]:
@@ -66,8 +67,8 @@ class StratusCoreBase:
     @abc.abstractmethod
     def buildWorker( self, name: str, spec: Dict[str,str] ): pass
 
-    @abc.abstractmethod
     @property
+    @abc.abstractmethod
     def internal_clients(self): pass
 
 
@@ -151,7 +152,7 @@ class StratusAppBase(Thread):
             except queue.Empty:
                 return
             except Exception as err:
-                msg =  f"Error ingesting request: {err}\n" + "\n".join(traceback.format_stack())
+                msg =  f"Error ingesting request: {err}\n" + traceback.format_exc()
                 self.logger.error(msg)
                 workflow = StratusWorkflow(error=(msg, err))
                 self.active_workflows[ rid ] = workflow
@@ -236,7 +237,7 @@ class StratusServerApp(StratusAppBase):
 
 class StratusEmbeddedApp(StratusAppBase):
 
-    def __init__( self, core: StratusCore ):
+    def __init__( self, core: StratusCoreBase ):
         StratusAppBase.__init__(self, core)
         self.logger =  StratusLogger.getLogger()
         self.parms = self.getConfigParms('stratus')
@@ -248,8 +249,7 @@ class StratusEmbeddedApp(StratusAppBase):
     def init(self, **kwargs):
         self.app = self.core.getApplication()
 
-    @stratusrequest
-    def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
+    def handle_client_request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs) -> TaskHandle:
         rid = requestSpec["rid"]
         self.requestQueue.put( requestSpec )
         self.ingestRequests()
@@ -258,7 +258,7 @@ class StratusEmbeddedApp(StratusAppBase):
         return self.getResult( rid )
 
     def capabilities(self, ctype: str, **kwargs ) -> Dict:
-        return {}
+        return self.core.getCapabilities( ctype )
 
     def log(self, msg: str ):
         self.logger.info( "[ZP] " + msg )
@@ -302,21 +302,3 @@ class StratusFactory:
 
     def __str__(self):
         return f"SF[{self.name}:{self.type}]"
-
-
-if __name__ == "__main__":
-    from stratus.app.core import StratusCore
-    from stratus_endpoint.handler.base import TaskHandle
-
-    settings = dict( stratus=dict( type="zeromq"), edas=dict(type="test", work_time=2.0 ) )
-    core = StratusCore(settings)
-    app = core.getApplication()
-
-    request = {    "edas:domain": [ { "name": "d0", "time": {"start": "1980-01-01", "end": "2001-12-31", "crs": "timestamps"} } ],
-                    "edas:input":  [ { "uri": "collection:merra2", "name": "tas:v1", "domain": "d1" } ],
-                    "operation":   [ { "name": "test:ave",  "input": "v1", "axis": "yt", "result": "v1ave" },
-                                     { "name": "test:diff", "input": ["v1", "v1ave"] } ] }
-
-    clientOpsets: Dict[str, ClientOpSet] = app.geClientOpsets(request)
-    distributed_opSets = app.distributeOps(clientOpsets)
-    print( list( distributed_opSets ) )

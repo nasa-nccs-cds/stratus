@@ -20,7 +20,7 @@ class CeleryClient(StratusClient):
 
     @stratusrequest
     def request(self, request: Dict, inputs: List[TaskResult] = None, **kwargs ) -> TaskHandle:
-        return self._app.request( request, inputs, **kwargs )
+        return self._app.handle_client_request(request, inputs, **kwargs)
 
     def status(self, **kwargs ) -> Status:
         from stratus.app.operations import StratusWorkflow

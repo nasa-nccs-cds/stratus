@@ -15,7 +15,7 @@ class Handler(StratusFactory):
         self._app: StratusAppBase = None
 
     @abc.abstractmethod
-    def newClient(self, **kwargs) -> StratusClient: pass
+    def newClient(self, core: StratusCore, **kwargs) -> StratusClient: pass
 
     def getClient(self, cid = None ) -> Optional[StratusClient]:
         if cid is None:
@@ -31,7 +31,7 @@ class Handler(StratusFactory):
         client: StratusClient = self.getClient( cid )
         if client is None:
             self.logger.info(f"create client {self.name}:\n kwargs= {kwargs}\n core.parms = {core.parms}\n core.config = {core.config}\n handler.parms = {self.parms}\n handler.type = {self.type}\n handler.name = {self.name}")
-            client = self.newClient( **self.parms )
+            client = self.newClient( core, **self.parms )
             if activate: client.activate()
             self._clients[ client.cid ] = client
         return client

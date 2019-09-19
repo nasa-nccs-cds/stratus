@@ -10,5 +10,5 @@ class ServiceHandler( Handler ):
         htype = os.path.basename(os.path.dirname(__file__))
         super(ServiceHandler, self).__init__( htype, **kwargs )
 
-    def newClient( self, **kwargs ) -> StratusClient:
+    def newClient( self, core: StratusCore, **kwargs ) -> StratusClient:
         return OpenApiClient( **kwargs  )
