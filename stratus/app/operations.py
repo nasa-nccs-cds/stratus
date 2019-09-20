@@ -65,7 +65,7 @@ class ClientOpSet(OpSet):
 
     @property
     def requestSpec(self) -> Dict:
-        return self._request
+        return { **self._request, "cid": self.client.cid }
 
     def copy(self) -> "ClientOpSet":
         return ClientOpSet( self._request, self.client, nodes=self.nodes.values(), graph = copy.deepcopy(self.graph) )

@@ -36,7 +36,7 @@ class StratusClient:
         self.type: str = type
         self.name: str = kwargs.get("name")
         self.cache_dir: str = kwargs.get( "cache_dir", "~/.edas/cache" )
-        self.parms = kwargs
+        self.parms = { **kwargs, "cid": self.cid, "type": type }
         self.priority: float = float( self.parm( "priority", "0" ) )
         self.active = False
         self._endpointSpecs: List[EndpointSpec] = None

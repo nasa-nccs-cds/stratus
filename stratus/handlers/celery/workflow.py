@@ -2,7 +2,7 @@ from stratus_endpoint.handler.base import  TaskHandle, Status, TaskResult, Faile
 from stratus.app.operations import WorkflowBase, WorkflowTask
 from stratus.app.graph import DGNode, DependencyGraph, graphop, Connection
 from celery.result import AsyncResult
-from stratus_endpoint.util.config import StratusLogger
+from stratus_endpoint.util.config import StratusLogger, UID
 from celery import group, states
 from stratus.app.client import StratusClient
 from typing import Dict, List, Optional
@@ -57,7 +57,6 @@ class CeleryWorkflow(WorkflowBase):
         self.taskSigs: Dict = {}
         self.celery_workflow_sig = None
         self.celery_result: AsyncResult = None
-        self.cid = None
         self.rid = None
 
     def getConnectedTaskSig( self, wtask: WorkflowTask ):
@@ -74,8 +73,6 @@ class CeleryWorkflow(WorkflowBase):
         wtask: WorkflowTask
         WorkflowBase.connect(self)
         for wtask in self.tasks:
-            if self.cid == None:
-                self.cid, self.rid = wtask.cid, wtask.rid
             out_edges = self.graph.out_edges(wtask.id)
             connections = [Connection(self.graph.get_edge_data(*edge_tup)["id"], edge_tup[0], edge_tup[1]) for edge_tup in out_edges]
             nids = [conn.nid(Connection.OUTGOING) for conn in connections]
@@ -84,13 +81,15 @@ class CeleryWorkflow(WorkflowBase):
         for wtask in self.tasks:
             self.celery_workflow_sig = self.getConnectedTaskSig( wtask )
 
+
     @graphop
     def update( self ) -> bool:
 
         if self.celery_result == None:
             task_inputs = []
             self.logger.info( "Executing Celery Workflow")
-            self.celery_result = self.celery_workflow_sig.apply_async( args=[ task_inputs ] )
+#            self.celery_result = self.celery_workflow_sig.apply_async( args=[ task_inputs ] )
+            self.celery_result = self.celery_workflow_sig( task_inputs )
             self.result = CeleryTaskHandle( self.rid, self.cid, self.celery_result )
             self._status = Status.EXECUTING
         else:

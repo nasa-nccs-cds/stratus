@@ -35,13 +35,15 @@ class CeleryTask(Task):
 
     def initHandler( self, clientSpec: Dict[str,Dict] ):
         if self._handlers is None:
-            self.handlers = Handlers( None, clientSpec )
-            self._name, handlerSpec = list(clientSpec.items())[0]
-            self._handler = self.handlers.available[ self._name ]
+            hspec: Dict[str,Dict] = { clientSpec['name']: clientSpec }
+            core = StratusCore( hspec )
+            self._handlers = Handlers( core, hspec )
+            self._name, handlerSpec = list(hspec.items())[0]
+            self._handler = self._handlers.available[ self._name ]
 
 @app.task( bind=True, base=CeleryTask )
-def celery_execute( self, clientSpec: Dict, requestSpec: Dict, inputs: List[TaskResult] ) -> Optional[TaskResult]:
-    cid = requestSpec['cid']
+def celery_execute( self, inputs: List[TaskResult], clientSpec: Dict, requestSpec: Dict ) -> Optional[TaskResult]:
+    cid = clientSpec['cid']
     self.initHandler( clientSpec )
     client: StratusClient = self._handler.getClient( cid )
     logger.info( f"Client[{cid}]: Executing request: {requestSpec}")
