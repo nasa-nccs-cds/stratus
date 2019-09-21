@@ -23,9 +23,13 @@ class FlowerManager(Thread):
     def __init__ (self ):
         Thread.__init__(self)
         self._completedProcess = None
+        self.logger = StratusLogger.getLogger()
 
     def run(self):
-        self._completedProcess = subprocess.run(['celery', 'flower', '--app=stratus.handlers.celery.app:app', '--port=5555', '--address=127.0.0.1' ], check = True )
+        try:
+            self._completedProcess = subprocess.run(['celery', 'flower', '--app=stratus.handlers.celery.app:app', '--port=5555', '--address=127.0.0.1' ], check = True )
+        except Exception as err:
+            self.logger.error( f"Error staring Celery: {err}" )
 
 class CeleryCore( StratusCore ):
 
@@ -34,6 +38,7 @@ class CeleryCore( StratusCore ):
         self._flower = None
         self.baseDir = os.path.dirname(__file__)
         StratusCore.__init__( self, configSpec, internal_clients=False, **kwargs )
+        self.parms.update( type="celery" )
         self.logger = StratusLogger.getLogger()
         self.logger.info( f"Starting CeleryCore with parms: {self.parms}" )
         if self.parm( 'flower', False ): self._startFlower()

@@ -31,13 +31,14 @@ class CeleryTask(Task):
         Task.__init__(self)
         self._handlers: Handlers = None
         self._name: str = None
+        self.core: StratusCore = None
         self._handler: Handler = None
 
     def initHandler( self, clientSpec: Dict[str,Dict] ):
         if self._handlers is None:
-            hspec: Dict[str,Dict] = { clientSpec['name']: clientSpec }
-            core = StratusCore( hspec )
-            self._handlers = Handlers( core, hspec )
+            hspec: Dict[str,Dict] = { clientSpec['name']: clientSpec, "stratus": { 'type': "celery", 'name':"stratus" } }
+            self.core = StratusCore( hspec )
+            self._handlers = Handlers( self.core, hspec )
             self._name, handlerSpec = list(hspec.items())[0]
             self._handler = self._handlers.available[ self._name ]
 
@@ -45,7 +46,7 @@ class CeleryTask(Task):
 def celery_execute( self, inputs: List[TaskResult], clientSpec: Dict, requestSpec: Dict ) -> Optional[TaskResult]:
     cid = clientSpec['cid']
     self.initHandler( clientSpec )
-    client: StratusClient = self._handler.getClient( cid )
+    client: StratusClient = self.core.getClient()
     logger.info( f"Client[{cid}]: Executing request: {requestSpec}")
     taskHandle: TaskHandle = client.request( requestSpec, inputs )
     return taskHandle.getResult()
