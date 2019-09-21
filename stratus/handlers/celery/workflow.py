@@ -11,10 +11,10 @@ from celery.utils.log import get_task_logger
 from celery import Task
 logger = get_task_logger(__name__)
 
-class CeleryTaskHandle(TaskHandle):
+class CeleryAsyncTaskHandle(TaskHandle):
 
     def __init__(self, manager: AsyncResult, **kwargs):
-        TaskHandle.__init__( self, rid='rid', cid='cid', **kwargs )   # **{ "rid":rid, "cid":cid, **kwargs }
+        TaskHandle.__init__( self, **kwargs )
         self.logger = StratusLogger.getLogger()
         self.manager: AsyncResult = manager
         self._exception = None
@@ -49,6 +49,23 @@ class CeleryTaskHandle(TaskHandle):
             self._exception = self.manager.result
         return self._exception
 
+class CelerySyncTaskHandle(TaskHandle):
+
+    def __init__(self, result: TaskResult, **kwargs):
+        TaskHandle.__init__( self, **kwargs )
+        self.logger = StratusLogger.getLogger()
+        self.result: TaskResult = result
+        self._exception = None
+
+    def getResult( self, **kwargs ) ->  Optional[TaskResult]:
+        return  self.result
+
+    def status(self) ->  Status:
+        return Status.COMPLETED
+
+    def exception(self) -> Optional[Exception]:
+        return self._exception
+
 
 class CeleryWorkflow(WorkflowBase):
 
@@ -58,7 +75,9 @@ class CeleryWorkflow(WorkflowBase):
         self.celery_workflow_sig = None
         self.celery_result: AsyncResult = None
         self.task_result: TaskResult = None
+        self.executor = kwargs.get('executor','inline')
         self.rid = None
+        self.logger.info( f"Starting Celery Workflow with parms: {kwargs}" )
 
     def getConnectedTaskSig( self, wtask: WorkflowTask ):
         from .app import celery_execute
@@ -85,32 +104,35 @@ class CeleryWorkflow(WorkflowBase):
 
     @graphop
     def update( self ) -> bool:
+        task_inputs = []
 
-        if self.task_result == None:
-            task_inputs = []
-            self.logger.info( "Executing Celery Workflow")
-#            self.celery_result = self.celery_workflow_sig.apply_async( args=[ task_inputs ] )
-            self.task_result = self.celery_workflow_sig( task_inputs )
-        return True
+        if self.executor == "inline":
+            if self.task_result == None:
+                self.logger.info( "Executing Celery Workflow")
+                self.task_result: TaskResult = self.celery_workflow_sig(task_inputs)
+                self._status = Status.COMPLETED
+                return True
+        else:
+            if self.celery_result == None:
+                self.logger.info( "Executing Celery Workflow")
+    #            self.celery_result = self.celery_workflow_sig.apply_async( args=[ task_inputs ] )
+                self.celery_result = self.celery_workflow_sig( task_inputs )
+                self.result = CeleryAsyncTaskHandle(self.celery_result)
+                self._status = Status.EXECUTING
+            else:
+                if self.celery_result.successful():
+                    self._status = Status.COMPLETED
+                    return True
+                elif self.celery_result.failed():
+                    self._status = Status.ERROR
+                    exc = self.celery_result.result
+                    raise Exception("Workflow Errored out: " + (getattr(exc, 'message', repr(exc)) if exc is not None else "NULL"))
+            return False
 
-    # @graphop
-    # def update(self) -> bool:
-    #
-    #     if self.celery_result == None:
-    #         task_inputs = []
-    #         self.logger.info("Executing Celery Workflow")
-    #         #            self.celery_result = self.celery_workflow_sig.apply_async( args=[ task_inputs ] )
-    #         self.celery_result = self.celery_workflow_sig(task_inputs)
-    #         self.result = CeleryTaskHandle(self.celery_result)
-    #         self._status = Status.EXECUTING
-    #     else:
-    #         if self.celery_result.successful():
-    #             self._status = Status.COMPLETED
-    #             return True
-    #         elif self.celery_result.failed():
-    #             self._status = Status.ERROR
-    #             exc = self.celery_result.result
-    #             raise Exception("Workflow Errored out: " + (getattr(exc, 'message', repr(exc)) if exc is not None else "NULL"))
-    #     return False
-    #
+    def getResult(self) -> TaskHandle:
+        if self.celery_result is not None:
+            return CeleryAsyncTaskHandle(self.celery_result)
+        elif self.task_result is not None:
+            return CelerySyncTaskHandle(self.task_result)
+        else: return WorkflowBase.getResult(self)
 

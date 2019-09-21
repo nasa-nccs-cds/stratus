@@ -55,7 +55,7 @@ class StratusAppCelery(StratusEmbeddedApp):
 
     def getWorkflow( self, tasks: List[WorkflowTask] ) -> WorkflowBase:
         from stratus.handlers.celery.workflow import CeleryWorkflow
-        return CeleryWorkflow(nodes=tasks)
+        return CeleryWorkflow( nodes=tasks, **self.parms )
 
     def processError(self, rid: str, ex: Exception): pass
 
