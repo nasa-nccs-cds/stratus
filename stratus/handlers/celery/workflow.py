@@ -13,8 +13,8 @@ logger = get_task_logger(__name__)
 
 class CeleryTaskHandle(TaskHandle):
 
-    def __init__(self, rid: str, cid: str, manager: AsyncResult, **kwargs):
-        TaskHandle.__init__( self, rid=rid, cid=cid, **kwargs )   # **{ "rid":rid, "cid":cid, **kwargs }
+    def __init__(self, manager: AsyncResult, **kwargs):
+        TaskHandle.__init__( self, rid='rid', cid='cid', **kwargs )   # **{ "rid":rid, "cid":cid, **kwargs }
         self.logger = StratusLogger.getLogger()
         self.manager: AsyncResult = manager
         self._exception = None
@@ -57,6 +57,7 @@ class CeleryWorkflow(WorkflowBase):
         self.taskSigs: Dict = {}
         self.celery_workflow_sig = None
         self.celery_result: AsyncResult = None
+        self.task_result: TaskResult = None
         self.rid = None
 
     def getConnectedTaskSig( self, wtask: WorkflowTask ):
@@ -85,51 +86,31 @@ class CeleryWorkflow(WorkflowBase):
     @graphop
     def update( self ) -> bool:
 
-        if self.celery_result == None:
+        if self.task_result == None:
             task_inputs = []
             self.logger.info( "Executing Celery Workflow")
 #            self.celery_result = self.celery_workflow_sig.apply_async( args=[ task_inputs ] )
-            self.celery_result = self.celery_workflow_sig( task_inputs )
-            self.result = CeleryTaskHandle( self.rid, self.cid, self.celery_result )
-            self._status = Status.EXECUTING
-        else:
-            if self.celery_result.successful():
-                self._status = Status.COMPLETED
-                return True
-            elif self.celery_result.failed():
-                self._status = Status.ERROR
-                exc = self.celery_result.result
-                raise Exception("Workflow Errored out: " + (getattr(exc, 'message', repr(exc)) if exc is not None else "NULL"))
-        return False
+            self.task_result = self.celery_workflow_sig( task_inputs )
+        return True
 
+    # @graphop
+    # def update(self) -> bool:
+    #
+    #     if self.celery_result == None:
+    #         task_inputs = []
+    #         self.logger.info("Executing Celery Workflow")
+    #         #            self.celery_result = self.celery_workflow_sig.apply_async( args=[ task_inputs ] )
+    #         self.celery_result = self.celery_workflow_sig(task_inputs)
+    #         self.result = CeleryTaskHandle(self.celery_result)
+    #         self._status = Status.EXECUTING
+    #     else:
+    #         if self.celery_result.successful():
+    #             self._status = Status.COMPLETED
+    #             return True
+    #         elif self.celery_result.failed():
+    #             self._status = Status.ERROR
+    #             exc = self.celery_result.result
+    #             raise Exception("Workflow Errored out: " + (getattr(exc, 'message', repr(exc)) if exc is not None else "NULL"))
+    #     return False
+    #
 
-        # completed = True
-        # try:
-        #     if self._status in [Status.EXECUTING, Status.IDLE]:
-        #         self._status = Status.EXECUTING
-        #         output_id = self.getOutputNode()
-        #         for wtask in self.tasks:
-        #             if wtask.id not in self.completed_tasks:
-        #                 stat = wtask.status()
-        #                 if stat == Status.ERROR:
-        #                     self._status = Status.ERROR
-        #                     exc = wtask.exception()
-        #                     raise Exception( "Workflow Errored out: " + ( getattr(exc, 'message', repr(exc)) if exc is not None else "NULL" )  )
-        #                 elif stat == Status.CANCELED:
-        #                     self._status = Status.CANCELED
-        #                     raise Exception("Workflow Canceled")
-        #                 elif (stat == Status.IDLE) and (wtask.dependentStatus() == Status.COMPLETED):
-        #                     wtask.async_execute()
-        #                     completed = False
-        #                 elif ( stat == Status.EXECUTING ):
-        #                     completed = False
-        #                 elif ( stat == Status.COMPLETED ):
-        #                     self._status = Status.COMPLETED
-        #                     self.completed_tasks.append( wtask.id )
-        #                     self.logger.info( f"COMPLETED TASK: taskID: {wtask.id}, outputID: {output_id}, nodes: {list(self.ids)}, exception: {wtask.taskHandle.exception()}, status: {wtask.taskHandle.status()}")
-        #                     if wtask.id == output_id:
-        #                         self.result =  wtask.taskHandle
-        # except Exception as err:
-        #     self._status = Status.ERROR
-        #     self.result = FailedTask( err )
-        # return completed

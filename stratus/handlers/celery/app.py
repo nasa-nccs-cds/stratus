@@ -40,16 +40,16 @@ class CeleryTask(Task):
             self.core = StratusCore( hspec )
             self._handlers = Handlers( self.core, hspec )
             self._name, handlerSpec = list(hspec.items())[0]
-            self._handler = self._handlers.available[ self._name ]
+            self._handler: Handler = self._handlers.available[ self._name ]
 
 @app.task( bind=True, base=CeleryTask )
 def celery_execute( self, inputs: List[TaskResult], clientSpec: Dict, requestSpec: Dict ) -> Optional[TaskResult]:
     cid = clientSpec['cid']
     self.initHandler( clientSpec )
-    client: StratusClient = self.core.getClient()
+    client: StratusClient = self._handler.client( self.core )
     logger.info( f"Client[{cid}]: Executing request: {requestSpec}")
     taskHandle: TaskHandle = client.request( requestSpec, inputs )
-    return taskHandle.getResult()
+    return taskHandle.getResult( block=True )
 
 class StratusAppCelery(StratusEmbeddedApp):
 
