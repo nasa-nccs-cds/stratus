@@ -77,13 +77,12 @@ class CeleryWorkflow(WorkflowBase):
         self.task_result: TaskResult = None
         self.executor = kwargs.get('executor','inline')
         self.rid: str = None
-        self.queue: str = None
         self.logger.info( f"Starting Celery Workflow with parms: {kwargs}" )
 
     def getConnectedTaskSig( self, wtask: WorkflowTask ):
         from stratus.handlers.celery.app import celery_execute
         if wtask.id not in self.taskSigs:
-            core_task_sig = celery_execute.s(wtask.clientSpec, wtask.requestSpec)
+            core_task_sig = celery_execute.signature( (wtask.clientSpec, wtask.requestSpec), queue=wtask.name )
             dep_sigs = [ self.getConnectedTaskSig(deptask) for deptask in wtask.dependencies ]
             if len(dep_sigs) == 0:      self.taskSigs[wtask.id] =                       core_task_sig
             elif len( dep_sigs ) == 1:  self.taskSigs[wtask.id] = (    dep_sigs[0]    | core_task_sig )
@@ -94,7 +93,6 @@ class CeleryWorkflow(WorkflowBase):
         wtask: WorkflowTask
         WorkflowBase.connect(self)
         for wtask in self.tasks:
-            if self.queue == None: self.queue = wtask.name
             out_edges = self.graph.out_edges(wtask.id)
             connections = [Connection(self.graph.get_edge_data(*edge_tup)["id"], edge_tup[0], edge_tup[1]) for edge_tup in out_edges]
             nids = [conn.nid(Connection.OUTGOING) for conn in connections]
@@ -116,8 +114,8 @@ class CeleryWorkflow(WorkflowBase):
                 return True
         else:
             if self.celery_result == None:
-                self.logger.info( f"Executing Celery Workflow on queue {self.queue}")
-                self.celery_result = self.celery_workflow_sig.apply_async( args=[task_inputs], queue=self.queue )
+                self.logger.info( f"Executing Celery Workflow")
+                self.celery_result = self.celery_workflow_sig.apply_async( args=[task_inputs] )
                 self.result = CeleryAsyncTaskHandle(self.celery_result)
                 self._status = Status.EXECUTING
             else:
