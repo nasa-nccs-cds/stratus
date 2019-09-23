@@ -14,8 +14,8 @@ if __name__ == "__main__":
 
     requestSpec = dict(
         domain=[ dict( name="d0", time={"start": "1980-01-01", "end": "2001-12-31", "crs": "timestamps"} )  ],
-        input=[ dict( uri=uri, name=f"tas:v0", domain=f"d0" ) ],
-        operation=[ dict( name="edas:ave", axis="xy", input=f"v0" )  ]
+        input=[ dict( uri=uri, name="tas:v0", domain="d0" ) ],
+        operation=[ dict( name="edas:ave", axis="xy", input="v0", result="r0" ),  dict( name="demo:log", input="r0" )  ]
     )
 
     task: TaskHandle = client.request( requestSpec )
