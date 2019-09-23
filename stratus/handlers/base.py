@@ -25,7 +25,7 @@ class Handler(StratusFactory):
     @abc.abstractmethod
     def newApplication(self, core: StratusCore, **kwargs ) -> StratusAppBase: pass
 
-    def client( self, core: StratusCoreBase, **kwargs ) -> StratusClient:
+    def client( self, core: StratusCore, **kwargs ) -> StratusClient:
         cid = kwargs.get("cid")
         activate = kwargs.get( "activate", True )
         client: StratusClient = self.getClient( cid )
@@ -38,4 +38,6 @@ class Handler(StratusFactory):
 
     def app(self, core: StratusCore ) -> StratusAppBase:
         return self.newApplication(core)
+
+
 

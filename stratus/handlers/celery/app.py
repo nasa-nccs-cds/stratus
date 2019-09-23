@@ -14,13 +14,6 @@ import queue, traceback, logging, os
 from celery.utils.log import get_task_logger
 from celery import Task
 
-debug_logger = logging.getLogger('stratus-celery.debug')
-debug_logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler(os.path.expanduser("~/.stratus/logs/celery-debug.log"))
-fh.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - stratus-celery.debug - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-debug_logger.addHandler(fh)
 
 logger = get_task_logger(__name__)
 app = Celery( 'stratus', broker = 'redis://localhost', backend = 'redis://localhost' )
@@ -45,7 +38,7 @@ class CeleryTask(Task):
     def initHandler( self, clientSpec: Dict[str,Dict] ):
         if self._handlers is None:
             hspec: Dict[str,Dict] = { clientSpec['name']: clientSpec, "stratus": { 'type': "celery", 'name':"stratus" } }
-            debug_logger.info(f"Init Celery Task Handler with spec: {hspec}")
+            logger.info(f"Init Celery Task Handler with spec: {hspec}")
             self.core = StratusCore( hspec )
             self._handlers = Handlers( self.core, hspec )
             self._name, handlerSpec = list(hspec.items())[0]
@@ -56,15 +49,13 @@ def celery_execute( self, inputs: List[TaskResult], clientSpec: Dict, requestSpe
     cid = clientSpec['cid']
     self.initHandler( clientSpec )
     client: StratusClient = self._handler.client( self.core )
-    debug_logger.info( f"Client[{cid}]: Executing request: {requestSpec}")
+    logger.info( f"Client[{cid}]: Executing request: {requestSpec}")
     taskHandle: TaskHandle = client.request( requestSpec, inputs )
     return taskHandle.getResult( block=True )
 
 @app.task
-def test_task():
-    debug_logger.info( f"EXEC test task")
+def demo_task():
     logger.info( f"EXEC test task")
-
 
 class StratusAppCelery(StratusEmbeddedApp):
 
@@ -77,3 +68,7 @@ class StratusAppCelery(StratusEmbeddedApp):
     def initInteractions(self): pass
 
     def updateInteractions(self): pass
+
+
+if __name__ == "__main__":
+    demo_task.delay()

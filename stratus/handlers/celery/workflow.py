@@ -4,7 +4,6 @@ from stratus.app.graph import DGNode, DependencyGraph, graphop, Connection
 from celery.result import AsyncResult
 from stratus_endpoint.util.config import StratusLogger, UID
 from celery import group, states
-from stratus.handlers.celery.app import test_task
 from stratus.app.client import StratusClient
 from typing import Dict, List, Optional
 import queue, datetime, time
@@ -77,7 +76,8 @@ class CeleryWorkflow(WorkflowBase):
         self.celery_result: AsyncResult = None
         self.task_result: TaskResult = None
         self.executor = kwargs.get('executor','inline')
-        self.rid = None
+        self.rid: str = None
+        self.queue: str = None
         self.logger.info( f"Starting Celery Workflow with parms: {kwargs}" )
 
     def getConnectedTaskSig( self, wtask: WorkflowTask ):
@@ -94,6 +94,7 @@ class CeleryWorkflow(WorkflowBase):
         wtask: WorkflowTask
         WorkflowBase.connect(self)
         for wtask in self.tasks:
+            if self.queue == None: self.queue = wtask.name
             out_edges = self.graph.out_edges(wtask.id)
             connections = [Connection(self.graph.get_edge_data(*edge_tup)["id"], edge_tup[0], edge_tup[1]) for edge_tup in out_edges]
             nids = [conn.nid(Connection.OUTGOING) for conn in connections]
@@ -110,17 +111,13 @@ class CeleryWorkflow(WorkflowBase):
         if self.executor == "inline":
             if self.task_result == None:
                 self.logger.info( "Executing Celery Workflow")
-                test_task.delay()
                 self.task_result: TaskResult = self.celery_workflow_sig(task_inputs)
                 self._status = Status.COMPLETED
                 return True
         else:
             if self.celery_result == None:
-                time.sleep(4)
-                self.logger.info( "Executing Celery Workflow")
-                print(  "Executing Celery Workflow" )
-                test_task.delay()
-                self.celery_result = self.celery_workflow_sig.delay(task_inputs)
+                self.logger.info( f"Executing Celery Workflow on queue {self.queue}")
+                self.celery_result = self.celery_workflow_sig.apply_async( args=[task_inputs], queue=self.queue )
                 self.result = CeleryAsyncTaskHandle(self.celery_result)
                 self._status = Status.EXECUTING
             else:

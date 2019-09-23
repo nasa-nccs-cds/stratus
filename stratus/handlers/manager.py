@@ -2,8 +2,8 @@ import os, json
 from typing import List, Dict, Callable, Optional
 from stratus.app.client import StratusClient
 from stratus_endpoint.util.config import StratusLogger
-from stratus.app.base import StratusFactory
-from stratus.app.base import StratusCoreBase
+from stratus.app.base import StratusFactory, StratusCoreBase
+from stratus.util.parsing import str2bool
 from stratus.app.operations import Op
 import traceback
 import importlib
@@ -17,7 +17,7 @@ class Handlers:
         self._core = core
         self._handlers: Dict[str, StratusFactory] = { }
         self._app_handler: StratusFactory = None
-        self._internal_clients = kwargs.get( "internal_clients", True )
+        self._internal_clients = str2bool( kwargs.get( "internal_clients", 'true' ) )
         self._parms = kwargs
         self._constructors: Dict[str, Callable[[], StratusFactory]] = {}
         self.configSpec: Dict[str,Dict] = settings
@@ -28,6 +28,7 @@ class Handlers:
         return self._internal_clients
 
     def _init( self ):
+        from stratus.handlers.base import Handler
         self._addConstructors()
         hspecs = self._getHandlerSpecs()
         for service_spec in hspecs:
@@ -37,12 +38,12 @@ class Handlers:
                 if service_name == "stratus":
                     self._app_handler = self._getHandler( service_spec )
                     self.logger.info(f"Initialized stratus node for service {htype}")
+                    if self._internal_clients:
+                        self._app_handler.buildWorker( service_name, service_spec )
                 elif service_name:
-                    self._handlers[service_name] = self._getHandler(service_spec)
+                    handler = self._getHandler(service_spec)
+                    self._handlers[service_name] = handler
                     self.logger.info(f"Adding stratus handler for service {htype}")
-                    if not self._internal_clients:
-                        assert self._core is not None, "Must supply an instance of 'StratusCore' to 'Handlers' in order to build workers"
-                        self._core.buildWorker( service_name, service_spec )
             except Exception as err:
                 err_msg = "Error registering handler for service {}: {}".format( service_spec.get("name",""), str(err) )
                 print( err_msg )

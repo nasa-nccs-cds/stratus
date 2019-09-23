@@ -1,7 +1,6 @@
 import os, json, yaml, abc, itertools, queue
 from typing import List, Union, Dict, Set, Iterator, Tuple, ItemsView
 from stratus_endpoint.util.config import Config, StratusLogger
-from stratus.app.client import stratusrequest
 from multiprocessing import Process as SubProcess
 from stratus.app.operations import *
 from threading import Thread
@@ -63,9 +62,6 @@ class StratusCoreBase:
 
     @abc.abstractmethod
     def getEpas( self,  **kwargs ) -> List[str]: pass
-
-    @abc.abstractmethod
-    def buildWorker( self, name: str, spec: Dict[str,str] ): pass
 
     @property
     @abc.abstractmethod
@@ -156,11 +152,8 @@ class StratusAppBase(Thread):
                 self.active_workflows[ rid ] = workflow
 
     def update_workflows(self):
-#        if len(self.active_workflows) > 0:
-        self.logger.info( f" ***********************************   StratusApp.update_workflows: {self.active_workflows.keys()}")
         completed_list = {}
         for rid, workflow in self.active_workflows.items():
-            self.logger.info(f" ***********************************   StratusApp.update_workflow: {rid}")
             completed = workflow.update()
             if completed:
                 self.logger.info(f" ***********************************   StratusApp.completed_workflow: {rid}")
@@ -171,6 +164,7 @@ class StratusAppBase(Thread):
 
     def waitForCompletion(self, rid: str ):
         while( True ):
+            self.update_workflows()
             if rid in self.completed_workflows: return
             time.sleep( 0.1 )
 
@@ -287,6 +281,9 @@ class StratusFactory:
     @abc.abstractmethod
     def app(self, core: StratusCoreBase ) -> StratusAppBase: pass
 
+    @abc.abstractmethod
+    def buildWorker(self, name: str, spec: Dict[str, str]): pass
+
     def __getitem__( self, key: str ) -> str:
         result =  self.parms.get( key, None )
         assert result is not None, "Missing required parameter in {}: {} ".format( self.__class__.__name__, key )
@@ -300,3 +297,4 @@ class StratusFactory:
 
     def __str__(self):
         return f"SF[{self.name}:{self.type}]"
+

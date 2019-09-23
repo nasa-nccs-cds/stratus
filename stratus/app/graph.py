@@ -129,7 +129,7 @@ class DependencyGraph():
 
     def filter(self, iops: Set[str] ) -> "DependencyGraph":
         newDepGraph = self.copy()
-        newDepGraph.remove( list( self.ids ^  iops ) )
+        newDepGraph.remove( list( self.ids ^ iops ) )
         return newDepGraph
 
     def __len__(self):
