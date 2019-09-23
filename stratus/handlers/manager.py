@@ -124,7 +124,7 @@ class Handlers:
         return specs
 
     def _addConstructor(self, type: str, handler_constructor: Callable[[], StratusFactory]):
-        self.logger.info( "Adding constructor for " + type )
+        self.logger.debug( "Adding constructor for " + type )
         self._constructors[type] = handler_constructor
 
     def _getHandler(self, service_spec: Dict[str,str] ) -> StratusFactory:

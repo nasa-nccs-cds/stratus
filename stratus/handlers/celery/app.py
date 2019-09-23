@@ -53,10 +53,6 @@ def celery_execute( self, inputs: List[TaskResult], clientSpec: Dict, requestSpe
     taskHandle: TaskHandle = client.request( requestSpec, inputs )
     return taskHandle.getResult( block=True )
 
-@app.task
-def demo_task():
-    logger.info( f"EXEC test task")
-
 class StratusAppCelery(StratusEmbeddedApp):
 
     def getWorkflow( self, tasks: List[WorkflowTask] ) -> WorkflowBase:
@@ -68,7 +64,3 @@ class StratusAppCelery(StratusEmbeddedApp):
     def initInteractions(self): pass
 
     def updateInteractions(self): pass
-
-
-if __name__ == "__main__":
-    demo_task.delay()
