@@ -28,9 +28,9 @@ class Handlers:
         return self._internal_clients
 
     def _init( self ):
-        from stratus.handlers.base import Handler
         self._addConstructors()
         hspecs = self._getHandlerSpecs()
+
         for service_spec in hspecs:
             htype = service_spec["type"]
             try:
@@ -38,12 +38,22 @@ class Handlers:
                 if service_name == "stratus":
                     self._app_handler = self._getHandler( service_spec )
                     self.logger.info(f"Initialized stratus node for service {htype}")
-                    if self._internal_clients:
-                        self._app_handler.buildWorker( service_name, service_spec )
-                elif service_name:
+            except Exception as err:
+                err_msg = "Error registering handler for service {}: {}".format( service_spec.get("name",""), str(err) )
+                print( err_msg )
+                print( traceback.format_exc() )
+                self.logger.error( err_msg )
+
+        for service_spec in hspecs:
+            htype = service_spec["type"]
+            try:
+                service_name = service_spec.get('name', "")
+                if service_name and (service_name != "stratus") and (service_name not in self._handlers):
                     handler = self._getHandler(service_spec)
                     self._handlers[service_name] = handler
-                    self.logger.info(f"Adding stratus handler for service {htype}")
+                    self.logger.info(f" ==========================>>>> Adding stratus handler for service {htype}")
+                    if self._app_handler and self._internal_clients:
+                        self._app_handler.buildWorker( service_name, service_spec )
             except Exception as err:
                 err_msg = "Error registering handler for service {}: {}".format( service_spec.get("name",""), str(err) )
                 print( err_msg )
