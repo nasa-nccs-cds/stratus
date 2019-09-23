@@ -6,17 +6,13 @@ from threading import Thread
 
 class TaskManager(Thread):
 
-    def __init__(self, name: str, spec: Dict[str,str] ):
+    def __init__(self, name: str ):
         Thread.__init__(self)
         self._name = name
-        self._spec = spec
-        self.task = None
         self._completedProcess = None
 
     def run(self):
-        from .app import celery_execute
-        self.task = celery_execute.s( self._spec )
-        self._completedProcess = subprocess.run(['celery', '--app=stratus.handlers.celery.app:app', 'worker', '-l', 'info',  '-Q', self._name ], check = True )
+        self._completedProcess = subprocess.run(['celery', '--app=stratus.handlers.celery.app:app', 'worker', '-l', 'info',  '-Q', self._name, '-E' ], check = True )
 
 class FlowerManager(Thread):
 
@@ -45,10 +41,10 @@ class CeleryCore( StratusCore ):
 
     def buildWorker( self, name: str, spec: Dict[str,str] ):
         if name not in self._workers:
-            self._startWorker( name, spec )
+            self._startWorker( name )
 
-    def _startWorker(self, name: str, spec: Dict[str,str] ):
-        taskManager = TaskManager( name, spec )
+    def _startWorker(self, name: str ):
+        taskManager = TaskManager( name )
         self._workers[ name ] = taskManager
         try:
             taskManager.start()

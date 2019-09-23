@@ -4,9 +4,10 @@ from stratus.app.graph import DGNode, DependencyGraph, graphop, Connection
 from celery.result import AsyncResult
 from stratus_endpoint.util.config import StratusLogger, UID
 from celery import group, states
+from stratus.handlers.celery.app import test_task
 from stratus.app.client import StratusClient
 from typing import Dict, List, Optional
-import queue, datetime
+import queue, datetime, time
 from celery.utils.log import get_task_logger
 from celery import Task
 logger = get_task_logger(__name__)
@@ -80,7 +81,7 @@ class CeleryWorkflow(WorkflowBase):
         self.logger.info( f"Starting Celery Workflow with parms: {kwargs}" )
 
     def getConnectedTaskSig( self, wtask: WorkflowTask ):
-        from .app import celery_execute
+        from stratus.handlers.celery.app import celery_execute
         if wtask.id not in self.taskSigs:
             core_task_sig = celery_execute.s(wtask.clientSpec, wtask.requestSpec)
             dep_sigs = [ self.getConnectedTaskSig(deptask) for deptask in wtask.dependencies ]
@@ -109,14 +110,17 @@ class CeleryWorkflow(WorkflowBase):
         if self.executor == "inline":
             if self.task_result == None:
                 self.logger.info( "Executing Celery Workflow")
+                test_task.delay()
                 self.task_result: TaskResult = self.celery_workflow_sig(task_inputs)
                 self._status = Status.COMPLETED
                 return True
         else:
             if self.celery_result == None:
+                time.sleep(4)
                 self.logger.info( "Executing Celery Workflow")
-    #            self.celery_result = self.celery_workflow_sig.apply_async( args=[ task_inputs ] )
-                self.celery_result = self.celery_workflow_sig( task_inputs )
+                print(  "Executing Celery Workflow" )
+                test_task.delay()
+                self.celery_result = self.celery_workflow_sig.delay(task_inputs)
                 self.result = CeleryAsyncTaskHandle(self.celery_result)
                 self._status = Status.EXECUTING
             else:
