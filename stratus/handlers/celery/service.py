@@ -5,7 +5,7 @@ from .client import CeleryClient
 from stratus.app.core import StratusCore
 from stratus.app.base import StratusAppBase
 from .app import StratusAppCelery
-from stratus_endpoint.util.config import StratusLogger
+from stratus_endpoint.util.config import StratusLogger, UID
 from stratus.util.parsing import str2bool
 import subprocess, os
 from threading import Thread
@@ -15,10 +15,11 @@ class TaskManager(Thread):
     def __init__(self, name: str ):
         Thread.__init__(self)
         self._name = name
+        self.id = self._name + "." + UID.randomId(6)
         self._completedProcess = None
 
     def run(self):
-        self._completedProcess = subprocess.run(['celery', '--app=stratus.handlers.celery.app:app', 'worker', '-l', 'info',  '-Q', self._name,  '-n', self._name, '-E' ], check = True )
+        self._completedProcess = subprocess.run(['celery', '--app=stratus.handlers.celery.app:app', 'worker', '-l', 'info',  '-Q', self._name,  '-n', self.id, '-E' ], check = True )
 
 class FlowerManager(Thread):
 

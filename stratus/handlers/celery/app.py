@@ -26,7 +26,7 @@ app.conf.update(
     result_serializer = 'pickle'
 )
 celery_log_file = os.path.expanduser("~/.stratus/logs/celery.log")
-app.log.setup_logging_subsystem( loglevel=logging.INFO, logfile=celery_log_file, format='[%(asctime)s: %(levelname)s/%(processName)s-> %(filename)s:%(lineno)d]: %(message)s' )
+app.log.setup_logging_subsystem( loglevel=logging.INFO, logfile=celery_log_file, format='[%(asctime)s: %(levelname)s/%(processName)s-> %(pathname)s:%(lineno)d]: %(message)s' )
 
 
 class CeleryTask(Task):
@@ -53,7 +53,7 @@ def celery_execute( self, inputs: List[TaskResult], clientSpec: Dict, requestSpe
     client: StratusClient = self._handler.client( self.core )
     logger.info( f"Client[{cid}]: Executing request: {requestSpec}")
     taskHandle: TaskHandle = client.request( requestSpec, inputs )
-    return taskHandle.getResult( block=True )
+    return taskHandle.getResult( block=True ) if taskHandle else None
 
 class StratusAppCelery(StratusEmbeddedApp):
 

@@ -7,7 +7,7 @@ from edas.portal.base import Message, Response
 from typing import Dict, Any, Sequence
 from celery.utils.log import get_task_logger
 from stratus.util.parsing import ensureIterable
-
+from stratus.handlers.celery.workflow import CelerySyncTaskHandle
 
 class DemoEndpoint(Endpoint):
 
@@ -50,9 +50,10 @@ class DemoEndpoint(Endpoint):
     def sendFile( self, clientId: str, jobId: str, name: str, filePath: str, sendData: bool ):
         self.logger.debug( "@@Portal: Sending file data to client for {}, filePath={}".format( name, filePath ) )
 
-    def request( self, requestSpec: Dict, inputs: Union[TaskResult,List[TaskResult]] = None, **kwargs ):
-        inputs = ensureIterable( inputs )
-        for result in inputs:
+    def request( self, requestSpec: Dict, inputs: Union[TaskResult,List[TaskResult]] = None, **kwargs ) -> TaskHandle:
+        inputList: List[TaskResult] = ensureIterable( inputs )
+        self.logger.info(f"Executing DemoEndpoint, NINputs = {len(inputList)}")
+        for result in inputList:
             dsets: List[xa.Dataset] = result.data
             self.logger.info(f"Completed Request, NResults = {len(dsets)}")
             for index, dset in enumerate(dsets):
@@ -61,6 +62,7 @@ class DemoEndpoint(Endpoint):
                 for vname in dset.variables:
                     self.logger.info(f"   -> Variable[{vname}]: Shape = {dset[vname].shape}")
                 dset.to_netcdf(fileName)
+        return CelerySyncTaskHandle( inputList[0] )
 
 
     def shutdown( self, *args ):
