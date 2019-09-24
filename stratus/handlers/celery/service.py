@@ -18,7 +18,7 @@ class TaskManager(Thread):
         self._completedProcess = None
 
     def run(self):
-        self._completedProcess = subprocess.run(['celery', '--app=stratus.handlers.celery.app:app', 'worker', '-l', 'info',  '-Q', self._name, '-E' ], check = True )
+        self._completedProcess = subprocess.run(['celery', '--app=stratus.handlers.celery.app:app', 'worker', '-l', 'info',  '-Q', self._name,  '-n', self._name, '-E' ], check = True )
 
 class FlowerManager(Thread):
 

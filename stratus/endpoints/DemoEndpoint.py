@@ -1,11 +1,12 @@
 from stratus_endpoint.handler.base import Endpoint, TaskHandle, Status, TaskResult
 from stratus_endpoint.util.config import StratusLogger
-from typing import Sequence, List, Dict, Mapping, Optional, Any
+from typing import Sequence, List, Dict, Mapping, Optional, Any, Union
 import traceback, xarray as xa
 import atexit, ast, os, json
 from edas.portal.base import Message, Response
 from typing import Dict, Any, Sequence
 from celery.utils.log import get_task_logger
+from stratus.util.parsing import ensureIterable
 
 
 class DemoEndpoint(Endpoint):
@@ -49,7 +50,8 @@ class DemoEndpoint(Endpoint):
     def sendFile( self, clientId: str, jobId: str, name: str, filePath: str, sendData: bool ):
         self.logger.debug( "@@Portal: Sending file data to client for {}, filePath={}".format( name, filePath ) )
 
-    def request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs ):
+    def request( self, requestSpec: Dict, inputs: Union[TaskResult,List[TaskResult]] = None, **kwargs ):
+        inputs = ensureIterable( inputs )
         for result in inputs:
             dsets: List[xa.Dataset] = result.data
             self.logger.info(f"Completed Request, NResults = {len(dsets)}")

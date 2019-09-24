@@ -1,5 +1,5 @@
 import six
-from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Union
+from typing import List, Dict, Any, Sequence, BinaryIO, TextIO, ValuesView, Optional, Union, Iterable
 
 class HtmlCodec:
     def marshal(self, value, **kwargs):
@@ -31,3 +31,13 @@ def str2bool( s: Union[str,bool] ):
     if   s.lower() in ("yes", "true", "t", "1"): return True
     elif s.lower() in ("no", "false", "f", "0"): return False
     raise Exception( f"Parse Error converting str '{s}' to bool")
+
+def isIterable( obj: Any ) -> bool:
+    try: iter(obj)
+    except TypeError: return False
+    return True
+
+def ensureIterable( obj: Any ) -> Iterable:
+    try: iter(obj)
+    except TypeError: return [obj]
+    return obj

@@ -9,7 +9,7 @@ from stratus.app.graph import DGNode, DependencyGraph, graphop, Connection
 class Op(DGNode):
 
     def __init__( self, **kwargs ):
-        inputs:  List[str] = self.parse( kwargs.get("input") )
+        inputs:  List[str] = self.parse( kwargs.get("input",[]) )
         outputs: List[str] = [ kwargs.get( "result", UID.randomId( 6 ) ) ]
         DGNode. __init__( self, inputs, outputs, **kwargs )
         raw_name = self["name"]
@@ -23,6 +23,13 @@ class Op(DGNode):
         elif isinstance(parm_value, str): return parm_value.split(",")
         elif isinstance(parm_value, (list, tuple)): return parm_value
         else: return [ str(parm_value) ]
+
+    def __str__(self):
+        return str( self.params )
+        # return str( dict(   name = ":".join([*self.epas,self.name]),
+        #                     input = ",".join(self._inputs),
+        #                     result = ",".join(self._outputs),
+        #                     **self.params ) )
 
 class OpSet(DependencyGraph):
 
@@ -65,10 +72,16 @@ class ClientOpSet(OpSet):
 
     @property
     def requestSpec(self) -> Dict:
-        return { **self._request, "cid": self.client.cid }
+        return dict(    input = self._request.get("input",[]),
+                        domain = self._request.get("domain",[]),
+                        operation = self.getOperationSpecs(),
+                        cid= self.client.cid )
 
     def copy(self) -> "ClientOpSet":
         return ClientOpSet( self._request, self.client, nodes=self.nodes.values(), graph = copy.deepcopy(self.graph) )
+
+    def getOperationSpecs(self) -> List[Dict[str,Any]]:
+        return [ op.params for op in self.nodes.values()]
 
     @property
     def name(self) -> str:

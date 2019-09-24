@@ -148,6 +148,7 @@ class StratusAppBase(Thread):
             except Exception as err:
                 msg =  f"Error ingesting request: {err}\n" + traceback.format_exc()
                 self.logger.error(msg)
+                self.logger.error( traceback.format_exc() )
                 workflow = StratusWorkflow(error=(msg, err))
                 self.active_workflows[ rid ] = workflow
 

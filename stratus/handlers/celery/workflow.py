@@ -6,7 +6,7 @@ from stratus_endpoint.util.config import StratusLogger, UID
 from celery import group, states
 from stratus.app.client import StratusClient
 from typing import Dict, List, Optional
-import queue, datetime, time
+import queue, datetime, time, traceback
 from celery.utils.log import get_task_logger
 from celery import Task
 logger = get_task_logger(__name__)
@@ -125,6 +125,7 @@ class CeleryWorkflow(WorkflowBase):
                 elif self.celery_result.failed():
                     self._status = Status.ERROR
                     exc = self.celery_result.result
+                    self.logger.error(traceback.format_exc())
                     raise Exception("Workflow Errored out: " + (getattr(exc, 'message', repr(exc)) if exc is not None else "NULL"))
             return False
 

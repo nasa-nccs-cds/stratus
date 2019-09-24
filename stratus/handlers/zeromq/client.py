@@ -69,6 +69,7 @@ class ZMQClient(StratusClient):
         except Exception as err:
             err_msg =  "\n-------------------------------\nWorker Init error: {0}\n{1}-------------------------------\n".format(err, traceback.format_exc() )
             self.logger.error(err_msg)
+            self.logger.error(traceback.format_exc())
             self.shutdown()
 
     @stratusrequest

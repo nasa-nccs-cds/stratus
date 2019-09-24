@@ -13,10 +13,12 @@ from typing import Dict, List, Optional
 import queue, traceback, logging, os
 from celery.utils.log import get_task_logger
 from celery import Task
-
+from celery.signals import after_setup_task_logger
+from celery.app.log import TaskFormatter
 
 logger = get_task_logger(__name__)
 app = Celery( 'stratus', broker = 'redis://localhost', backend = 'redis://localhost' )
+
 app.conf.update(
     result_expires=3600,
     task_serializer = 'pickle',
@@ -24,8 +26,8 @@ app.conf.update(
     result_serializer = 'pickle'
 )
 celery_log_file = os.path.expanduser("~/.stratus/logs/celery.log")
-app.log.setup( loglevel=logging.INFO, logfile=celery_log_file )
-app.log.setup_task_loggers( loglevel=logging.INFO, logfile=celery_log_file )
+app.log.setup_logging_subsystem( loglevel=logging.INFO, logfile=celery_log_file, format='[%(asctime)s: %(levelname)s/%(processName)s-> %(filename)s:%(lineno)d]: %(message)s' )
+
 
 class CeleryTask(Task):
     def __init__(self):

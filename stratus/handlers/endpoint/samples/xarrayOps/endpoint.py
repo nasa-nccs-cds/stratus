@@ -72,7 +72,7 @@ class XaOpsExecutable(Executable):
             TaskResult: The result of the operation.
             """
         print( f"Executing request {self.request}" )
-        inputSpec = self.request['input']
+        inputSpec = self.request.get('input',[])
         dset: xa.Dataset = xa.open_dataset( inputSpec['uri'] )
         vid = inputSpec['name']
         variable: xa.DataArray = dset.data_vars[ vid ]

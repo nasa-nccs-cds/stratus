@@ -40,9 +40,8 @@ class Handlers:
                     self.logger.info(f"Initialized stratus node for service {htype}")
             except Exception as err:
                 err_msg = "Error registering handler for service {}: {}".format( service_spec.get("name",""), str(err) )
-                print( err_msg )
-                print( traceback.format_exc() )
                 self.logger.error( err_msg )
+                self.logger.error( traceback.format_exc() )
 
         for service_spec in hspecs:
             htype = service_spec["type"]
@@ -56,9 +55,8 @@ class Handlers:
                         self._app_handler.buildWorker( service_name, service_spec )
             except Exception as err:
                 err_msg = "Error registering handler for service {}: {}".format( service_spec.get("name",""), str(err) )
-                print( err_msg )
-                print( traceback.format_exc() )
                 self.logger.error( err_msg )
+                self.logger.error( traceback.format_exc() )
 
     def __getitem__( self, key: str ) -> StratusFactory:
         result =  self._handlers.get(key, None)
@@ -158,6 +156,5 @@ class Handlers:
                 self.logger.debug( "No handler found for path: " + module_name + ": " + repr(err))
             except Exception as err:
                 msg = "Unable to register constructor for {}: {} ({})".format( package_name, str(err), err.__class__.__name__ )
-                self.logger.error( msg )
                 self.logger.error( traceback.format_exc() )
 
