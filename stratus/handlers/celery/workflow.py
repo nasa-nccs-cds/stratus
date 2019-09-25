@@ -84,22 +84,25 @@ class CeleryWorkflow(WorkflowBase):
         if wtask.id not in self.taskSigs:
             core_task_sig = celery_execute.signature( (wtask.clientSpec, wtask.requestSpec), queue=wtask.name )
             dep_sigs = [ self.getConnectedTaskSig(deptask) for deptask in wtask.dependencies ]
-            if len(dep_sigs) == 0:      self.taskSigs[wtask.id] =                       core_task_sig
-            elif len( dep_sigs ) == 1:  self.taskSigs[wtask.id] = (    dep_sigs[0]    | core_task_sig )
-            else:                       self.taskSigs[wtask.id] = ( group( dep_sigs ) | core_task_sig )
+            if len(dep_sigs) == 0:
+                self.taskSigs[wtask.id] =                       core_task_sig
+            elif len( dep_sigs ) == 1:
+                self.taskSigs[wtask.id] = (    dep_sigs[0]    | core_task_sig )
+            else:
+                self.taskSigs[wtask.id] = ( group( dep_sigs ) | core_task_sig )
         return self.taskSigs[wtask.id]
 
     def connect(self):
-        wtask: WorkflowTask
-        WorkflowBase.connect(self)
-        for wtask in self.tasks:
-            out_edges = self.graph.out_edges(wtask.id)
-            connections = [Connection(self.graph.get_edge_data(*edge_tup)["id"], edge_tup[0], edge_tup[1]) for edge_tup in out_edges]
-            nids = [conn.nid(Connection.OUTGOING) for conn in connections]
-            consumer_tasks: List[WorkflowTask] = [self.nodes.get(nid) for nid in nids if nid is not None]
-            wtask.setConsumers(consumer_tasks)
-        for wtask in self.tasks:
-            self.celery_workflow_sig = self.getConnectedTaskSig( wtask )
+        if self.celery_workflow_sig is None:
+            WorkflowBase.connect(self)
+            for wtask in self.tasks:
+                out_edges = self.graph.out_edges(wtask.id)
+                connections = [Connection(self.graph.get_edge_data(*edge_tup)["id"], edge_tup[0], edge_tup[1]) for edge_tup in out_edges]
+                nids = [conn.nid(Connection.OUTGOING) for conn in connections]
+                consumer_tasks: List[WorkflowTask] = [self.nodes.get(nid) for nid in nids if nid is not None]
+                wtask.setConsumers(consumer_tasks)
+            for wtask in self.tasks:
+                self.celery_workflow_sig = self.getConnectedTaskSig( wtask )
 
 
     @graphop

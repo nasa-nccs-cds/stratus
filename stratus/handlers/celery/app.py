@@ -48,10 +48,10 @@ class CeleryTask(Task):
 
 @app.task( bind=True, base=CeleryTask )
 def celery_execute( self, inputs: List[TaskResult], clientSpec: Dict, requestSpec: Dict ) -> Optional[TaskResult]:
-    cid = clientSpec['cid']
+    cid = clientSpec.get('cid',"UNKNOWN")
+    logger.info( f"Client[{cid}]: Executing request: {requestSpec}" )
     self.initHandler( clientSpec )
     client: StratusClient = self._handler.client( self.core )
-    logger.info( f"Client[{cid}]: Executing request: {requestSpec}")
     taskHandle: TaskHandle = client.request( requestSpec, inputs )
     return taskHandle.getResult( block=True ) if taskHandle else None
 
