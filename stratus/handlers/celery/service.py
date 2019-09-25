@@ -15,7 +15,7 @@ class TaskManager(Thread):
     def __init__(self, name: str ):
         Thread.__init__(self)
         self._name = name
-        self.id = self._name + "." + UID.randomId(6)
+        self.id = self._name # + "." + UID.randomId(6)
         self._completedProcess = None
 
     def run(self):
