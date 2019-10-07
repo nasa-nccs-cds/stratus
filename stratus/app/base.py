@@ -130,7 +130,7 @@ class StratusAppBase(Thread):
         self.registeredRequests.add( request["rid"] )
         return request
 
-    def getWorkflow( self, tasks: List[WorkflowTask] ) -> StratusWorkflow:
+    def createWorkflow( self, tasks: List[WorkflowTask] ) -> StratusWorkflow:
         return StratusWorkflow(nodes=tasks)
 
     def ingestRequests( self ):
@@ -142,7 +142,7 @@ class StratusAppBase(Thread):
                 self.logger.info(f"Ingest request: {rid}")
                 clientOpsets: Dict[str, ClientOpSet] = self.geClientOpsets(request)
                 tasks: List[WorkflowTask] = [WorkflowTask(cOpSet) for cOpSet in self.distributeOps(clientOpsets)]
-                self.active_workflows[ rid ] = self.getWorkflow( tasks )
+                self.active_workflows[ rid ] = self.createWorkflow( tasks )
             except queue.Empty:
                 return
             except Exception as err:
@@ -234,13 +234,12 @@ class StratusEmbeddedApp(StratusAppBase):
         StratusAppBase.__init__(self, core)
         self.logger =  StratusLogger.getLogger()
         self.parms = self.getConfigParms('stratus')
-        self.app = None
 
     def run(self):
         pass
 
     def init(self, **kwargs):
-        self.app = self.core.getApplication()
+        pass
 
     def handle_client_request(self, requestSpec: Dict, inputs: List[TaskResult] = None, **kwargs) -> TaskHandle:
         rid = requestSpec["rid"]

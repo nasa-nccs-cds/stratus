@@ -15,7 +15,7 @@ class TaskManager(Thread):
     def __init__(self, name: str ):
         Thread.__init__(self)
         self._name = name
-        self.id = self._name # + "." + UID.randomId(6)
+        self.id = self._name
         self._completedProcess = None
 
     def run(self):
@@ -42,7 +42,7 @@ class ServiceHandler( Handler ):
         self._flower = None
         self.baseDir = os.path.dirname(__file__)
         super(ServiceHandler, self).__init__( htype, **kwargs )
-        self.apps: Dict[str,StratusAppCelery] = {}
+        self._app: StratusAppCelery = None
         if str2bool( self.parm( 'flower', "false" ) ): self._startFlower()
 
     def newClient(self, core: StratusCore, **kwargs) -> StratusClient:
@@ -52,10 +52,18 @@ class ServiceHandler( Handler ):
     def newApplication(self, core: StratusCore, **kwargs ) -> StratusAppBase:
         return self.getApplication( core )
 
+    def getCeleryCore(self, core: StratusCore, **kwargs ) -> StratusCore:
+        for key, core_celery_params in core.config.items():
+            if core_celery_params.get('type') == 'celery':
+                celery_settings = core_celery_params.get( "settings")
+                if celery_settings is not None:
+                    return StratusCore(celery_settings)
+        return core
+
     def getApplication(self, core: StratusCore, **kwargs ):
-        if core.id not in self.apps:
-            self.apps[core.id] = StratusAppCelery( core )
-        return self.apps[core.id]
+        if self._app is None:
+            self._app = StratusAppCelery( self.getCeleryCore( core, **kwargs ) )
+        return self._app
 
     def buildWorker( self, name: str, spec: Dict[str,str] ):
         if name not in self._workers:

@@ -4,11 +4,15 @@ from edas.process.test import TestDataManager as mgr
 import os, xarray as xa
 from stratus.app.core import StratusCore
 HERE: str = os.path.dirname(os.path.abspath(__file__))
-SETTINGS_FILE: str = os.path.join( HERE, "edas_test_settings.ini" )
+certificate_path = "/att/nobackup/tpmaxwel/.stratus/zmq/"
+# zmq_settings = dict( stratus = dict( type="zeromq", client_address = "127.0.0.1", request_port = "4556", response_port = "4557", certificate_path = certificate_path  ) )
+rest_settings = dict( stratus=dict(type="rest", host="127.0.0.1", port="5000" ) )
+useRest = True
+SETTINGS: str = rest_settings if useRest else os.path.join( HERE, "edas_test_settings.ini" )
 
 if __name__ == "__main__":
 
-    stratus = StratusCore( SETTINGS_FILE )
+    stratus = StratusCore( SETTINGS )
     client = stratus.getClient()
     uri =  mgr.getAddress("merra2", "tas")
 
