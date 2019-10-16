@@ -19,9 +19,9 @@ class RestAPI(RestAPIBase):
 
         @bp.route('/status', methods=('GET',))
         def status():
-            rid = self.getParameter( "rid", None, False)
-            statusMap = self.getStatus(rid)
-            if self.debug: self.logger.info( "Status Map: " + str(statusMap) )
+            rid = self.getParameter( "rid", None, False )
+            statusMap =  self.getStatusMap() if rid is None else self.getStatus(rid)
+            if self.debug: self.logger.info( f"Status Map[{rid}]: {statusMap}" )
             return self.jsonResponse( statusMap )
 
         @bp.route('/result', methods=('GET',))
@@ -30,7 +30,7 @@ class RestAPI(RestAPIBase):
             task:  Optional[TaskHandle] = self.app.getResult( rid )
             result: Optional[TaskResult] = task.getResult() if task is not None else None
             if result is None:
-                return self.jsonResponse( dict(status="executing", id=task.rid) )
+                return self.jsonResponse( dict( status="executing", rid=rid, tid=task.rid ) )
             else:
                 response = make_response( pickle.dumps( result ) )
                 response.headers.set('Content-Type', 'application/octet-stream')

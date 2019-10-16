@@ -113,11 +113,13 @@ class ResponseManager(Thread):
 
     def updateStatus(self, message: Dict ) -> Dict:
         if "status" in message:
-            rid = message["rid"]
-            status = Status.decode( message["status"] )
-            self.statusMap[ rid ] = status
-            message["status"] = status
-            if self.debug: self.logger.info( f"REST_CLIENT: Update Status Map[{rid}]: " + str( status ) )
+            rid = message.get("rid")
+            if rid is not None:
+                status = Status.decode( message["status"] )
+                self.statusMap[ rid ] = status
+                message["status"] = status
+                if self.debug or status == Status.ERROR:
+                    self.logger.info( f"REST_CLIENT: Update Status Map[{rid}]: " + str( status ) )
         return message
 
     def getMessage(self, type: str, requestSpec: Dict, **kwargs ) -> Dict:
@@ -150,6 +152,7 @@ class ResponseManager(Thread):
         timeout = kwargs.get("timeout")
         block = kwargs.get("block")
         rid = kwargs.get("rid")
+        self.logger.info(f" ResponseManager:getResult: rid = {rid}, block = {block}, timeout = {timeout} ")
         if block: self.waitUntilReady( rid, timeout )
         result = self.getMessage( "result", dict(rid=rid) )
         rtype = result["type"]
@@ -174,7 +177,8 @@ class ResponseManager(Thread):
     def completed(self, rid ) -> bool :
         status = self.getStatus(rid)
         result =  status in [Status.COMPLETED, Status.ERROR ]
-        if self.debug: self.logger.info( f"COMPLETED[{status}]: {result}")
+        if self.debug or status == Status.ERROR:
+            self.logger.info( f"REQUEST COMPLETED: status = {status}")
         return result
 
     def waitUntilReady( self, rid: str, timeout: float = None ):
@@ -185,7 +189,6 @@ class ResponseManager(Thread):
                 accum_time += 0.2
                 if( accum_time >= timeout ):
                     return False
-        self.logger.info("[RM] Result Available" )
         return True
 
     def log(self, msg: str ):
@@ -205,6 +208,7 @@ class RestTask(TaskHandle):
     def getResult( self, **kwargs ) ->  Optional[TaskResult]:
         try:
             self._exception = None
+            self.logger.info( f" RestTask:getResult: rid = {self.rid} ")
             return self.manager.getResult( rid=self.rid, **kwargs )
         except Exception as err:
             self._exception = err

@@ -143,7 +143,7 @@ class RestAPI(RestAPIBase):
             rid = self.getParameter("rid")
             workflow = self.app.getWorkflow(rid)
             if workflow.status() == Status.EXECUTING:
-                return self.jsonResponse( dict(status="executing", id=rid) )
+                return self.jsonResponse( dict(status="executing", rid=rid) )
             else:
                 task: Optional[TaskHandle] = workflow.getResult()
                 result: Optional[TaskResult] = task.getResult() if task is not None else None
@@ -179,7 +179,7 @@ class RestAPI(RestAPIBase):
             rid = self.getParameter("rid")
             workflow = self.app.getWorkflow(rid)
             if workflow.status() == Status.EXECUTING:
-                return self.jsonResponse( dict(status="executing", id=rid) )
+                return self.jsonResponse( dict(status="executing", rid=rid) )
             else:
                 task: Optional[TaskHandle] = workflow.getResult()
                 result: Optional[TaskResult] = task.getResult() if task is not None else None

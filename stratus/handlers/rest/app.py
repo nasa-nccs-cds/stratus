@@ -22,6 +22,7 @@ class RestAPIBase:
         self.app: StratusAppBase = app
 
     def getStatus( self, rid: str ) -> Dict[str,str]:
+        if rid is None: return {}
         workflow = self.app.getWorkflow(rid)
         if workflow is None:
             if rid in self.app.registeredRequests:  return { "status": Status.str( Status.IDLE  ), "rid": rid }
@@ -34,9 +35,22 @@ class RestAPIBase:
             self.logger.info( f"REST-SERVER: getStatus(rid={rid}): {str(result)}, all tasks: {self.app.getWorkflows().keys()}" )
             return result
 
+    def getStatusMap( self ) -> Dict:
+        response = {}
+        for rid, workflow in self.app.getWorkflows().items():
+            status = workflow.status()
+            result = { "status": Status.str( status ), "rid": rid }
+            if status == Status.ERROR:
+                result["message"] = str( workflow.getResult().exception() )
+            self.logger.info( f"REST-SERVER: getStatus(rid={rid}): {str(result)}, all tasks: {self.app.getWorkflows().keys()}" )
+            response[rid] = result
+        return response
+
     def getParameter(self, name: str, default = None, required = True ):
         param = request.args.get( name, default )
-        assert required is False or param is not None, f"Missing required parameter: '{name}'"
+        if required is True and param is None:
+            self.logger.error( f"Missing required parameter: '{name}' in request '{request.args}' " )
+            return None
         return param
 
     def _blueprint( self, app: Flask ):
@@ -106,16 +120,18 @@ class StratusApp(StratusServerApp):
 
     def addApis( self, app ):
         apiListParm = self.core.parms.get("API",None)
+        ignored = [ "__pycache__" ]
         apiList = self.available_apis if apiListParm is None else apiListParm.split(",")
         for apiName in self.available_apis:
             if apiName in apiList:
                 try:
-                    package_name = f"stratus.handlers.rest.api.{apiName}.app"
-                    module = importlib.import_module( package_name )
-                    constructor = getattr( module, "RestAPI" )
-                    rest_api: RestAPIBase = constructor( apiName, self )
-                    rest_api.instantiate( app )
-                    self.apis.append( rest_api )
+                    if apiName not in ignored:
+                        package_name = f"stratus.handlers.rest.api.{apiName}.app"
+                        module = importlib.import_module( package_name )
+                        constructor = getattr( module, "RestAPI" )
+                        rest_api: RestAPIBase = constructor( apiName, self )
+                        rest_api.instantiate( app )
+                        self.apis.append( rest_api )
                 except Exception as err:
                     self.logger.error( f"Error instantiating api {apiName}: {str(err)}\n" + traceback.format_exc( ))
 

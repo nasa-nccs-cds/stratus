@@ -136,7 +136,7 @@ class RestAPI(RestAPIBase):
             result: Optional[TaskResult] = task.getResult()
             self.logger.info(f"Got File Request for task rid={rid}, result = {str(result)}")
             if task.status() == Status.EXECUTING:
-                return self.jsonResponse( dict(status="executing", id=task.rid) )
+                return self.jsonResponse( dict(status="executing", rid=rid, tid=task.rid) )
             else:
                 if result is None: return self.missingResult( task )
                 dataset: Optional[xa.Dataset] = result.popDataset()
@@ -166,7 +166,7 @@ class RestAPI(RestAPIBase):
             assert task is not None, f"Can't find task for rid {rid}, current tasks: {self.app.getTaskIds()}"
             result: Optional[TaskResult] = task.getResult()
             if task.status() == Status.EXECUTING:
-                return self.jsonResponse( dict(status="executing", rid=task.rid) )
+                return self.jsonResponse( dict(status="executing", rid=rid, tid=task.rid) )
             else:
                 if result is None: return self.missingResult( task )
                 dataset: Optional[xa.Dataset] = result.popDataset()
