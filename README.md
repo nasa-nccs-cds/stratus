@@ -9,7 +9,7 @@ Coordinating workflows composed of services developed by disparate teams general
 
 For example, a REST service might require a REST server (request-reply) located outside the firewall connected via zeroMQ (request-reply + pub-sub) through the firewall to Celery (distributed task queue) running on an analytics cluster. In Stratus these three layers are implemented as Stratus nodes which, because of the common API, can be easily combined as components in the overall service framework. Moving from one context to another context, e.g. from local cluster to the cloud, simply requires the replacement of cluster node(s) with equivalent cloud node(s), e.g. replacing a Stratus node implementing a ZeroMQ-based messaging service with one based on AWS SQS or Google gRPC.
 
-### Installation
+#### Installation
 
 Conda environment setup:
 
@@ -34,6 +34,9 @@ The following are the currently available stratus service handlers:
 * rest
 * rest_client
 * celery
+
+##### ZMQ Certificate generation
+   To generate CURVE certificates for zmq security you can execute the script `stratus/handlers/zeromq/security/generate_certificates.py`. The certificates will, by default, be written to the `~/.stratus/zmq` directory, which is the default location where zmq will look for them.  The certificate path will need to be specified using the `certificate_path` parameter in the stratus configuration if the certificates are stored elsewhere. 
 
 ##### Documentation
 
