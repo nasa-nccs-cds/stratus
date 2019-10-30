@@ -68,6 +68,13 @@ class StratusClient:
     @abc.abstractmethod
     def capabilities(self, type: str, **kwargs ) -> Dict: pass
 
+    def __del__(self):
+        self.shutdown()
+
+    def shutdown(self):
+        if self.active:
+            self.active = False
+
     @property
     def endpointSpecs(self) -> List[str]:
         return [str(eps) for eps in self._endpointSpecs]

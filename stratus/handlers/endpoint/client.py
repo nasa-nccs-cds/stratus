@@ -40,4 +40,8 @@ class DirectClient(StratusClient):
             if self.endpoint is not None:
                 self.endpoint.shutdown()
 
+    def shutdown(self):
+        StratusClient.shutdown(self)
+        self.endpoint.shutdown()
+
 

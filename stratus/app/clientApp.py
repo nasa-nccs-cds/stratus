@@ -32,4 +32,5 @@ class StratusAppClient(StratusClient):
         self.app.shutdown()
 
     def shutdown(self):
+        StratusClient.shutdown(self)
         self.app.shutdown()

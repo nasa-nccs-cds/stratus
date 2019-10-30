@@ -61,11 +61,10 @@ class CoreRestClient(StratusClient):
         return self.response_manager
 
     def shutdown(self):
-        if self.active:
-            self.active = False
-            if not (self.response_manager is None):
-                self.response_manager.term()
-                self.response_manager = None
+        StratusClient.shutdown(self)
+        if not (self.response_manager is None):
+            self.response_manager.term()
+            self.response_manager = None
 
     def waitUntilDone(self):
         self.response_manager.join()

@@ -41,13 +41,6 @@ class WPSRestClient(StratusClient):
     def log(self, msg: str ):
         self.logger.info( "[RP] " + msg )
 
-    def __del__(self):
-        self.shutdown()
-
-    def shutdown(self):
-        if self.active:
-            self.active = False
-
 class RestTask(TaskHandle):
 
     def __init__(self, rid: str, cid: str, refs: Dict, wpsRequest: WPSExecuteRequest, **kwargs):

@@ -127,14 +127,6 @@ class OwsWpsClient(StratusClient):
     def log(self, msg: str ):
         self.logger.info( "[RP] " + msg )
 
-    def __del__(self):
-        self.shutdown()
-
-    def shutdown(self):
-        if self.active:
-            self.active = False
-
-
 if __name__ == "__main__":
     from stratus.util.test import TestDataManager as mgr
     HERE = os.path.dirname(os.path.abspath(__file__))

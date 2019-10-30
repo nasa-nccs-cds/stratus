@@ -89,14 +89,10 @@ class ZMQClient(StratusClient):
     def log(self, msg: str ):
         self.logger.info( "[ZP] " + msg )
 
-    def __del__(self):
-        self.shutdown()
-
     def shutdown(self):
-        if self.active:
-            self.active = False
-            try: self.request_socket.close()
-            except Exception: pass
+        StratusClient.shutdown(self)
+        try: self.request_socket.close()
+        except Exception: pass
 
     def sendMessage(self, type: str, requestData: Dict, **kwargs ) -> Dict:
         requestId = requestData.get( "rid", UID.randomId(6) )
